@@ -37,6 +37,7 @@
     <string name="bypass_confirm_start">Start bypass</string>
     <string name="bypass_active_prefix">Bypass ends in</string>
     <string name="cancel">Cancel</string>
+    <string name="copyright_notice">© Arthur Girard 2026</string>
 
     <!-- Updates -->
     <string name="update_check_cta">Check for updates</string>
