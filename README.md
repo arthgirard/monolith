@@ -1,5 +1,7 @@
 # Monolith
 
+[![GitHub release](https://img.shields.io/github/v/release/arthgirard/monolith)](https://github.com/arthgirard/monolith/releases/latest)
+
 Turn an NFC tag into a physical switch for the apps that eat your day. Tap the tag, the
 distracting apps disappear; tap it again, they're back. No tag, no unlock — with a 15-minute
 emergency bypass for when the tag itself goes missing.
