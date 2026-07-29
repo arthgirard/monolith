@@ -72,7 +72,7 @@
     <string name="nfc_not_supported">This device has no NFC hardware.</string>
 
     <!-- Overlay -->
-    <string name="overlay_title">Monolith Active</string>
+    <string name="overlay_title">Monolith active</string>
     <string name="overlay_body">This app is blocked. Tap your tag to unlock.</string>
     <string name="overlay_go_home">Go to home screen</string>
 
