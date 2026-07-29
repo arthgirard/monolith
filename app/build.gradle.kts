@@ -27,8 +27,8 @@ android {
         applicationId = "com.monolith.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,6 +55,7 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "Monolith Debug")
         }
     }
 
@@ -85,6 +86,10 @@ android {
 
 kapt {
     correctErrorTypes = true
+}
+
+base {
+    archivesName.set("Monolith-${android.defaultConfig.versionName}")
 }
 
 dependencies {

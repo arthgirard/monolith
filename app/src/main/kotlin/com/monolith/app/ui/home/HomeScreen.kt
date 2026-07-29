@@ -30,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -117,7 +118,27 @@ fun HomeScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineLarge)
+
+                IconButton(
+                    onClick = viewModel::checkForUpdates,
+                    enabled = updateState != UpdateUiState.Checking,
+                ) {
+                    if (updateState == UpdateUiState.Checking) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            Icons.Filled.SystemUpdate,
+                            contentDescription = stringResource(R.string.update_check_cta),
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(8.dp))
 
@@ -152,21 +173,6 @@ fun HomeScreen(
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.manage_apps_cta))
             }
-
-            TextButton(
-                onClick = viewModel::checkForUpdates,
-                enabled = updateState != UpdateUiState.Checking,
-            ) {
-                if (updateState == UpdateUiState.Checking) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Filled.SystemUpdate, contentDescription = null, modifier = Modifier.size(16.dp))
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.update_check_cta))
-            }
-
-            Spacer(Modifier.height(24.dp))
 
             if (uiState.blockState.isActive && !uiState.blockState.bypassUsed) {
                 Button(
