@@ -24,8 +24,8 @@
 
     <!-- Home -->
     <string name="home_title">Monolith</string>
-    <string name="block_mode_active">Monolith Activated</string>
-    <string name="block_mode_inactive">Monolith Disabled</string>
+    <string name="block_mode_active">Monolith activated</string>
+    <string name="block_mode_inactive">Monolith disabled</string>
     <string name="block_mode_active_desc">Tap your Monolith tag to unlock.</string>
     <string name="block_mode_inactive_desc">Tap your Monolith tag to lock in.</string>
     <string name="no_tag_linked">No tag linked yet</string>
@@ -33,7 +33,7 @@
     <string name="manage_apps_cta">Manage blocked apps</string>
     <string name="emergency_bypass">Emergency bypass</string>
     <string name="bypass_confirm_title">Start 15-minute bypass?</string>
-    <string name="bypass_confirm_body">This temporarily lifts Block Mode for 15 minutes. You only get one bypass per lock — tap your tag to reset it. Use only if you\'ve lost your tag.</string>
+    <string name="bypass_confirm_body">This temporarily disables Monolith for 15 minutes. You only get one bypass per lock — tap your tag to reset it. Use only if you\'ve lost your tag.</string>
     <string name="bypass_confirm_start">Start bypass</string>
     <string name="bypass_active_prefix">Bypass ends in</string>
     <string name="cancel">Cancel</string>
@@ -66,8 +66,8 @@
     <string name="nfc_link_title">Link Tag</string>
     <string name="nfc_link_instructions">Hold your NFC tag against the back of your phone</string>
     <string name="nfc_link_writing">Writing tag…</string>
-    <string name="nfc_link_success_smart">Tag linked (smart provisioning)</string>
-    <string name="nfc_link_success_fallback">Tag linked (read-only fallback: UID stored)</string>
+    <string name="nfc_link_success_smart">Tag successfully linked</string>
+    <string name="nfc_link_success_fallback">UID successfully stored</string>
     <string name="nfc_link_error">Could not read tag. Try again.</string>
     <string name="nfc_not_supported">This device has no NFC hardware.</string>
 
@@ -77,8 +77,8 @@
     <string name="overlay_go_home">Go to home screen</string>
 
     <!-- Tap overlay (background NFC tap feedback) -->
-    <string name="tap_overlay_locked">Monolith Activated</string>
-    <string name="tap_overlay_unlocked">Monolith Disabled</string>
+    <string name="tap_overlay_locked">Monolith activated</string>
+    <string name="tap_overlay_unlocked">Monolith disabled</string>
     <string name="tap_overlay_unknown_tag">Unrecognized tag</string>
     <string name="tap_overlay_no_tag_linked">No tag linked yet</string>
 </resources>
