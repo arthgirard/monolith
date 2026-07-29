@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Monolith</string>
+    <string name="accessibility_service_description">Monolith uses this to detect which app is in the foreground so it can enforce Block Mode.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Set up Monolith</string>
+    <string name="onboarding_subtitle">Four permissions. Grant them once, forget about it.</string>
+    <string name="restricted_settings_title">Toggle greyed out?</string>
+    <string name="restricted_settings_body">Sideloaded apps start with Android\'s restricted settings on. Open App Info, tap ⋮ in the top corner, then \"Allow restricted settings\" — the Accessibility and Notification Access toggles below will unlock.</string>
+    <string name="restricted_settings_open">Open App Info</string>
+    <string name="perm_usage_title">Usage Access</string>
+    <string name="perm_usage_desc">Lets Monolith see which app is currently open.</string>
+    <string name="perm_overlay_title">Display Over Other Apps</string>
+    <string name="perm_overlay_desc">Needed to show the block screen on top of a blocked app.</string>
+    <string name="perm_accessibility_title">Accessibility Service</string>
+    <string name="perm_accessibility_desc">Lets Monolith detect app launches in real time and enforce blocks.</string>
+    <string name="perm_notifications_title">Notification Access</string>
+    <string name="perm_notifications_desc">Lets Monolith silence notifications from blocked apps during Block Mode.</string>
+    <string name="perm_grant">Grant</string>
+    <string name="perm_granted">Granted</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_finish">Finish setup</string>
+
+    <!-- Home -->
+    <string name="home_title">Monolith</string>
+    <string name="block_mode_active">Monolith Activated</string>
+    <string name="block_mode_inactive">Monolith Disabled</string>
+    <string name="block_mode_active_desc">Tap your Monolith tag to unlock.</string>
+    <string name="block_mode_inactive_desc">Tap your Monolith tag to lock in.</string>
+    <string name="no_tag_linked">No tag linked yet</string>
+    <string name="link_tag_cta">Link an NFC tag</string>
+    <string name="manage_apps_cta">Manage blocked apps</string>
+    <string name="emergency_bypass">Emergency bypass</string>
+    <string name="bypass_confirm_title">Start 15-minute bypass?</string>
+    <string name="bypass_confirm_body">This temporarily lifts Block Mode for 15 minutes. You only get one bypass per lock — tap your tag to reset it. Use only if you\'ve lost your tag.</string>
+    <string name="bypass_confirm_start">Start bypass</string>
+    <string name="bypass_active_prefix">Bypass ends in</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Updates -->
+    <string name="update_check_cta">Check for updates</string>
+    <string name="update_up_to_date">You\'re on the latest version.</string>
+    <string name="update_check_failed">Couldn\'t check for updates: %1$s</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">Version %1$s is ready to install.</string>
+    <string name="update_download_install">Download &amp; Install</string>
+    <string name="update_downloading">Downloading update…</string>
+    <string name="update_download_failed">Download failed: %1$s</string>
+    <string name="update_install_permission_title">Allow installs from Monolith</string>
+    <string name="update_install_permission_body">Android needs permission to install updates from this app. Enable it, then try again.</string>
+    <string name="update_open_settings">Open Settings</string>
+
+    <!-- App selector -->
+    <string name="app_selector_title">Blocked Apps</string>
+    <string name="app_selector_search_hint">Search apps</string>
+    <string name="app_selector_locked_banner">Unlock Block Mode to edit this list</string>
+    <string name="dumb_phone_mode_cta">Dumb Phone Mode</string>
+    <string name="dumb_phone_mode_confirm_title">Enable Dumb Phone Mode?</string>
+    <string name="dumb_phone_mode_confirm_body">Blocks every app except the essentials. This replaces your current selection.</string>
+    <string name="dumb_phone_mode_confirm_start">Enable</string>
+    <string name="select_all_cta">Select all</string>
+    <string name="deselect_all_cta">Deselect all</string>
+
+    <!-- NFC link -->
+    <string name="nfc_link_title">Link Tag</string>
+    <string name="nfc_link_instructions">Hold your NFC tag against the back of your phone</string>
+    <string name="nfc_link_writing">Writing tag…</string>
+    <string name="nfc_link_success_smart">Tag linked (smart provisioning)</string>
+    <string name="nfc_link_success_fallback">Tag linked (read-only fallback: UID stored)</string>
+    <string name="nfc_link_error">Could not read tag. Try again.</string>
+    <string name="nfc_not_supported">This device has no NFC hardware.</string>
+
+    <!-- Overlay -->
+    <string name="overlay_title">Monolith Active</string>
+    <string name="overlay_body">This app is blocked. Tap your tag to unlock.</string>
+    <string name="overlay_go_home">Go to home screen</string>
+
+    <!-- Tap overlay (background NFC tap feedback) -->
+    <string name="tap_overlay_locked">Monolith Activated</string>
+    <string name="tap_overlay_unlocked">Monolith Disabled</string>
+    <string name="tap_overlay_unknown_tag">Unrecognized tag</string>
+    <string name="tap_overlay_no_tag_linked">No tag linked yet</string>
+</resources>

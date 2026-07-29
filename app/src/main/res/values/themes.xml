@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Monolith" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/monolith_white</item>
+        <item name="android:navigationBarColor">@color/monolith_white</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.Monolith.Overlay" parent="Theme.Monolith">
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@color/monolith_black</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowShowWallpaper">false</item>
+    </style>
+</resources>
