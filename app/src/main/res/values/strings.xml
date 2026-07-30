@@ -17,6 +17,8 @@
     <string name="perm_accessibility_desc">Lets Monolith detect app launches in real time and enforce blocks.</string>
     <string name="perm_notifications_title">Notification Access</string>
     <string name="perm_notifications_desc">Lets Monolith silence notifications from blocked apps during Block Mode.</string>
+    <string name="perm_post_notifications_title">Post Notifications</string>
+    <string name="perm_post_notifications_desc">Lets Monolith show you the notifications it held once Block Mode turns off.</string>
     <string name="perm_grant">Grant</string>
     <string name="perm_granted">Granted</string>
     <string name="onboarding_continue">Continue</string>

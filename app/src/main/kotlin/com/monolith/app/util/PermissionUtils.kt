@@ -1,11 +1,15 @@
 package com.monolith.app.util
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Process
 import android.provider.Settings
 import android.text.TextUtils
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 
 object PermissionUtils {
 
@@ -40,9 +44,18 @@ object PermissionUtils {
     fun hasNotificationAccess(context: Context): Boolean =
         NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
 
+    /** Below API 33 this permission doesn't exist and posting is allowed by default. */
+    fun hasPostNotificationsPermission(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+
     fun allPermissionsGranted(context: Context, accessibilityServiceClass: Class<*>): Boolean =
         hasUsageAccess(context) &&
             hasOverlayPermission(context) &&
             isAccessibilityServiceEnabled(context, accessibilityServiceClass) &&
-            hasNotificationAccess(context)
+            hasNotificationAccess(context) &&
+            hasPostNotificationsPermission(context)
 }

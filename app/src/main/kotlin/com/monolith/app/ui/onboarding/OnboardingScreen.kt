@@ -1,8 +1,12 @@
 package com.monolith.app.ui.onboarding
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,6 +58,10 @@ fun OnboardingScreen(
 
     var pendingRestrictedCheck by remember { mutableStateOf(false) }
     var showRestrictedHint by remember { mutableStateOf(false) }
+
+    val postNotificationsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { viewModel.refresh() }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -148,6 +156,17 @@ fun OnboardingScreen(
                 onGrant = {
                     pendingRestrictedCheck = true
                     context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                },
+            )
+            Spacer(Modifier.height(16.dp))
+            PermissionCard(
+                title = stringResource(R.string.perm_post_notifications_title),
+                description = stringResource(R.string.perm_post_notifications_desc),
+                granted = uiState.postNotificationsGranted,
+                onGrant = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        postNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
                 },
             )
 

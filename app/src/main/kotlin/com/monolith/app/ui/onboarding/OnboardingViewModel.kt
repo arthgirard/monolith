@@ -15,12 +15,15 @@ data class OnboardingUiState(
     val overlayGranted: Boolean = false,
     val accessibilityGranted: Boolean = false,
     val notificationAccessGranted: Boolean = false,
+    val postNotificationsGranted: Boolean = false,
 ) {
     val allGranted: Boolean
-        get() = usageAccessGranted && overlayGranted && accessibilityGranted && notificationAccessGranted
+        get() = usageAccessGranted && overlayGranted && accessibilityGranted &&
+            notificationAccessGranted && postNotificationsGranted
 
     val anyGranted: Boolean
-        get() = usageAccessGranted || overlayGranted || accessibilityGranted || notificationAccessGranted
+        get() = usageAccessGranted || overlayGranted || accessibilityGranted ||
+            notificationAccessGranted || postNotificationsGranted
 }
 
 @HiltViewModel
@@ -40,6 +43,7 @@ class OnboardingViewModel @Inject constructor(
                 AppBlockAccessibilityService::class.java,
             ),
             notificationAccessGranted = PermissionUtils.hasNotificationAccess(context),
+            postNotificationsGranted = PermissionUtils.hasPostNotificationsPermission(context),
         )
     }
 }
