@@ -9,6 +9,7 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.repository.AppRepository
@@ -27,11 +28,12 @@ import javax.inject.Inject
  * Cancels notifications from blocked apps while Block Mode is enforcing, so a blocked app can't
  * reach the user through the notification shade either. Mirrors [AppBlockAccessibilityService]'s
  * state-tracking pattern; the two run independently since a device can enable one without the
- * other. Every cancelled notification is held in memory and reposted (as a Monolith-authored
- * stand-in — the OS doesn't let a listener repost another app's notification under its own
- * identity) the moment Block Mode turns off, so nothing is silently lost. The held queue is
- * memory-only: a process death mid-block drops it, same as the notifications themselves would
- * have been dropped by the block.
+ * other. Cancels both newly posted notifications and ones already in the shade the moment Block
+ * Mode turns on. Every cancelled notification is held in memory and reposted (as a
+ * Monolith-authored stand-in — the OS doesn't let a listener repost another app's notification
+ * under its own identity) the moment Block Mode turns off, so nothing is silently lost. The held
+ * queue is memory-only: a process death mid-block drops it, same as the notifications themselves
+ * would have been dropped by the block.
  */
 @AndroidEntryPoint
 class NotificationBlockListenerService : NotificationListenerService() {
@@ -56,6 +58,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
                     val wasActive = blockState.isActive
                     blockState = state
                     blockedPackages = packages
+                    if (!wasActive && state.isActive) sweepExistingNotifications()
                     if (wasActive && !state.isActive) restoreHeldNotifications()
                 }
         }
@@ -67,6 +70,21 @@ class NotificationBlockListenerService : NotificationListenerService() {
         if (sbn.packageName !in blockedPackages) return
         heldNotifications.add(sbn)
         cancelNotification(sbn.key)
+    }
+
+    /**
+     * Block Mode just switched on: notifications from blocked apps already sitting in the shade
+     * were posted before we started enforcing, so [onNotificationPosted] never saw them. Sweep
+     * them the same way — hold, then cancel — so they get restored later instead of just lingering.
+     */
+    private fun sweepExistingNotifications() {
+        val existing = runCatching { activeNotifications }.getOrNull() ?: return
+        existing
+            .filter { it.packageName != packageName && it.packageName in blockedPackages }
+            .forEach { sbn ->
+                heldNotifications.add(sbn)
+                cancelNotification(sbn.key)
+            }
     }
 
     /** Block Mode just turned off: repost everything it swallowed so the user can catch up. */
@@ -88,6 +106,12 @@ class NotificationBlockListenerService : NotificationListenerService() {
             val appIcon = runCatching {
                 pm.getApplicationIcon(sbn.packageName).toBitmap()
             }.getOrNull()
+            // The original app's own status-bar icon (not its launcher icon) — reusing it keeps
+            // the restored notification looking like it came from that app, not from Monolith.
+            val smallIcon = runCatching {
+                sbn.notification.smallIcon?.loadDrawable(this)?.toBitmap()
+            }.getOrNull()?.let { IconCompat.createWithBitmap(it) }
+                ?: IconCompat.createWithResource(this, android.R.drawable.ic_lock_lock)
 
             // Reuse the original notification's own PendingIntent where possible — it opens the
             // exact screen the source app intended (e.g. a specific chat), not just its launcher.
@@ -102,7 +126,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
                 }
 
             val restored = NotificationCompat.Builder(this, MISSED_CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setSmallIcon(smallIcon)
                 .setContentTitle(title ?: appLabel)
                 .setContentText(text)
                 .setSubText("Missed while Block Mode was on • $appLabel")
