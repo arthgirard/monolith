@@ -48,7 +48,7 @@ import javax.inject.Inject
  * Landing spot for a background NFC tap: the OS Tag Dispatch System launches this directly
  * (see the manifest's monolith://tag intent-filter) instead of routing through MainActivity, so
  * a tap flashes its result over whatever app the user was already in and hands control straight
- * back — it never becomes a full app switch.
+ * back, it never becomes a full app switch.
  */
 @AndroidEntryPoint
 class NfcTapOverlayActivity : ComponentActivity() {

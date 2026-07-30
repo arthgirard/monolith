@@ -21,8 +21,8 @@ import javax.inject.Inject
 /**
  * The accessibility service itself resumes automatically once Android finishes booting, since
  * the OS re-binds any service the user enabled in Accessibility settings. This receiver exists
- * for the case that matters: Block Mode was active before reboot but the service somehow isn't
- * enabled (OEM battery managers love disabling accessibility services) — nudge the user instead
+ * for the case that matters: Monolith was active before reboot but the service somehow isn't
+ * enabled (OEM battery managers love disabling accessibility services), so nudge the user instead
  * of silently leaving blocking off.
  */
 @AndroidEntryPoint
@@ -73,7 +73,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .setContentTitle("Monolith needs re-enabling")
-            .setContentText("Block Mode was active before reboot, but the Accessibility service was turned off. Tap to fix.")
+            .setContentText("Monolith was active before reboot, but the Accessibility service was turned off. Tap to fix.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

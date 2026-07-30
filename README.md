@@ -4,7 +4,7 @@
 
 An NFC tag as a physical switch for the apps you keep opening out of habit. Tap the tag and
 your chosen apps get blocked; tap it again and they're back. There's no in-app toggle for this
-by design — the tag is the only quick way out, aside from a timed emergency bypass for when the
+by design: the tag is the only quick way out, aside from a timed emergency bypass for when the
 tag isn't around.
 
 ## How it works
@@ -12,10 +12,10 @@ tag isn't around.
 Pick the apps you want blocked from your installed apps list, then link an NFC tag to your
 phone. Monolith tries to write an NDEF record to the tag (a `monolith://tag/<uid>` URI, so a tap
 launches the app directly instead of going through a browser). Read-only or unformattable tags
-fall back to matching on the tag's hardware UID instead — either way, the tap is recognized as
+fall back to matching on the tag's hardware UID instead. Either way, the tap is recognized as
 yours from then on.
 
-Once linked, tapping the tag flips Block Mode on or off. The app list locks while it's on, so
+Once linked, tapping the tag flips Monolith on or off. The app list locks while it's on, so
 the tag stays the only way to change what's blocked. Enforcement itself runs on two independent
 services: an Accessibility Service watches for foreground app changes and throws up a
 full-screen block when a listed app (or Settings, so you can't disable the service to escape)
@@ -23,7 +23,7 @@ comes to the front, and a Notification Listener cancels notifications from block
 can't reach you through the shade either.
 
 Lost the tag, or it's not on you? The home screen has a 15-minute countdown bypass that lifts
-Block Mode temporarily — one per Block Mode cycle, so it can't be spammed. Tapping the tag again,
+Monolith temporarily, one per Monolith cycle, so it can't be spammed. Tapping the tag again,
 either on or off, resets that allowance.
 
 Monolith also checks GitHub releases for newer versions on demand and can download and hand the
@@ -44,7 +44,7 @@ repository interfaces, use cases) has no Android dependencies beyond the NFC `Ta
 
 ## Building
 
-Standard Gradle Android project — open in Android Studio or run:
+Standard Gradle Android project, open in Android Studio or run:
 
 ```
 ./gradlew assembleDebug

@@ -82,7 +82,7 @@ class AppRepositoryImpl @Inject constructor(
         resolveActivityPackage(pm, Intent(Intent.ACTION_MAIN).addCategory(category))
 
     /**
-     * No public API exists for "which app holds the Wallet role" — RoleManager.getRoleHolders is
+     * No public API exists for "which app holds the Wallet role": RoleManager.getRoleHolders is
      * restricted to system callers, and there's no ACTION_APP_WALLET-style resolvable intent
      * either. Best-effort only: checks for the most common wallet packages actually installed.
      * A device running a wallet app outside this list won't be recognized.

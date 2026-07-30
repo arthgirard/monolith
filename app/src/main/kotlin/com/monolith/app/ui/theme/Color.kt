@@ -2,7 +2,7 @@ package com.monolith.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Monolith is deliberately monochrome — the accent only shows up where a decision is being made.
+// Monolith is deliberately monochrome; the accent only shows up where a decision is being made.
 val MonolithBlack = Color(0xFF0B0B0D)
 val MonolithNearBlack = Color(0xFF17171A)
 val MonolithWhite = Color(0xFFF5F5F0)

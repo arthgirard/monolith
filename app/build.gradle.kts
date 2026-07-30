@@ -9,7 +9,7 @@ plugins {
 }
 
 // Release signing is opt-in via a local, gitignored keystore.properties (see
-// keystore.properties.example). Without it, `assembleRelease` still builds, just unsigned — CI
+// keystore.properties.example). Without it, `assembleRelease` still builds, just unsigned. CI
 // or a fresh checkout won't fail for lacking a secret they were never meant to have.
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {

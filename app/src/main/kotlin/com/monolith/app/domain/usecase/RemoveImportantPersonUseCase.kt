@@ -6,7 +6,7 @@ import com.monolith.app.domain.repository.ImportantPersonRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
-/** Rejects edits while Block Mode is active, so the tag stays the only way out. */
+/** Rejects edits while Monolith is active, so the tag stays the only way out. */
 class RemoveImportantPersonUseCase @Inject constructor(
     private val importantPersonRepository: ImportantPersonRepository,
     private val blockRepository: BlockRepository,
@@ -14,7 +14,7 @@ class RemoveImportantPersonUseCase @Inject constructor(
     suspend operator fun invoke(person: ImportantPerson): Result<Unit> {
         val state = blockRepository.observeBlockState().first()
         if (state.isActive) {
-            return Result.failure(IllegalStateException("Block Mode is active; unlock with your tag first."))
+            return Result.failure(IllegalStateException("Monolith is active; unlock with your tag first."))
         }
         importantPersonRepository.removeImportantPerson(person)
         return Result.success(Unit)

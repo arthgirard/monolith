@@ -24,7 +24,7 @@ class BlockOverlayViewModel @Inject constructor(
     // Seeded isActive=true: this activity is only ever launched by AppBlockAccessibilityService
     // after it already confirmed isEnforcing()==true. DataStore's first real read is async, so a
     // BlockState() (isActive=false) placeholder here would read as "not enforcing" on the first
-    // frame and instantly self-finish the overlay before the real value loads — letting the
+    // frame and instantly self-finish the overlay before the real value loads, letting the
     // blocked app win the race every time.
     val blockState: StateFlow<BlockState> =
         observeBlockState().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BlockState(isActive = true))

@@ -5,7 +5,7 @@ import com.monolith.app.domain.repository.BlockRepository
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
-/** Rejects edits while Block Mode is active, so the tag stays the only way out. */
+/** Rejects edits while Monolith is active, so the tag stays the only way out. */
 class SaveBlockedAppsUseCase @Inject constructor(
     private val appRepository: AppRepository,
     private val blockRepository: BlockRepository,
@@ -13,7 +13,7 @@ class SaveBlockedAppsUseCase @Inject constructor(
     suspend operator fun invoke(packages: Set<String>): Result<Unit> {
         val state = blockRepository.observeBlockState().first()
         if (state.isActive) {
-            return Result.failure(IllegalStateException("Block Mode is active; unlock with your tag first."))
+            return Result.failure(IllegalStateException("Monolith is active; unlock with your tag first."))
         }
         appRepository.setBlockedPackages(packages)
         return Result.success(Unit)

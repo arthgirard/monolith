@@ -27,13 +27,13 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import javax.inject.Inject
 
 /**
- * Cancels notifications from blocked apps while Block Mode is enforcing, so a blocked app can't
+ * Cancels notifications from blocked apps while Monolith is enforcing, so a blocked app can't
  * reach the user through the notification shade either. Mirrors [AppBlockAccessibilityService]'s
  * state-tracking pattern; the two run independently since a device can enable one without the
- * other. Cancels both newly posted notifications and ones already in the shade the moment Block
- * Mode turns on. Every cancelled notification is held in memory and reposted (as a
- * Monolith-authored stand-in — the OS doesn't let a listener repost another app's notification
- * under its own identity) the moment Block Mode turns off, so nothing is silently lost. The held
+ * other. Cancels both newly posted notifications and ones already in the shade the moment
+ * Monolith turns on. Every cancelled notification is held in memory and reposted (as a
+ * Monolith-authored stand-in, since the OS doesn't let a listener repost another app's notification
+ * under its own identity) the moment Monolith turns off, so nothing is silently lost. The held
  * queue is memory-only: a process death mid-block drops it, same as the notifications themselves
  * would have been dropped by the block.
  */
@@ -90,9 +90,9 @@ class NotificationBlockListenerService : NotificationListenerService() {
     }
 
     /**
-     * Block Mode just switched on: notifications from blocked apps already sitting in the shade
+     * Monolith just switched on: notifications from blocked apps already sitting in the shade
      * were posted before we started enforcing, so [onNotificationPosted] never saw them. Sweep
-     * them the same way — hold, then cancel — so they get restored later instead of just lingering.
+     * them the same way, hold then cancel, so they get restored later instead of just lingering.
      */
     private fun sweepExistingNotifications() {
         val existing = runCatching { activeNotifications }.getOrNull() ?: return
@@ -104,7 +104,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
             }
     }
 
-    /** Block Mode just turned off: repost everything it swallowed so the user can catch up. */
+    /** Monolith just turned off: repost everything it swallowed so the user can catch up. */
     private fun restoreHeldNotifications() {
         val toRestore = generateSequence { heldNotifications.poll() }.toList()
         if (toRestore.isEmpty()) return
@@ -123,14 +123,14 @@ class NotificationBlockListenerService : NotificationListenerService() {
             val appIcon = runCatching {
                 pm.getApplicationIcon(sbn.packageName).toBitmap()
             }.getOrNull()
-            // The original app's own status-bar icon (not its launcher icon) — reusing it keeps
+            // The original app's own status-bar icon (not its launcher icon): reusing it keeps
             // the restored notification looking like it came from that app, not from Monolith.
             val smallIcon = runCatching {
                 sbn.notification.smallIcon?.loadDrawable(this)?.toBitmap()
             }.getOrNull()?.let { IconCompat.createWithBitmap(it) }
                 ?: IconCompat.createWithResource(this, android.R.drawable.ic_lock_lock)
 
-            // Reuse the original notification's own PendingIntent where possible — it opens the
+            // Reuse the original notification's own PendingIntent where possible: it opens the
             // exact screen the source app intended (e.g. a specific chat), not just its launcher.
             val pendingIntent = sbn.notification.contentIntent
                 ?: pm.getLaunchIntentForPackage(sbn.packageName)?.let { launchIntent ->
@@ -146,7 +146,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
                 .setSmallIcon(smallIcon)
                 .setContentTitle(title ?: appLabel)
                 .setContentText(text)
-                .setSubText("Missed while Block Mode was on • $appLabel")
+                .setSubText("Missed while Monolith was on • $appLabel")
                 .setLargeIcon(appIcon)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)

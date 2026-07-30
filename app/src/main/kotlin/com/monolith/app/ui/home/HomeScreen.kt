@@ -79,7 +79,7 @@ fun HomeScreen(
             val message = when (event) {
                 HomeEvent.UnknownTag -> "That tag isn't linked to Monolith."
                 HomeEvent.NoTagLinked -> "Link a tag first from the home screen."
-                is HomeEvent.Toggled -> if (event.nowActive) "Block Mode locked in." else "Block Mode unlocked."
+                is HomeEvent.Toggled -> if (event.nowActive) "Monolith locked in." else "Monolith unlocked."
             }
             scope.launch { snackbarHostState.showSnackbar(message) }
         }

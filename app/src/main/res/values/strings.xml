@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Monolith</string>
-    <string name="accessibility_service_description">Monolith uses this to detect which app is in the foreground so it can enforce Block Mode.</string>
+    <string name="accessibility_service_description">Monolith uses this to detect which app is in the foreground so it can enforce blocking.</string>
 
     <!-- Onboarding -->
     <string name="onboarding_title">Set up Monolith</string>
     <string name="onboarding_subtitle">Four permissions. Grant them once, forget about it.</string>
     <string name="restricted_settings_title">Toggle greyed out?</string>
-    <string name="restricted_settings_body">Sideloaded apps start with Android\'s restricted settings on. Open App Info, tap ⋮ in the top corner, then \"Allow restricted settings\" — the Accessibility and Notification Access toggles below will unlock.</string>
+    <string name="restricted_settings_body">Sideloaded apps start with Android\'s restricted settings on. Open App Info, tap ⋮ in the top corner, then \"Allow restricted settings\": the Accessibility and Notification Access toggles below will unlock.</string>
     <string name="restricted_settings_open">Open App Info</string>
     <string name="perm_usage_title">Usage Access</string>
     <string name="perm_usage_desc">Lets Monolith see which app is currently open.</string>
@@ -16,16 +16,16 @@
     <string name="perm_accessibility_title">Accessibility Service</string>
     <string name="perm_accessibility_desc">Lets Monolith detect app launches in real time and enforce blocks.</string>
     <string name="perm_notifications_title">Notification Access</string>
-    <string name="perm_notifications_desc">Lets Monolith silence notifications from blocked apps during Block Mode.</string>
+    <string name="perm_notifications_desc">Lets Monolith silence notifications from blocked apps while it\'s active.</string>
     <string name="perm_post_notifications_title">Post Notifications</string>
-    <string name="perm_post_notifications_desc">Lets Monolith show you the notifications it held once Block Mode turns off.</string>
+    <string name="perm_post_notifications_desc">Lets Monolith show you the notifications it held once it turns off.</string>
     <string name="perm_grant">Grant</string>
     <string name="perm_granted">Granted</string>
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_configuration_title">Configuration</string>
     <string name="onboarding_step_indicator">%1$d/%2$d</string>
-    <string name="onboarding_select_apps_subtitle">Select the apps you want blocked</string>
-    <string name="onboarding_link_tag_subtitle">Last step: link your NFC tag to toggle blocking</string>
+    <string name="onboarding_select_apps_subtitle">Select the apps you want blocked.</string>
+    <string name="onboarding_link_tag_subtitle">Last step: link your NFC tag to toggle blocking.</string>
     <string name="onboarding_complete_title">You\'re all set!</string>
     <string name="onboarding_complete_desc">Welcome to Monolith.</string>
 
@@ -41,7 +41,7 @@
     <string name="manage_important_people_cta">Manage important people</string>
     <string name="emergency_bypass">Emergency bypass</string>
     <string name="bypass_confirm_title">Start 15-minute bypass?</string>
-    <string name="bypass_confirm_body">This temporarily disables Monolith for 15 minutes. You only get one bypass per lock — tap your tag to reset it. Use only if you\'ve lost your tag.</string>
+    <string name="bypass_confirm_body">This temporarily disables Monolith for 15 minutes. You only get one bypass per lock, tap your tag to reset it. Use only if you\'ve lost your tag.</string>
     <string name="bypass_confirm_start">Start bypass</string>
     <string name="bypass_active_prefix">Bypass ends in</string>
     <string name="cancel">Cancel</string>
@@ -63,7 +63,7 @@
     <!-- App selector -->
     <string name="app_selector_title">Blocked Apps</string>
     <string name="app_selector_search_hint">Search apps</string>
-    <string name="app_selector_locked_banner">Unlock Block Mode to edit this list</string>
+    <string name="app_selector_locked_banner">Unlock Monolith to edit this list</string>
     <string name="dumb_phone_mode_cta">Dumb Phone Mode</string>
     <string name="dumb_phone_mode_confirm_title">Enable Dumb Phone Mode?</string>
     <string name="dumb_phone_mode_confirm_body">Blocks every app except the essentials. This replaces your current selection.</string>
@@ -73,14 +73,14 @@
 
     <!-- Important people -->
     <string name="important_people_title">Important People</string>
-    <string name="important_people_subtitle">Notifications from these people get through Block Mode, per app.</string>
-    <string name="important_people_locked_banner">Unlock Block Mode to edit this list</string>
+    <string name="important_people_subtitle">Notifications from these people get through Monolith, per app.</string>
+    <string name="important_people_locked_banner">Unlock Monolith to edit this list</string>
     <string name="important_people_empty">No one added yet. Tap + to add someone.</string>
     <string name="important_people_add_title">Add important person</string>
     <string name="important_people_app_label">App</string>
     <string name="important_people_name_label">Name (optional)</string>
     <string name="important_people_handle_label">Handle (optional)</string>
-    <string name="important_people_field_hint">Enter a name or a handle — at least one is required.</string>
+    <string name="important_people_field_hint">Enter a name or a handle. At least one is required.</string>
     <string name="important_people_add_cta">Add</string>
     <string name="important_people_remove_cta">Remove</string>
 

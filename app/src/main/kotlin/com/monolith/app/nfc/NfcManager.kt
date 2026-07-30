@@ -24,11 +24,11 @@ import javax.inject.Singleton
 
 /**
  * Owns all NFC hardware interaction: foreground dispatch setup, writing the smart-provisioning
- * NDEF URI, and the read-only UID fallback. Tag *identity* is always the hardware UID — the NDEF
+ * NDEF URI, and the read-only UID fallback. Tag *identity* is always the hardware UID; the NDEF
  * write is a convenience so a background tap routes straight to [com.monolith.app.ui.tapoverlay.NfcTapOverlayActivity]
  * via a custom URI scheme rather than https: Android 12+ only direct-launches an app for an
  * http(s) link once the domain passes Digital Asset Links verification, which an unhosted domain
- * can never do — the tap would silently fall back to "open in browser" and fail. A custom scheme
+ * can never do; the tap would silently fall back to "open in browser" and fail. A custom scheme
  * has no such verification step, at the cost of an uninstalled phone getting "no app found"
  * instead of a download page.
  */

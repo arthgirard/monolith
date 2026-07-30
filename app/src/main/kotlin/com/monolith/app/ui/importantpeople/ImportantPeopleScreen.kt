@@ -189,7 +189,7 @@ private fun PersonRow(
                 text = if (isAppBlocked) {
                     app?.label ?: person.packageName
                 } else {
-                    "${app?.label ?: person.packageName} — not blocked"
+                    "${app?.label ?: person.packageName} (not blocked)"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),

@@ -7,7 +7,7 @@ import com.monolith.app.domain.repository.TagProvisioner
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
-/** A registered tag tap flips Block Mode on/off; an unrecognized tag is ignored. */
+/** A registered tag tap flips Monolith on/off; an unrecognized tag is ignored. */
 class ToggleBlockModeFromTagUseCase @Inject constructor(
     private val tagProvisioner: TagProvisioner,
     private val blockRepository: BlockRepository,
@@ -23,9 +23,9 @@ class ToggleBlockModeFromTagUseCase @Inject constructor(
         val current = blockRepository.observeBlockState().first()
         val nowActive = !current.isActive
         blockRepository.setBlockModeActive(nowActive)
-        // Any tap — on or off — starts a fresh cycle: clears a running/expired bypass so its
-        // countdown can't linger on screen after the tap turned Block Mode off, and frees up the
-        // one-bypass-per-cycle allowance for next time Block Mode comes on.
+        // Any tap, on or off, starts a fresh cycle: clears a running/expired bypass so its
+        // countdown can't linger on screen after the tap turned Monolith off, and frees up the
+        // one-bypass-per-cycle allowance for next time Monolith comes on.
         blockRepository.clearBypass()
         return NfcTapResult.Toggled(nowActive)
     }

@@ -1,8 +1,8 @@
 package com.monolith.app.domain.model
 
 /**
- * Someone allowed through Block Mode for a specific app. At least one of [name] or [handle] must
- * be non-blank — matching checks whichever is present against the notification's title and text.
+ * Someone allowed through Monolith for a specific app. At least one of [name] or [handle] must
+ * be non-blank; matching checks whichever is present against the notification's title and text.
  */
 data class ImportantPerson(
     val packageName: String,

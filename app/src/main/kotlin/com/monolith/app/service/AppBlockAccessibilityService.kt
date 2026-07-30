@@ -18,9 +18,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Watches foreground-app changes and throws up the block overlay whenever Block Mode is
+ * Watches foreground-app changes and throws up the block overlay whenever Monolith is
  * enforcing and the foreground package is on the blocked list. Settings is hard-blocked too,
- * so a user can't disable this service to escape Block Mode — the NFC tag or the timed
+ * so a user can't disable this service to escape Monolith: the NFC tag or the timed
  * emergency bypass are the only ways out. Monolith's own UI is deliberately left reachable,
  * since the emergency bypass button lives there.
  */
