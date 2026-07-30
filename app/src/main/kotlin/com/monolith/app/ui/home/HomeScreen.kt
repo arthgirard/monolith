@@ -20,8 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -57,7 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
-import com.monolith.app.domain.model.TagLinkMode
+import com.monolith.app.domain.model.NfcTagLink
 import kotlinx.coroutines.launch
 
 @Composable
@@ -148,15 +150,7 @@ fun HomeScreen(
             BlockStatusCard(
                 isActive = uiState.blockState.isActive,
                 bypassSecondsRemaining = uiState.bypassSecondsRemaining,
-            )
-
-            Text(
-                text = uiState.linkedTag?.let {
-                    val modeLabel = if (it.mode == TagLinkMode.SMART_NDEF) "smart tag" else "generic tag"
-                    "Linked to a $modeLabel"
-                } ?: stringResource(R.string.no_tag_linked),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                linkedTag = uiState.linkedTag,
             )
 
             OutlinedButton(onClick = onLinkTag, modifier = Modifier.fillMaxWidth()) {
@@ -293,7 +287,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long) {
+private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long, linkedTag: NfcTagLink?) {
     val background = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     val onBackground = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
 
@@ -323,6 +317,14 @@ private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = onBackground.copy(alpha = 0.7f),
             )
+            if (linkedTag == null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.no_tag_linked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onBackground.copy(alpha = 0.7f),
+                )
+            }
             if (bypassSecondsRemaining > 0) {
                 Spacer(Modifier.height(12.dp))
                 val minutes = bypassSecondsRemaining / 60
@@ -331,6 +333,27 @@ private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long) {
                     text = "${stringResource(R.string.bypass_active_prefix)} %d:%02d".format(minutes, seconds),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+        }
+
+        if (linkedTag != null) {
+            Row(
+                modifier = Modifier.align(Alignment.TopEnd),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Contactless,
+                    contentDescription = "Tag linked",
+                    tint = onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp),
+                )
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = onBackground.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
