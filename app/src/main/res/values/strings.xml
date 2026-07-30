@@ -22,7 +22,12 @@
     <string name="perm_grant">Grant</string>
     <string name="perm_granted">Granted</string>
     <string name="onboarding_continue">Continue</string>
-    <string name="onboarding_finish">Finish setup</string>
+    <string name="onboarding_configuration_title">Configuration</string>
+    <string name="onboarding_step_indicator">%1$d/%2$d</string>
+    <string name="onboarding_select_apps_subtitle">Select the apps you want blocked</string>
+    <string name="onboarding_link_tag_subtitle">Last step: link your NFC tag to toggle blocking</string>
+    <string name="onboarding_complete_title">You\'re all set!</string>
+    <string name="onboarding_complete_desc">Welcome to Monolith.</string>
 
     <!-- Home -->
     <string name="home_title">Monolith</string>

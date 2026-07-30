@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,6 +51,9 @@ import com.monolith.app.domain.model.AppInfo
 @Composable
 fun AppSelectorScreen(
     onBack: () -> Unit,
+    onContinue: (() -> Unit)? = null,
+    onboardingStep: Pair<Int, Int>? = null,
+    onboardingSubtitle: String? = null,
     viewModel: AppSelectorViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -58,16 +62,42 @@ fun AppSelectorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_selector_title)) },
+                title = {
+                    Text(
+                        if (onboardingStep != null) {
+                            stringResource(R.string.onboarding_configuration_title)
+                        } else {
+                            stringResource(R.string.app_selector_title)
+                        },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    if (onboardingStep != null) {
+                        Text(
+                            stringResource(R.string.onboarding_step_indicator, onboardingStep.first, onboardingStep.second),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp),
+                        )
                     }
                 },
             )
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            if (onboardingSubtitle != null) {
+                Text(
+                    onboardingSubtitle,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+            }
             if (uiState.isLocked) {
                 Row(
                     modifier = Modifier
@@ -117,7 +147,7 @@ fun AppSelectorScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+            LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
                 items(uiState.filteredApps, key = { it.packageName }) { app ->
                     AppRow(
                         app = app,
@@ -125,6 +155,15 @@ fun AppSelectorScreen(
                         enabled = !uiState.isLocked,
                         onToggle = { viewModel.toggleApp(app.packageName) },
                     )
+                }
+            }
+
+            if (onContinue != null) {
+                Button(
+                    onClick = onContinue,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                ) {
+                    Text(stringResource(R.string.onboarding_continue))
                 }
             }
         }

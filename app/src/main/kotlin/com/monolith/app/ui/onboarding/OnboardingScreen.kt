@@ -177,7 +177,7 @@ fun OnboardingScreen(
                 enabled = uiState.allGranted,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.onboarding_finish))
+                Text(stringResource(R.string.onboarding_continue))
             }
         }
     }

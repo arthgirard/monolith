@@ -34,6 +34,8 @@ import com.monolith.app.domain.model.TagLinkMode
 @Composable
 fun NfcLinkScreen(
     onBack: () -> Unit,
+    onboardingStep: Pair<Int, Int>? = null,
+    onboardingSubtitle: String? = null,
     viewModel: NfcLinkViewModel = hiltViewModel(),
 ) {
     val status by viewModel.status.collectAsState()
@@ -41,10 +43,28 @@ fun NfcLinkScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.nfc_link_title)) },
+                title = {
+                    Text(
+                        if (onboardingStep != null) {
+                            stringResource(R.string.onboarding_configuration_title)
+                        } else {
+                            stringResource(R.string.nfc_link_title)
+                        },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    if (onboardingStep != null) {
+                        Text(
+                            stringResource(R.string.onboarding_step_indicator, onboardingStep.first, onboardingStep.second),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp),
+                        )
                     }
                 },
             )
@@ -58,6 +78,15 @@ fun NfcLinkScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
+            if (onboardingSubtitle != null) {
+                Text(
+                    onboardingSubtitle,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                )
+            }
             when (val current = status) {
                 NfcLinkStatus.NfcUnsupported -> {
                     Text(
