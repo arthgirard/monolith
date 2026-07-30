@@ -18,6 +18,9 @@ data class OnboardingUiState(
 ) {
     val allGranted: Boolean
         get() = usageAccessGranted && overlayGranted && accessibilityGranted && notificationAccessGranted
+
+    val anyGranted: Boolean
+        get() = usageAccessGranted || overlayGranted || accessibilityGranted || notificationAccessGranted
 }
 
 @HiltViewModel

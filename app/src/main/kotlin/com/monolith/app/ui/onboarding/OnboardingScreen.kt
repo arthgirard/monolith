@@ -29,6 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,9 +52,20 @@ fun OnboardingScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val uiState by viewModel.uiState.collectAsState()
 
+    var pendingRestrictedCheck by remember { mutableStateOf(false) }
+    var showRestrictedHint by remember { mutableStateOf(false) }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+                if (pendingRestrictedCheck) {
+                    pendingRestrictedCheck = false
+                    if (!viewModel.uiState.value.anyGranted) {
+                        showRestrictedHint = true
+                    }
+                }
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -77,24 +91,29 @@ fun OnboardingScreen(
             )
             Spacer(Modifier.height(24.dp))
 
-            RestrictedSettingsHint(
-                onOpenAppInfo = {
-                    context.startActivity(
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:${context.packageName}"),
-                        ),
-                    )
-                },
-            )
+            if (showRestrictedHint && !uiState.anyGranted) {
+                RestrictedSettingsHint(
+                    onOpenAppInfo = {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:${context.packageName}"),
+                            ),
+                        )
+                    },
+                )
 
-            Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
+            }
 
             PermissionCard(
                 title = stringResource(R.string.perm_usage_title),
                 description = stringResource(R.string.perm_usage_desc),
                 granted = uiState.usageAccessGranted,
-                onGrant = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
+                onGrant = {
+                    pendingRestrictedCheck = true
+                    context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                },
             )
             Spacer(Modifier.height(16.dp))
             PermissionCard(
@@ -102,6 +121,7 @@ fun OnboardingScreen(
                 description = stringResource(R.string.perm_overlay_desc),
                 granted = uiState.overlayGranted,
                 onGrant = {
+                    pendingRestrictedCheck = true
                     context.startActivity(
                         Intent(
                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -115,14 +135,20 @@ fun OnboardingScreen(
                 title = stringResource(R.string.perm_accessibility_title),
                 description = stringResource(R.string.perm_accessibility_desc),
                 granted = uiState.accessibilityGranted,
-                onGrant = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                onGrant = {
+                    pendingRestrictedCheck = true
+                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                },
             )
             Spacer(Modifier.height(16.dp))
             PermissionCard(
                 title = stringResource(R.string.perm_notifications_title),
                 description = stringResource(R.string.perm_notifications_desc),
                 granted = uiState.notificationAccessGranted,
-                onGrant = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                onGrant = {
+                    pendingRestrictedCheck = true
+                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                },
             )
 
             Spacer(Modifier.height(24.dp))
