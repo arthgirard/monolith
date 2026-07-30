@@ -38,6 +38,7 @@
     <string name="no_tag_linked">No tag linked yet</string>
     <string name="link_tag_cta">Link an NFC tag</string>
     <string name="manage_apps_cta">Manage blocked apps</string>
+    <string name="manage_important_people_cta">Manage important people</string>
     <string name="emergency_bypass">Emergency bypass</string>
     <string name="bypass_confirm_title">Start 15-minute bypass?</string>
     <string name="bypass_confirm_body">This temporarily disables Monolith for 15 minutes. You only get one bypass per lock — tap your tag to reset it. Use only if you\'ve lost your tag.</string>
@@ -69,6 +70,19 @@
     <string name="dumb_phone_mode_confirm_start">Enable</string>
     <string name="select_all_cta">Select all</string>
     <string name="deselect_all_cta">Deselect all</string>
+
+    <!-- Important people -->
+    <string name="important_people_title">Important People</string>
+    <string name="important_people_subtitle">Notifications from these people get through Block Mode, per app.</string>
+    <string name="important_people_locked_banner">Unlock Block Mode to edit this list</string>
+    <string name="important_people_empty">No one added yet. Tap + to add someone.</string>
+    <string name="important_people_add_title">Add important person</string>
+    <string name="important_people_app_label">App</string>
+    <string name="important_people_name_label">Name (optional)</string>
+    <string name="important_people_handle_label">Handle (optional)</string>
+    <string name="important_people_field_hint">Enter a name or a handle — at least one is required.</string>
+    <string name="important_people_add_cta">Add</string>
+    <string name="important_people_remove_cta">Remove</string>
 
     <!-- NFC link -->
     <string name="nfc_link_title">Link Tag</string>

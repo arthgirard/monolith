@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -62,6 +63,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onManageApps: () -> Unit,
+    onManageImportantPeople: () -> Unit,
     onLinkTag: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -173,6 +175,12 @@ fun HomeScreen(
                 Icon(Icons.Filled.Apps, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.manage_apps_cta))
+            }
+
+            OutlinedButton(onClick = onManageImportantPeople, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.People, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.manage_important_people_cta))
             }
 
             if (uiState.blockState.isActive && !uiState.blockState.bypassUsed) {

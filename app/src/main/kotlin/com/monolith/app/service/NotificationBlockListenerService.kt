@@ -12,8 +12,10 @@ import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.monolith.app.domain.model.BlockState
+import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.BlockRepository
+import com.monolith.app.domain.repository.ImportantPersonRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,11 +42,13 @@ class NotificationBlockListenerService : NotificationListenerService() {
 
     @Inject lateinit var blockRepository: BlockRepository
     @Inject lateinit var appRepository: AppRepository
+    @Inject lateinit var importantPersonRepository: ImportantPersonRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Volatile private var blockState: BlockState = BlockState()
     @Volatile private var blockedPackages: Set<String> = emptySet()
+    @Volatile private var importantPeople: List<ImportantPerson> = emptyList()
     private val heldNotifications = ConcurrentLinkedQueue<StatusBarNotification>()
 
     override fun onListenerConnected() {
@@ -53,11 +57,13 @@ class NotificationBlockListenerService : NotificationListenerService() {
             combine(
                 blockRepository.observeBlockState(),
                 appRepository.observeBlockedPackages(),
-            ) { state, packages -> state to packages }
-                .collect { (state, packages) ->
+                importantPersonRepository.observeImportantPeople(),
+            ) { state, packages, people -> Triple(state, packages, people) }
+                .collect { (state, packages, people) ->
                     val wasActive = blockState.isActive
                     blockState = state
                     blockedPackages = packages
+                    importantPeople = people
                     if (!wasActive && state.isActive) sweepExistingNotifications()
                     if (wasActive && !state.isActive) restoreHeldNotifications()
                 }
@@ -68,8 +74,19 @@ class NotificationBlockListenerService : NotificationListenerService() {
         if (sbn.packageName == packageName) return
         if (!blockState.isEnforcing(System.currentTimeMillis())) return
         if (sbn.packageName !in blockedPackages) return
+        if (isFromImportantPerson(sbn)) return
         heldNotifications.add(sbn)
         cancelNotification(sbn.key)
+    }
+
+    /** Lets a notification through untouched when its sender matches an allowlisted person for this app. */
+    private fun isFromImportantPerson(sbn: StatusBarNotification): Boolean {
+        val extras = sbn.notification.extras
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)
+        val text = extras.getCharSequence(Notification.EXTRA_TEXT)
+        return importantPeople
+            .filter { it.packageName == sbn.packageName }
+            .any { it.matches(title, text) }
     }
 
     /**
@@ -80,7 +97,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
     private fun sweepExistingNotifications() {
         val existing = runCatching { activeNotifications }.getOrNull() ?: return
         existing
-            .filter { it.packageName != packageName && it.packageName in blockedPackages }
+            .filter { it.packageName != packageName && it.packageName in blockedPackages && !isFromImportantPerson(it) }
             .forEach { sbn ->
                 heldNotifications.add(sbn)
                 cancelNotification(sbn.key)

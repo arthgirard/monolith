@@ -2,9 +2,11 @@ package com.monolith.app.di
 
 import com.monolith.app.data.repository.AppRepositoryImpl
 import com.monolith.app.data.repository.BlockRepositoryImpl
+import com.monolith.app.data.repository.ImportantPersonRepositoryImpl
 import com.monolith.app.data.repository.UpdateRepositoryImpl
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.BlockRepository
+import com.monolith.app.domain.repository.ImportantPersonRepository
 import com.monolith.app.domain.repository.TagProvisioner
 import com.monolith.app.domain.repository.UpdateRepository
 import com.monolith.app.nfc.NfcManager
@@ -28,4 +30,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindUpdateRepository(impl: UpdateRepositoryImpl): UpdateRepository
+
+    @Binds
+    abstract fun bindImportantPersonRepository(impl: ImportantPersonRepositoryImpl): ImportantPersonRepository
 }

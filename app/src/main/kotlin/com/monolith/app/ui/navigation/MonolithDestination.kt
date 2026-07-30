@@ -7,5 +7,6 @@ sealed class MonolithDestination(val route: String) {
     data object OnboardingComplete : MonolithDestination("onboarding_complete")
     data object Home : MonolithDestination("home")
     data object AppSelector : MonolithDestination("app_selector")
+    data object ImportantPeople : MonolithDestination("important_people")
     data object NfcLink : MonolithDestination("nfc_link")
 }

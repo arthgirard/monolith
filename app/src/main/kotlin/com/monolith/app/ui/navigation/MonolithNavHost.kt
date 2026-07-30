@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import com.monolith.app.R
 import com.monolith.app.ui.appselector.AppSelectorScreen
 import com.monolith.app.ui.home.HomeScreen
+import com.monolith.app.ui.importantpeople.ImportantPeopleScreen
 import com.monolith.app.ui.nfclink.NfcLinkScreen
 import com.monolith.app.ui.onboarding.OnboardingCompleteScreen
 import com.monolith.app.ui.onboarding.OnboardingScreen
@@ -64,11 +65,15 @@ fun MonolithNavHost(
         composable(MonolithDestination.Home.route) {
             HomeScreen(
                 onManageApps = { navController.navigate(MonolithDestination.AppSelector.route) },
+                onManageImportantPeople = { navController.navigate(MonolithDestination.ImportantPeople.route) },
                 onLinkTag = { navController.navigate(MonolithDestination.NfcLink.route) },
             )
         }
         composable(MonolithDestination.AppSelector.route) {
             AppSelectorScreen(onBack = { navController.popBackStack() })
+        }
+        composable(MonolithDestination.ImportantPeople.route) {
+            ImportantPeopleScreen(onBack = { navController.popBackStack() })
         }
         composable(MonolithDestination.NfcLink.route) {
             NfcLinkScreen(onBack = { navController.popBackStack() })
