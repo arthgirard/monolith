@@ -48,9 +48,11 @@ fun MonolithNavHost(
         }
         composable(MonolithDestination.OnboardingNfcLink.route) {
             NfcLinkScreen(
-                onBack = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
+                onBack = { navController.popBackStack() },
                 onboardingStep = 2 to 2,
                 onboardingSubtitle = stringResource(R.string.onboarding_link_tag_subtitle),
+                onSkip = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
+                onLinked = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
             )
         }
         composable(MonolithDestination.OnboardingComplete.route) {

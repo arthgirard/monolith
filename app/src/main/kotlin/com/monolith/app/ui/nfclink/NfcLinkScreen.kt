@@ -1,6 +1,6 @@
 package com.monolith.app.ui.nfclink
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +36,8 @@ fun NfcLinkScreen(
     onBack: () -> Unit,
     onboardingStep: Pair<Int, Int>? = null,
     onboardingSubtitle: String? = null,
+    onSkip: (() -> Unit)? = null,
+    onLinked: (() -> Unit)? = null,
     viewModel: NfcLinkViewModel = hiltViewModel(),
 ) {
     val status by viewModel.status.collectAsState()
@@ -76,7 +78,6 @@ fun NfcLinkScreen(
                 .padding(padding)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
         ) {
             if (onboardingSubtitle != null) {
                 Text(
@@ -84,63 +85,78 @@ fun NfcLinkScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-            when (val current = status) {
-                NfcLinkStatus.NfcUnsupported -> {
-                    Text(
-                        stringResource(R.string.nfc_not_supported),
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
-                }
 
-                NfcLinkStatus.WaitingForTap -> {
-                    Icon(
-                        Icons.Filled.Nfc,
-                        contentDescription = null,
-                        modifier = Modifier.height(96.dp),
-                        tint = MaterialTheme.colorScheme.secondary,
-                    )
-                    Spacer(Modifier.height(24.dp))
-                    Text(
-                        stringResource(R.string.nfc_link_instructions),
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
-                }
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    when (val current = status) {
+                        NfcLinkStatus.NfcUnsupported -> {
+                            Text(
+                                stringResource(R.string.nfc_not_supported),
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                        }
 
-                NfcLinkStatus.Writing -> {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-                    Spacer(Modifier.height(24.dp))
-                    Text(stringResource(R.string.nfc_link_writing), style = MaterialTheme.typography.bodyLarge)
-                }
+                        NfcLinkStatus.WaitingForTap -> {
+                            Icon(
+                                Icons.Filled.Nfc,
+                                contentDescription = null,
+                                modifier = Modifier.height(96.dp),
+                                tint = MaterialTheme.colorScheme.secondary,
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            Text(
+                                stringResource(R.string.nfc_link_instructions),
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                        }
 
-                is NfcLinkStatus.Success -> {
-                    val message = if (current.mode == TagLinkMode.SMART_NDEF) {
-                        stringResource(R.string.nfc_link_success_smart)
-                    } else {
-                        stringResource(R.string.nfc_link_success_fallback)
+                        NfcLinkStatus.Writing -> {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.height(24.dp))
+                            Text(stringResource(R.string.nfc_link_writing), style = MaterialTheme.typography.bodyLarge)
+                        }
+
+                        is NfcLinkStatus.Success -> {
+                            val message = if (current.mode == TagLinkMode.SMART_NDEF) {
+                                stringResource(R.string.nfc_link_success_smart)
+                            } else {
+                                stringResource(R.string.nfc_link_success_fallback)
+                            }
+                            Text(
+                                message,
+                                style = MaterialTheme.typography.titleLarge,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            Button(onClick = onLinked ?: onBack, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(R.string.onboarding_continue))
+                            }
+                        }
+
+                        is NfcLinkStatus.Error -> {
+                            Text(
+                                stringResource(R.string.nfc_link_error),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Button(onClick = viewModel::retry) {
+                                Text(stringResource(R.string.cancel))
+                            }
+                        }
                     }
-                    Text(message, style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Spacer(Modifier.height(24.dp))
-                    Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.onboarding_continue))
-                    }
                 }
+            }
 
-                is NfcLinkStatus.Error -> {
-                    Text(
-                        stringResource(R.string.nfc_link_error),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = viewModel::retry) {
-                        Text(stringResource(R.string.cancel))
-                    }
+            if (onSkip != null && status !is NfcLinkStatus.Success) {
+                Button(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.not_now_cta))
                 }
             }
         }

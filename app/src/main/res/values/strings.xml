@@ -92,6 +92,7 @@
     <string name="nfc_link_success_fallback">UID successfully stored</string>
     <string name="nfc_link_error">Could not read tag. Try again.</string>
     <string name="nfc_not_supported">This device has no NFC hardware.</string>
+    <string name="not_now_cta">Not now</string>
 
     <!-- Overlay -->
     <string name="overlay_title">Monolith active</string>
