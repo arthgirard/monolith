@@ -27,15 +27,16 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Contactless
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -84,6 +85,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var showBypassConfirm by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -139,17 +141,32 @@ fun HomeScreen(
             ) {
                 Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineLarge)
 
-                IconButton(
-                    onClick = viewModel::checkForUpdates,
-                    enabled = updateState != UpdateUiState.Checking,
-                ) {
-                    if (updateState == UpdateUiState.Checking) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(
-                            Icons.Filled.SystemUpdate,
-                            contentDescription = stringResource(R.string.update_check_cta),
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        if (updateState == UpdateUiState.Checking) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_options_cta))
+                        }
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.update_check_cta)) },
+                            enabled = updateState != UpdateUiState.Checking,
+                            onClick = {
+                                showMenu = false
+                                viewModel.checkForUpdates()
+                            },
                         )
+                        if (uiState.linkedTag != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.relink_tag_cta)) },
+                                onClick = {
+                                    showMenu = false
+                                    onLinkTag()
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -168,16 +185,12 @@ fun HomeScreen(
                 onClick = onViewTimeSaved,
             )
 
-            OutlinedButton(onClick = onLinkTag, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Nfc, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (uiState.linkedTag == null) {
-                        stringResource(R.string.link_tag_cta)
-                    } else {
-                        "Re-link tag"
-                    },
-                )
+            if (uiState.linkedTag == null) {
+                OutlinedButton(onClick = onLinkTag, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Nfc, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.link_tag_cta))
+                }
             }
 
             OutlinedButton(onClick = onManageApps, modifier = Modifier.fillMaxWidth()) {
@@ -359,7 +372,7 @@ private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long, lin
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Icon(
-                    Icons.Filled.Contactless,
+                    Icons.Filled.Nfc,
                     contentDescription = "Tag linked",
                     tint = onBackground.copy(alpha = 0.7f),
                     modifier = Modifier.size(16.dp),

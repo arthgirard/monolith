@@ -37,6 +37,8 @@
     <string name="block_mode_inactive_desc">Tap your Monolith tag to lock in.</string>
     <string name="no_tag_linked">No tag linked yet</string>
     <string name="link_tag_cta">Link an NFC tag</string>
+    <string name="relink_tag_cta">Re-link tag</string>
+    <string name="more_options_cta">More options</string>
     <string name="manage_apps_cta">Manage blocked apps</string>
     <string name="manage_important_people_cta">Manage important people</string>
     <string name="time_saved_cta">Time gained</string>
