@@ -2,17 +2,23 @@ package com.monolith.app.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.DownloadState
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.NfcTapResult
+import com.monolith.app.domain.model.TimePeriodType
+import com.monolith.app.domain.model.TimeSavedBucket
 import com.monolith.app.domain.model.UpdateCheckResult
 import com.monolith.app.domain.usecase.CanInstallPackagesUseCase
 import com.monolith.app.domain.usecase.CheckForUpdateUseCase
 import com.monolith.app.domain.usecase.DownloadUpdateUseCase
+import com.monolith.app.domain.usecase.ObserveActiveSessionStartUseCase
+import com.monolith.app.domain.usecase.ObserveBlockSessionsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.ObserveLinkedTagUseCase
 import com.monolith.app.domain.usecase.StartBypassUseCase
+import com.monolith.app.domain.usecase.TimeSavedCalculator
 import com.monolith.app.domain.usecase.ToggleBlockModeFromTagUseCase
 import com.monolith.app.nfc.NfcBusMode
 import com.monolith.app.nfc.NfcTagBus
@@ -29,11 +35,15 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 data class HomeUiState(
     val blockState: BlockState = BlockState(),
     val linkedTag: NfcTagLink? = null,
+    val todaySavedMillis: Long = 0L,
+    val todayBuckets: List<TimeSavedBucket> = emptyList(),
     val nowMillis: Long = System.currentTimeMillis(),
 ) {
     val bypassSecondsRemaining: Long
@@ -64,6 +74,8 @@ sealed interface UpdateUiState {
 class HomeViewModel @Inject constructor(
     observeBlockState: ObserveBlockStateUseCase,
     observeLinkedTag: ObserveLinkedTagUseCase,
+    observeBlockSessions: ObserveBlockSessionsUseCase,
+    observeActiveSessionStart: ObserveActiveSessionStartUseCase,
     private val startBypass: StartBypassUseCase,
     private val toggleFromTag: ToggleBlockModeFromTagUseCase,
     private val nfcTagBus: NfcTagBus,
@@ -73,13 +85,28 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val ticker = MutableStateFlow(System.currentTimeMillis())
+    private val zone = ZoneId.systemDefault()
 
     val uiState: StateFlow<HomeUiState> = combine(
         observeBlockState(),
         observeLinkedTag(),
+        observeBlockSessions(),
+        observeActiveSessionStart(),
         ticker,
-    ) { blockState, linkedTag, now ->
-        HomeUiState(blockState = blockState, linkedTag = linkedTag, nowMillis = now)
+    ) { blockState, linkedTag, sessions, activeSessionStart, now ->
+        val ongoing = if (blockState.isActive && activeSessionStart != null) {
+            BlockSession(activeSessionStart, now)
+        } else {
+            null
+        }
+        val todayBuckets = TimeSavedCalculator.bucketsFor(TimePeriodType.DAY, LocalDate.now(zone), sessions, ongoing)
+        HomeUiState(
+            blockState = blockState,
+            linkedTag = linkedTag,
+            todaySavedMillis = todayBuckets.sumOf { it.durationMillis },
+            todayBuckets = todayBuckets,
+            nowMillis = now,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
     private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 1)

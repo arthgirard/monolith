@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Contactless
@@ -60,6 +64,10 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.TimePeriodType
+import com.monolith.app.domain.model.TimeSavedBucket
+import com.monolith.app.ui.timesaved.TimeSavedBarChart
+import com.monolith.app.util.formatDuration
 import kotlinx.coroutines.launch
 
 @Composable
@@ -67,6 +75,7 @@ fun HomeScreen(
     onManageApps: () -> Unit,
     onManageImportantPeople: () -> Unit,
     onLinkTag: () -> Unit,
+    onViewTimeSaved: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -151,6 +160,12 @@ fun HomeScreen(
                 isActive = uiState.blockState.isActive,
                 bypassSecondsRemaining = uiState.bypassSecondsRemaining,
                 linkedTag = uiState.linkedTag,
+            )
+
+            TimeSavedTodayCard(
+                todaySavedMillis = uiState.todaySavedMillis,
+                todayBuckets = uiState.todayBuckets,
+                onClick = onViewTimeSaved,
             )
 
             OutlinedButton(onClick = onLinkTag, modifier = Modifier.fillMaxWidth()) {
@@ -357,5 +372,54 @@ private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long, lin
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TimeSavedTodayCard(
+    todaySavedMillis: Long,
+    todayBuckets: List<TimeSavedBucket>,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.History,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                stringResource(R.string.time_saved_today_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                formatDuration(todaySavedMillis),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Spacer(Modifier.width(16.dp))
+        TimeSavedBarChart(
+            buckets = todayBuckets,
+            periodType = TimePeriodType.DAY,
+            modifier = Modifier.weight(1f),
+            chartHeight = 40.dp,
+            showLabels = false,
+        )
+        Spacer(Modifier.width(12.dp))
+        Icon(
+            Icons.Filled.ChevronRight,
+            contentDescription = stringResource(R.string.time_saved_cta),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

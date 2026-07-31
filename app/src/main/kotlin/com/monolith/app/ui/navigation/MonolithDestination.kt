@@ -9,4 +9,5 @@ sealed class MonolithDestination(val route: String) {
     data object AppSelector : MonolithDestination("app_selector")
     data object ImportantPeople : MonolithDestination("important_people")
     data object NfcLink : MonolithDestination("nfc_link")
+    data object TimeSaved : MonolithDestination("time_saved")
 }

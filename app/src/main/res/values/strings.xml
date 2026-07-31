@@ -39,6 +39,8 @@
     <string name="link_tag_cta">Link an NFC tag</string>
     <string name="manage_apps_cta">Manage blocked apps</string>
     <string name="manage_important_people_cta">Manage important people</string>
+    <string name="time_saved_cta">Time gained</string>
+    <string name="time_saved_today_label">Time gained today</string>
     <string name="emergency_bypass">Emergency bypass</string>
     <string name="bypass_confirm_title">Start 15-minute bypass?</string>
     <string name="bypass_confirm_body">This temporarily disables Monolith for 15 minutes. You only get one bypass per lock, tap your tag to reset it. Use only if you\'ve lost your tag.</string>
@@ -83,6 +85,17 @@
     <string name="important_people_field_hint">Enter a name or a handle. At least one is required.</string>
     <string name="important_people_add_cta">Add</string>
     <string name="important_people_remove_cta">Remove</string>
+
+    <!-- Time saved -->
+    <string name="time_saved_title">Time Gained</string>
+    <string name="time_saved_day">Day</string>
+    <string name="time_saved_week">Week</string>
+    <string name="time_saved_month">Month</string>
+    <string name="time_saved_year">Year</string>
+    <string name="time_saved_previous">Previous period</string>
+    <string name="time_saved_next">Next period</string>
+    <string name="time_saved_total_label">Total time gained</string>
+    <string name="time_saved_empty">No time gained yet for this period.</string>
 
     <!-- NFC link -->
     <string name="nfc_link_title">Link Tag</string>

@@ -1,6 +1,7 @@
 package com.monolith.app.data.repository
 
 import com.monolith.app.data.datastore.MonolithPreferences
+import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.repository.BlockRepository
@@ -32,4 +33,8 @@ class BlockRepositoryImpl @Inject constructor(
     override suspend fun saveLinkedTag(link: NfcTagLink) {
         preferences.saveLinkedTag(link)
     }
+
+    override fun observeBlockSessions(): Flow<List<BlockSession>> = preferences.blockSessions
+
+    override fun observeActiveSessionStart(): Flow<Long?> = preferences.activeSessionStart
 }

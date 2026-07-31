@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.model.NfcTagLink
@@ -29,6 +30,15 @@ private data class ImportantPersonDto(
     val handle: String?,
 )
 
+@Serializable
+private data class BlockSessionDto(
+    val start: Long,
+    val end: Long,
+)
+
+/** Sessions older than this are pruned on write; Year view only ever needs the trailing 12 months. */
+private const val SESSION_RETENTION_MILLIS: Long = 400L * 24 * 60 * 60 * 1000
+
 @Singleton
 class MonolithPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -42,6 +52,8 @@ class MonolithPreferences @Inject constructor(
         val TAG_MODE = stringPreferencesKey("tag_mode")
         val TAG_LINKED_AT = longPreferencesKey("tag_linked_at")
         val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
+        val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
+        val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -54,7 +66,24 @@ class MonolithPreferences @Inject constructor(
     }
 
     suspend fun setBlockModeActive(active: Boolean) {
-        context.dataStore.edit { it[Keys.BLOCK_MODE_ACTIVE] = active }
+        context.dataStore.edit { prefs ->
+            val wasActive = prefs[Keys.BLOCK_MODE_ACTIVE] ?: false
+            prefs[Keys.BLOCK_MODE_ACTIVE] = active
+
+            if (active && !wasActive) {
+                prefs[Keys.SESSION_STARTED_AT] = System.currentTimeMillis()
+            } else if (!active && wasActive) {
+                val startedAt = prefs[Keys.SESSION_STARTED_AT]
+                if (startedAt != null) {
+                    val now = System.currentTimeMillis()
+                    val cutoff = now - SESSION_RETENTION_MILLIS
+                    val updated = decodeBlockSessions(prefs[Keys.BLOCK_SESSIONS])
+                        .filter { it.end >= cutoff } + BlockSessionDto(startedAt, now)
+                    prefs[Keys.BLOCK_SESSIONS] = json.encodeToString(updated)
+                }
+                prefs.remove(Keys.SESSION_STARTED_AT)
+            }
+        }
     }
 
     suspend fun startBypass(durationMillis: Long) {
@@ -127,5 +156,18 @@ class MonolithPreferences @Inject constructor(
     private fun decodeImportantPeople(raw: String?): List<ImportantPersonDto> {
         if (raw == null) return emptyList()
         return runCatching { json.decodeFromString<List<ImportantPersonDto>>(raw) }.getOrDefault(emptyList())
+    }
+
+    val blockSessions: Flow<List<BlockSession>> = context.dataStore.data.map { prefs ->
+        decodeBlockSessions(prefs[Keys.BLOCK_SESSIONS]).map { BlockSession(it.start, it.end) }
+    }
+
+    val activeSessionStart: Flow<Long?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SESSION_STARTED_AT]
+    }
+
+    private fun decodeBlockSessions(raw: String?): List<BlockSessionDto> {
+        if (raw == null) return emptyList()
+        return runCatching { json.decodeFromString<List<BlockSessionDto>>(raw) }.getOrDefault(emptyList())
     }
 }
