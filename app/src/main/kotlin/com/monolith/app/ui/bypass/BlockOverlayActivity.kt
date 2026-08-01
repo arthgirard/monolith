@@ -92,6 +92,13 @@ class BlockOverlayActivity : ComponentActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(homeIntent)
+        // This instance isn't needed once dismissed: enforcement lives in the accessibility
+        // service, not here, and it'll be relaunched fresh next time a blocked app resurfaces.
+        // Without finishing, this Activity (and its ViewModel, NFC dispatch registration, and
+        // Compose composition) would linger indefinitely in the background on every "Go home"
+        // tap, since it's launched from a Service via FLAG_ACTIVITY_NEW_TASK and can't reliably
+        // count on task-affinity reuse to clean up a prior un-finished instance.
+        finish()
     }
 
     companion object {
