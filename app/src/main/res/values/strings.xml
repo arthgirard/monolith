@@ -119,4 +119,9 @@
     <string name="tap_overlay_unlocked">Monolith disabled</string>
     <string name="tap_overlay_unknown_tag">Unrecognized tag</string>
     <string name="tap_overlay_no_tag_linked">No tag linked yet</string>
+
+    <!-- Enforcement foreground notification -->
+    <string name="enforcement_notification_channel">Monolith active</string>
+    <string name="enforcement_notification_title">Monolith is active</string>
+    <string name="enforcement_notification_body">Tap your tag to stop the blocker.</string>
 </resources>

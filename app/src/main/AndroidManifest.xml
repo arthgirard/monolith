@@ -92,6 +92,19 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!--
+            Keeps the process foreground-prioritized while Monolith is on, so blocked-app opens
+            get an instant overlay instead of racing a cold app-process start.
+        -->
+        <service
+            android:name=".service.EnforcementForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps app-blocking enforcement instant while Monolith is active" />
+        </service>
+
         <service
             android:name=".service.NotificationBlockListenerService"
             android:exported="false"
