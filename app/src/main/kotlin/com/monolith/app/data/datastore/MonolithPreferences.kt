@@ -77,8 +77,22 @@ class MonolithPreferences @Inject constructor(
                 if (startedAt != null) {
                     val now = System.currentTimeMillis()
                     val cutoff = now - SESSION_RETENTION_MILLIS
+                    // Bypass (emergency mode) minutes don't count toward time gained: carve the
+                    // bypass window out of this session instead of crediting the full span.
+                    val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]?.takeIf { it > 0 }
+                    val newSegments = if (bypassExpiresAt != null) {
+                        val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
+                        val beforeBypassEnd = bypassStartedAt.coerceIn(startedAt, now)
+                        val afterBypassStart = bypassExpiresAt.coerceIn(startedAt, now)
+                        listOfNotNull(
+                            BlockSessionDto(startedAt, beforeBypassEnd).takeIf { beforeBypassEnd > startedAt },
+                            BlockSessionDto(afterBypassStart, now).takeIf { now > afterBypassStart },
+                        )
+                    } else {
+                        listOf(BlockSessionDto(startedAt, now))
+                    }
                     val updated = decodeBlockSessions(prefs[Keys.BLOCK_SESSIONS])
-                        .filter { it.end >= cutoff } + BlockSessionDto(startedAt, now)
+                        .filter { it.end >= cutoff } + newSegments
                     prefs[Keys.BLOCK_SESSIONS] = json.encodeToString(updated)
                 }
                 prefs.remove(Keys.SESSION_STARTED_AT)

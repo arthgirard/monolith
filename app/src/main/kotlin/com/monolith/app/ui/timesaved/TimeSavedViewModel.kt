@@ -54,8 +54,10 @@ class TimeSavedViewModel @Inject constructor(
         ticker,
         combine(periodType, anchor, ::Pair),
     ) { sessions, blockState, activeSessionStart, now, (type, anchorDate) ->
-        val ongoing = if (blockState.isActive && activeSessionStart != null) {
-            BlockSession(activeSessionStart, now)
+        val ongoing = if (blockState.isEnforcing(now) && activeSessionStart != null) {
+            // A past bypass this cycle doesn't count toward time gained, even after it expires.
+            val effectiveStart = maxOf(activeSessionStart, blockState.bypassExpiresAtMillis ?: activeSessionStart)
+            BlockSession(effectiveStart, now)
         } else {
             null
         }
