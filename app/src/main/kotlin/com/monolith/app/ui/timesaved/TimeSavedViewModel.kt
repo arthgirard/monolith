@@ -2,7 +2,6 @@ package com.monolith.app.ui.timesaved
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
 import com.monolith.app.domain.usecase.ObserveActiveSessionStartUseCase
@@ -54,13 +53,7 @@ class TimeSavedViewModel @Inject constructor(
         ticker,
         combine(periodType, anchor, ::Pair),
     ) { sessions, blockState, activeSessionStart, now, (type, anchorDate) ->
-        val ongoing = if (blockState.isEnforcing(now) && activeSessionStart != null) {
-            // A past bypass this cycle doesn't count toward time gained, even after it expires.
-            val effectiveStart = maxOf(activeSessionStart, blockState.bypassExpiresAtMillis ?: activeSessionStart)
-            BlockSession(effectiveStart, now)
-        } else {
-            null
-        }
+        val ongoing = TimeSavedCalculator.ongoingSessions(blockState, activeSessionStart, now)
         val buckets = TimeSavedCalculator.bucketsFor(type, anchorDate, sessions, ongoing)
         val (_, periodEnd) = TimeSavedCalculator.periodRange(type, anchorDate)
         TimeSavedUiState(

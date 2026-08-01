@@ -1,6 +1,7 @@
 package com.monolith.app.domain.usecase
 
 import com.monolith.app.domain.model.BlockSession
+import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
 import java.time.DayOfWeek
@@ -21,9 +22,9 @@ object TimeSavedCalculator {
         periodType: TimePeriodType,
         anchor: LocalDate,
         sessions: List<BlockSession>,
-        ongoing: BlockSession?,
+        ongoing: List<BlockSession> = emptyList(),
     ): List<TimeSavedBucket> {
-        val all = if (ongoing != null) sessions + ongoing else sessions
+        val all = sessions + ongoing
         val boundaries = bucketBoundaries(periodType, anchor)
         return boundaries.zipWithNext { start, end ->
             val duration = all.sumOf { overlapMillis(it, start, end) }
@@ -35,8 +36,31 @@ object TimeSavedCalculator {
         periodType: TimePeriodType,
         anchor: LocalDate,
         sessions: List<BlockSession>,
-        ongoing: BlockSession?,
+        ongoing: List<BlockSession> = emptyList(),
     ): Long = bucketsFor(periodType, anchor, sessions, ongoing).sumOf { it.durationMillis }
+
+    /**
+     * The still-in-progress session(s) not yet persisted to [sessions]. Normally a single span
+     * from [activeSessionStart] to [now], but an emergency bypass carves itself out: time already
+     * counted before the bypass started stays credited, nothing accrues while it's running, and
+     * counting resumes fresh from the moment it expires. Mirrors how MonolithPreferences splits
+     * the session when it's finally persisted, so the displayed total never jumps on that write.
+     */
+    fun ongoingSessions(blockState: BlockState, activeSessionStart: Long?, now: Long): List<BlockSession> {
+        if (!blockState.isActive || activeSessionStart == null) return emptyList()
+        val bypassExpiresAt = blockState.bypassExpiresAtMillis
+            ?: return listOf(BlockSession(activeSessionStart, now))
+
+        val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
+        val beforeBypassEnd = bypassStartedAt.coerceIn(activeSessionStart, now)
+        val segments = mutableListOf<BlockSession>()
+        if (beforeBypassEnd > activeSessionStart) segments.add(BlockSession(activeSessionStart, beforeBypassEnd))
+        if (!blockState.isBypassActive(now)) {
+            val afterBypassStart = bypassExpiresAt.coerceIn(activeSessionStart, now)
+            if (now > afterBypassStart) segments.add(BlockSession(afterBypassStart, now))
+        }
+        return segments
+    }
 
     /** Millis boundaries of the whole period, e.g. [monthStart, monthEnd). */
     fun periodRange(periodType: TimePeriodType, anchor: LocalDate): Pair<Long, Long> {

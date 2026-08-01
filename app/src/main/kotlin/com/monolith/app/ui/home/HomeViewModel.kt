@@ -2,7 +2,6 @@ package com.monolith.app.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.DownloadState
 import com.monolith.app.domain.model.NfcTagLink
@@ -94,13 +93,7 @@ class HomeViewModel @Inject constructor(
         observeActiveSessionStart(),
         ticker,
     ) { blockState, linkedTag, sessions, activeSessionStart, now ->
-        val ongoing = if (blockState.isEnforcing(now) && activeSessionStart != null) {
-            // A past bypass this cycle doesn't count toward time gained, even after it expires.
-            val effectiveStart = maxOf(activeSessionStart, blockState.bypassExpiresAtMillis ?: activeSessionStart)
-            BlockSession(effectiveStart, now)
-        } else {
-            null
-        }
+        val ongoing = TimeSavedCalculator.ongoingSessions(blockState, activeSessionStart, now)
         val todayBuckets = TimeSavedCalculator.bucketsFor(TimePeriodType.DAY, LocalDate.now(zone), sessions, ongoing)
         HomeUiState(
             blockState = blockState,

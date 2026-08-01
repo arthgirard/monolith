@@ -31,11 +31,12 @@ import javax.inject.Inject
  * reach the user through the notification shade either. Mirrors [AppBlockAccessibilityService]'s
  * state-tracking pattern; the two run independently since a device can enable one without the
  * other. Cancels both newly posted notifications and ones already in the shade the moment
- * Monolith turns on. Every cancelled notification is held in memory and reposted (as a
- * Monolith-authored stand-in, since the OS doesn't let a listener repost another app's notification
- * under its own identity) the moment Monolith turns off, so nothing is silently lost. The held
- * queue is memory-only: a process death mid-block drops it, same as the notifications themselves
- * would have been dropped by the block.
+ * enforcement starts (Monolith turning on). Every cancelled notification is held in memory and
+ * reposted (as a Monolith-authored stand-in, since the OS doesn't let a listener repost another
+ * app's notification under its own identity) the moment enforcement stops — Monolith turning off
+ * *or* an emergency bypass starting — so nothing is silently lost. The held queue is memory-only:
+ * a process death mid-block drops it, same as the notifications themselves would have been
+ * dropped by the block.
  */
 @AndroidEntryPoint
 class NotificationBlockListenerService : NotificationListenerService() {
@@ -60,12 +61,18 @@ class NotificationBlockListenerService : NotificationListenerService() {
                 importantPersonRepository.observeImportantPeople(),
             ) { state, packages, people -> Triple(state, packages, people) }
                 .collect { (state, packages, people) ->
-                    val wasActive = blockState.isActive
+                    val now = System.currentTimeMillis()
+                    val wasEnforcing = blockState.isEnforcing(now)
                     blockState = state
                     blockedPackages = packages
                     importantPeople = people
-                    if (!wasActive && state.isActive) sweepExistingNotifications()
-                    if (wasActive && !state.isActive) restoreHeldNotifications()
+                    val isEnforcingNow = state.isEnforcing(now)
+                    // Enforcement can stop either because Monolith turned off or because an
+                    // emergency bypass just started; either way, held notifications should
+                    // surface. Enforcement resuming (bypass starting, not just Monolith turning
+                    // on) re-arms the sweep too.
+                    if (!wasEnforcing && isEnforcingNow) sweepExistingNotifications()
+                    if (wasEnforcing && !isEnforcingNow) restoreHeldNotifications()
                 }
         }
     }
@@ -104,7 +111,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
             }
     }
 
-    /** Monolith just turned off: repost everything it swallowed so the user can catch up. */
+    /** Enforcement just stopped (off or bypassed): repost everything it swallowed so the user can catch up. */
     private fun restoreHeldNotifications() {
         val toRestore = generateSequence { heldNotifications.poll() }.toList()
         if (toRestore.isEmpty()) return
