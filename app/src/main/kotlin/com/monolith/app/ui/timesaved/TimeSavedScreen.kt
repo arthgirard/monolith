@@ -83,6 +83,11 @@ fun TimeSavedScreen(
                         selected = uiState.periodType == type,
                         onClick = { viewModel.selectPeriodType(type) },
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = periods.size),
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = MaterialTheme.colorScheme.surface,
+                            activeContentColor = MaterialTheme.colorScheme.secondary,
+                            activeBorderColor = MaterialTheme.colorScheme.secondary,
+                        ),
                         label = { Text(stringResource(labelRes)) },
                     )
                 }
