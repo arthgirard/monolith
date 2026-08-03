@@ -58,7 +58,7 @@ class BlockOverlayActivity : ComponentActivity() {
         })
 
         setContent {
-            MonolithTheme(darkTheme = true) {
+            MonolithTheme {
                 BlockOverlayScreen(
                     onGoHome = { goHome() },
                     onUnlocked = { finish() },

@@ -68,7 +68,7 @@ class NfcTapOverlayActivity : ComponentActivity() {
         handleIntent(intent)
 
         setContent {
-            MonolithTheme(darkTheme = true) {
+            MonolithTheme {
                 NfcTapOverlayScreen(onDone = { finish() })
             }
         }
