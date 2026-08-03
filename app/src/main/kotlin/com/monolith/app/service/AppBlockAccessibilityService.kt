@@ -20,10 +20,12 @@ import javax.inject.Inject
 
 /**
  * Watches foreground-app changes and throws up the block overlay whenever Monolith is
- * enforcing and the foreground package is on the blocked list. Settings is hard-blocked too,
- * so a user can't disable this service to escape Monolith: the NFC tag or the timed
- * emergency bypass are the only ways out. Monolith's own UI is deliberately left reachable,
- * since the emergency bypass button lives there.
+ * enforcing and the foreground package is on the blocked list. Settings isn't hard-blocked:
+ * a user determined to disable the accessibility service could just uninstall Monolith from
+ * the home screen instead, so hard-blocking it stops nothing while catching false positives
+ * like system dialogs (biometric/PIN confirmation, location prompts, ...) that happen to be
+ * hosted inside the Settings package. Monolith's own UI is deliberately left reachable, since
+ * the emergency bypass button lives there.
  */
 @AndroidEntryPoint
 class AppBlockAccessibilityService : AccessibilityService() {
@@ -61,17 +63,22 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
         val foregroundClass = event.className?.toString()
         // Some system dialogs live inside the Settings package but aren't a user navigating to
-        // Settings, e.g. Android's location-accuracy resolution dialog: any app requesting
-        // high-accuracy location (Maps included) can trigger it, and its window reports
-        // com.android.settings just like the real Settings app would. Without this carve-out
-        // that dialog gets hard-blocked, which throws the overlay over a non-blocked app that
-        // merely asked for location and stalls it until the app is force-killed and reopened.
-        if (foregroundPackage == SystemPackages.SETTINGS && foregroundClass in TRANSIENT_SETTINGS_DIALOG_CLASSES) {
-            return
+        // Settings, e.g. Android's location-accuracy resolution dialog or a biometric/PIN
+        // confirmation prompt (Microsoft Authenticator's "verify it's you" step included): any
+        // app can trigger these, and their window reports com.android.settings just like the
+        // real Settings app would. If the user has Settings on their blocked list, this carve-out
+        // stops that collateral blocking from throwing the overlay over an unrelated, unblocked
+        // app that merely triggered one of these system dialogs.
+        if (foregroundPackage == SystemPackages.SETTINGS) {
+            if (foregroundClass !in TRANSIENT_SETTINGS_DIALOG_CLASSES) {
+                // Diagnostic only: lets a real false positive be confirmed and its exact class
+                // added above, instead of guessing at OEM-specific confirm-credential activities.
+                Log.d(LOG_TAG, "settings window class=$foregroundClass (not in exemption list)")
+            }
+            if (foregroundClass in TRANSIENT_SETTINGS_DIALOG_CLASSES) return
         }
 
-        val shouldBlock = foregroundPackage in blockedPackages || foregroundPackage in HARD_BLOCKED_PACKAGES
-        if (!shouldBlock) return
+        if (foregroundPackage !in blockedPackages) return
 
         Log.d(LOG_TAG, "blocking foreground=$foregroundPackage class=$foregroundClass")
 
@@ -110,16 +117,22 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val LOG_TAG = "MonolithBlock"
-        private val HARD_BLOCKED_PACKAGES = setOf(SystemPackages.SETTINGS)
 
         /**
-         * AOSP's location-accuracy resolution dialog (see [SystemPackages.SETTINGS]'s
-         * `location.LocationAccuracyDialogActivity`), the known case of a transient helper
-         * window that reports under the Settings package without being a real Settings visit.
-         * Add more class names here if other false positives like this turn up.
+         * Transient helper windows that report under the Settings package without being a real
+         * Settings visit -- AOSP's location-accuracy resolution dialog, plus the device-credential
+         * confirmation screen (`KeyguardManager.createConfirmDeviceCredentialIntent()`) that any
+         * app can trigger for a "verify it's you" step, Microsoft Authenticator included. The
+         * confirm-credential entries are stock AOSP class names, unverified on a real device --
+         * OEM skins (Samsung, Xiaomi, ...) commonly ship their own class here instead. Watch
+         * logcat for "settings window class=... (not in exemption list)" from this service to
+         * catch and add whatever a given device actually reports.
          */
         private val TRANSIENT_SETTINGS_DIALOG_CLASSES = setOf(
             "com.android.settings.location.LocationAccuracyDialogActivity",
+            "com.android.settings.password.ConfirmDeviceCredentialActivity",
+            "com.android.settings.password.ConfirmLockPattern",
+            "com.android.settings.password.ConfirmLockPassword",
         )
     }
 }
