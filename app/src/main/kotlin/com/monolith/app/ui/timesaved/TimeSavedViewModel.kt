@@ -29,6 +29,7 @@ data class TimeSavedUiState(
     val totalMillis: Long = 0L,
     val periodLabel: String = "",
     val canGoNext: Boolean = false,
+    val personalRecordMillis: Long = 0L,
 )
 
 @HiltViewModel
@@ -56,12 +57,17 @@ class TimeSavedViewModel @Inject constructor(
         val ongoing = TimeSavedCalculator.ongoingSessions(blockState, activeSessionStart, now)
         val buckets = TimeSavedCalculator.bucketsFor(type, anchorDate, sessions, ongoing)
         val (_, periodEnd) = TimeSavedCalculator.periodRange(type, anchorDate)
+        // Bypass already carves a session into separate before/after entries (see
+        // TimeSavedCalculator.ongoingSessions' kdoc), so a session's own duration is already a
+        // streak with no bypass in it -- the longest one, live or past, is the personal record.
+        val personalRecord = (sessions + ongoing).maxOfOrNull { it.durationMillis } ?: 0L
         TimeSavedUiState(
             periodType = type,
             buckets = buckets,
             totalMillis = buckets.sumOf { it.durationMillis },
             periodLabel = labelFor(type, anchorDate),
             canGoNext = periodEnd <= now,
+            personalRecordMillis = personalRecord,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TimeSavedUiState())
 

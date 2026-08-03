@@ -116,6 +116,15 @@ fun TimeSavedScreen(
                 Text(formatDuration(uiState.totalMillis), style = MaterialTheme.typography.displaySmall)
             }
 
+            Column {
+                Text(
+                    stringResource(R.string.time_saved_record_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(formatDuration(uiState.personalRecordMillis), style = MaterialTheme.typography.titleLarge)
+            }
+
             if (uiState.totalMillis == 0L) {
                 Text(
                     stringResource(R.string.time_saved_empty),

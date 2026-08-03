@@ -31,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.nfc.NfcManager
 import com.monolith.app.nfc.NfcTagBus
+import com.monolith.app.service.BlockOverlayGuard
 import com.monolith.app.ui.theme.MonolithTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -40,6 +41,7 @@ class BlockOverlayActivity : ComponentActivity() {
 
     @Inject lateinit var nfcManager: NfcManager
     @Inject lateinit var nfcTagBus: NfcTagBus
+    @Inject lateinit var overlayGuard: BlockOverlayGuard
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,6 +76,9 @@ class BlockOverlayActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         nfcManager.enableForegroundDispatch(this)
+        // This Activity's own window has taken over the screen by now, so the temporary
+        // opaque cover the accessibility service painted while this was launching can go.
+        overlayGuard.hide()
     }
 
     override fun onPause() {

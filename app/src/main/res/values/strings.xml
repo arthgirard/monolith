@@ -97,6 +97,7 @@
     <string name="time_saved_previous">Previous period</string>
     <string name="time_saved_next">Next period</string>
     <string name="time_saved_total_label">Total time gained</string>
+    <string name="time_saved_record_label">Personal record (no blocked apps)</string>
     <string name="time_saved_empty">No time gained yet for this period.</string>
 
     <!-- NFC link -->
@@ -124,4 +125,5 @@
     <string name="enforcement_notification_channel">Monolith active</string>
     <string name="enforcement_notification_title">Monolith is active</string>
     <string name="enforcement_notification_body">Tap your tag to stop the blocker.</string>
+    <string name="enforcement_notification_body_paused">Timer paused — emergency bypass active.</string>
 </resources>

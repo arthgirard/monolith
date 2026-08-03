@@ -30,6 +30,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
     @Inject lateinit var blockRepository: BlockRepository
     @Inject lateinit var appRepository: AppRepository
+    @Inject lateinit var overlayGuard: BlockOverlayGuard
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -74,8 +75,27 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
         Log.d(LOG_TAG, "blocking foreground=$foregroundPackage class=$foregroundClass")
 
+        // Paint the opaque overlay before anything else: it's a pre-inflated window with no
+        // Activity launch in the critical path, so it covers the blocked app's already-drawn
+        // frame in this same tick. BlockOverlayActivity below still cold-starts its Hilt/Compose
+        // graph, but that now happens behind this cover instead of in full view.
+        val overlayShown = overlayGuard.show()
+
+        // GLOBAL_ACTION_HOME is dispatched to the system server asynchronously, so it can land
+        // *after* BlockOverlayActivity's own task has started, bumping that Activity behind the
+        // home launcher and leaving the block screen never shown. Only worth the race when the
+        // pixel-cover above couldn't paint (e.g. overlay permission revoked) and something needs
+        // to hide the blocked app immediately regardless.
+        if (!overlayShown) {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        }
+
         val overlayIntent = Intent(this, BlockOverlayActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_NO_ANIMATION,
+            )
             putExtra(BlockOverlayActivity.EXTRA_BLOCKED_PACKAGE, foregroundPackage)
         }
         startActivity(overlayIntent)
