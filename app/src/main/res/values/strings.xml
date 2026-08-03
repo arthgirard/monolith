@@ -68,7 +68,7 @@
     <string name="app_selector_title">Blocked Apps</string>
     <string name="app_selector_search_hint">Search apps</string>
     <string name="app_selector_locked_banner">Unlock Monolith to edit this list</string>
-    <string name="dumb_phone_mode_cta">Dumb Phone Mode</string>
+    <string name="dumb_phone_mode_cta">Dumb Phone</string>
     <string name="dumb_phone_mode_confirm_title">Enable Dumb Phone Mode?</string>
     <string name="dumb_phone_mode_confirm_body">Blocks every app except the essentials. This replaces your current selection.</string>
     <string name="dumb_phone_mode_confirm_start">Enable</string>
