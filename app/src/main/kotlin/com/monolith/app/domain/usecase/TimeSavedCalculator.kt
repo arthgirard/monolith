@@ -54,13 +54,24 @@ object TimeSavedCalculator {
         val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
         val beforeBypassEnd = bypassStartedAt.coerceIn(activeSessionStart, now)
         val segments = mutableListOf<BlockSession>()
-        if (beforeBypassEnd > activeSessionStart) segments.add(BlockSession(activeSessionStart, beforeBypassEnd))
+        if (beforeBypassEnd > activeSessionStart) {
+            segments.add(BlockSession(activeSessionStart, beforeBypassEnd))
+        }
         if (!blockState.isBypassActive(now)) {
             val afterBypassStart = bypassExpiresAt.coerceIn(activeSessionStart, now)
-            if (now > afterBypassStart) segments.add(BlockSession(afterBypassStart, now))
+            if (now > afterBypassStart) {
+                segments.add(BlockSession(afterBypassStart, now))
+            }
         }
         return segments
     }
+
+    /**
+     * Longest unbroken streak, live or past. A bypass ends the streak it interrupts -- the
+     * segment before it and the segment after it are separate streaks, not one merged run.
+     */
+    fun personalRecordMillis(sessions: List<BlockSession>, ongoing: List<BlockSession> = emptyList()): Long =
+        (sessions + ongoing).maxOfOrNull { it.durationMillis } ?: 0L
 
     /** Millis boundaries of the whole period, e.g. [monthStart, monthEnd). */
     fun periodRange(periodType: TimePeriodType, anchor: LocalDate): Pair<Long, Long> {

@@ -57,10 +57,7 @@ class TimeSavedViewModel @Inject constructor(
         val ongoing = TimeSavedCalculator.ongoingSessions(blockState, activeSessionStart, now)
         val buckets = TimeSavedCalculator.bucketsFor(type, anchorDate, sessions, ongoing)
         val (_, periodEnd) = TimeSavedCalculator.periodRange(type, anchorDate)
-        // Bypass already carves a session into separate before/after entries (see
-        // TimeSavedCalculator.ongoingSessions' kdoc), so a session's own duration is already a
-        // streak with no bypass in it -- the longest one, live or past, is the personal record.
-        val personalRecord = (sessions + ongoing).maxOfOrNull { it.durationMillis } ?: 0L
+        val personalRecord = TimeSavedCalculator.personalRecordMillis(sessions, ongoing)
         TimeSavedUiState(
             periodType = type,
             buckets = buckets,
