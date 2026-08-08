@@ -48,6 +48,11 @@ object TimeSavedCalculator {
      */
     fun ongoingSessions(blockState: BlockState, activeSessionStart: Long?, now: Long): List<BlockSession> {
         if (!blockState.isActive || activeSessionStart == null) return emptyList()
+        // The session clock can legitimately sit in the future: granting a per-app unlock
+        // fast-forwards it past the unlock window (see MonolithPreferences.grantAppUnlock) so
+        // nothing accrues while that app is exempted. Nothing is owed for that window, and the
+        // clamps below would otherwise be handed an inverted range (min > max) and throw.
+        if (now <= activeSessionStart) return emptyList()
         val bypassExpiresAt = blockState.bypassExpiresAtMillis
             ?: return listOf(BlockSession(activeSessionStart, now))
 

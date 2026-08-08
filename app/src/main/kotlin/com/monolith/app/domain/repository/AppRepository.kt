@@ -13,4 +13,7 @@ interface AppRepository {
 
     /** The device's current default SMS, dialer, and clock/alarm app packages, where resolvable. */
     suspend fun getEssentialPackages(): Set<String>
+
+    /** The launcher-visible label for [packageName], or the package name itself if unresolvable. */
+    suspend fun getAppLabel(packageName: String): String
 }

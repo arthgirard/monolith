@@ -114,6 +114,23 @@
     <string name="overlay_title">Monolith active</string>
     <string name="overlay_body">This app is blocked. Tap your tag to unlock.</string>
     <string name="overlay_go_home">Go to home screen</string>
+    <string name="overlay_break_code_title">Break the code to unlock</string>
+    <string name="overlay_break_code_subtitle">· 5 min</string>
+
+    <!-- Code-breaker challenge -->
+    <string name="codebreaker_title">Break the code</string>
+    <string name="codebreaker_legend_exact">Exact</string>
+    <string name="codebreaker_legend_partial">Wrong slot</string>
+    <string name="codebreaker_legend_miss">Absent</string>
+    <string name="codebreaker_tries_left">%1$d of %2$d tries left</string>
+    <string name="codebreaker_out_of_tries">Out of tries — new code, %1$d tries left</string>
+    <string name="codebreaker_clear">Clear</string>
+    <string name="codebreaker_submit">Submit guess</string>
+
+    <!-- Waiver step -->
+    <string name="waiver_title">Type this exactly to continue</string>
+    <string name="waiver_placeholder">Type the sentence above</string>
+    <string name="waiver_continue">Continue</string>
 
     <!-- Tap overlay (background NFC tap feedback) -->
     <string name="tap_overlay_locked">Monolith activated</string>
@@ -126,4 +143,5 @@
     <string name="enforcement_notification_title">Monolith is active</string>
     <string name="enforcement_notification_body">Tap your tag to stop the blocker.</string>
     <string name="enforcement_notification_body_paused">Timer paused — emergency bypass active.</string>
+    <string name="enforcement_notification_body_paused_unlock">Timer paused — an app is unlocked.</string>
 </resources>

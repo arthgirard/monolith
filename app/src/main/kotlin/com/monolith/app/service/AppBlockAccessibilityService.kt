@@ -7,6 +7,7 @@ import android.view.accessibility.AccessibilityEvent
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.SystemPackages
 import com.monolith.app.domain.repository.AppRepository
+import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.ui.bypass.BlockOverlayActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,12 +33,14 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
     @Inject lateinit var blockRepository: BlockRepository
     @Inject lateinit var appRepository: AppRepository
+    @Inject lateinit var appUnlockRepository: AppUnlockRepository
     @Inject lateinit var overlayGuard: BlockOverlayGuard
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Volatile private var blockState: BlockState = BlockState()
     @Volatile private var blockedPackages: Set<String> = emptySet()
+    @Volatile private var unlockedPackages: Map<String, Long> = emptyMap()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -45,10 +48,12 @@ class AppBlockAccessibilityService : AccessibilityService() {
             combine(
                 blockRepository.observeBlockState(),
                 appRepository.observeBlockedPackages(),
-            ) { state, packages -> state to packages }
-                .collect { (state, packages) ->
+                appUnlockRepository.observeUnlockedPackages(),
+            ) { state, packages, unlocks -> Triple(state, packages, unlocks) }
+                .collect { (state, packages, unlocks) ->
                     blockState = state
                     blockedPackages = packages
+                    unlockedPackages = unlocks
                 }
         }
     }
@@ -79,6 +84,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
         }
 
         if (foregroundPackage !in blockedPackages) return
+        if ((unlockedPackages[foregroundPackage] ?: 0L) > now) return
 
         Log.d(LOG_TAG, "blocking foreground=$foregroundPackage class=$foregroundClass")
 

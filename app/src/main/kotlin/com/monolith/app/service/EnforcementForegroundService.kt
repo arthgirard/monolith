@@ -11,6 +11,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.monolith.app.R
 import com.monolith.app.domain.model.BlockState
+import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.usecase.TimeSavedCalculator
 import com.monolith.app.ui.MainActivity
@@ -40,21 +41,25 @@ import javax.inject.Inject
 class EnforcementForegroundService : Service() {
 
     @Inject lateinit var blockRepository: BlockRepository
+    @Inject lateinit var appUnlockRepository: AppUnlockRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Fires exactly when a running bypass expires, so the chronometer resumes the instant it's
-    // over even though nothing writes to the block-state store at that moment. Re-armed (and any
-    // stale prior instance cancelled) on every state change.
-    private var bypassResumeJob: Job? = null
+    // Fires exactly when the last thing pausing the timer (a bypass, a per-app unlock) expires, so
+    // the chronometer resumes the instant it's over even though nothing writes to the block-state
+    // store at that moment. Re-armed (and any stale prior instance cancelled) on every change.
+    private var resumeJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIFICATION_ID, buildNotification(elapsedMillis = 0L, bypassActive = false))
+        startForeground(NOTIFICATION_ID, buildNotification(elapsedMillis = 0L, pauseBodyRes = null))
 
-        blockRepository.observeBlockState()
-            .combine(blockRepository.observeActiveSessionStart()) { state, sessionStart -> state to sessionStart }
-            .onEach { (state, sessionStart) -> onStateChanged(state, sessionStart) }
+        combine(
+            blockRepository.observeBlockState(),
+            blockRepository.observeActiveSessionStart(),
+            appUnlockRepository.observeUnlockedPackages(),
+        ) { state, sessionStart, unlocks -> Triple(state, sessionStart, unlocks) }
+            .onEach { (state, sessionStart, unlocks) -> onStateChanged(state, sessionStart, unlocks) }
             .launchIn(serviceScope)
     }
 
@@ -67,39 +72,57 @@ class EnforcementForegroundService : Service() {
         super.onDestroy()
     }
 
-    private fun onStateChanged(state: BlockState, sessionStart: Long?) {
-        bypassResumeJob?.cancel()
+    private fun onStateChanged(state: BlockState, sessionStart: Long?, unlocks: Map<String, Long>) {
+        resumeJob?.cancel()
 
         if (!state.isActive) {
             stopSelf()
             return
         }
 
-        render(state, sessionStart)
+        render(state, sessionStart, unlocks)
 
-        val bypassExpiresAt = state.bypassExpiresAtMillis
         val now = System.currentTimeMillis()
-        if (bypassExpiresAt != null && state.isBypassActive(now)) {
-            bypassResumeJob = serviceScope.launch {
-                delay(bypassExpiresAt - now)
-                render(state, sessionStart)
-            }
+        val pausedUntil = pausedUntil(state, unlocks, now) ?: return
+        resumeJob = serviceScope.launch {
+            delay(pausedUntil - now)
+            render(state, sessionStart, unlocks)
         }
+    }
+
+    /**
+     * When the timer stops being paused, or null if it isn't. Both a running emergency bypass and
+     * a live per-app unlock pause it: neither one's minutes count toward the streak, so neither
+     * should tick. Overlapping windows hold the pause until the last of them expires.
+     */
+    private fun pausedUntil(state: BlockState, unlocks: Map<String, Long>, now: Long): Long? {
+        val bypassUntil = state.bypassExpiresAtMillis?.takeIf { state.isBypassActive(now) }
+        val unlockUntil = unlocks.values.filter { it > now }.maxOrNull()
+        return listOfNotNull(bypassUntil, unlockUntil).maxOrNull()
     }
 
     /**
      * Time already accrued this session is [TimeSavedCalculator.ongoingSessions]' sum, which
      * already carves out any bypass window -- so pausing and resuming just means recomputing this
-     * against the same, never-cleared [sessionStart] rather than restarting a fresh clock.
+     * against the same [sessionStart] rather than restarting a fresh clock. A per-app unlock is
+     * different in kind: granting it ends the streak outright and fast-forwards [sessionStart]
+     * past the unlock window (see MonolithPreferences.grantAppUnlock), so this reads as zero for
+     * the whole window and the timer starts counting up from zero when it expires.
      */
-    private fun render(state: BlockState, sessionStart: Long?) {
+    private fun render(state: BlockState, sessionStart: Long?, unlocks: Map<String, Long>) {
         val now = System.currentTimeMillis()
         val elapsedMillis = TimeSavedCalculator.ongoingSessions(state, sessionStart, now).sumOf { it.durationMillis }
-        val notification = buildNotification(elapsedMillis, bypassActive = state.isBypassActive(now))
+        val pauseBodyRes = when {
+            pausedUntil(state, unlocks, now) == null -> null
+            state.isBypassActive(now) -> R.string.enforcement_notification_body_paused
+            else -> R.string.enforcement_notification_body_paused_unlock
+        }
+        val notification = buildNotification(elapsedMillis, pauseBodyRes)
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
     }
 
-    private fun buildNotification(elapsedMillis: Long, bypassActive: Boolean): Notification {
+    /** [pauseBodyRes] non-null means the timer is paused, and says which pause the user is in. */
+    private fun buildNotification(elapsedMillis: Long, pauseBodyRes: Int?): Notification {
         ensureChannel()
         val contentIntent = PendingIntent.getActivity(
             this,
@@ -115,11 +138,11 @@ class EnforcementForegroundService : Service() {
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
 
-        if (bypassActive) {
+        if (pauseBodyRes != null) {
             // Chronometer off: freezes the displayed time at exactly what render() last computed,
-            // instead of ticking through the bypass window it's not supposed to count.
+            // instead of ticking through a window it's not supposed to count.
             builder
-                .setContentText(getString(R.string.enforcement_notification_body_paused))
+                .setContentText(getString(pauseBodyRes))
                 .setShowWhen(false)
                 .setUsesChronometer(false)
         } else {

@@ -52,6 +52,12 @@ class AppRepositoryImpl @Inject constructor(
         preferences.setBlockedPackages(packages)
     }
 
+    override suspend fun getAppLabel(packageName: String): String = withContext(Dispatchers.IO) {
+        val pm = context.packageManager
+        runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }
+            .getOrDefault(packageName)
+    }
+
     override suspend fun getEssentialPackages(): Set<String> = withContext(Dispatchers.IO) {
         val pm = context.packageManager
 

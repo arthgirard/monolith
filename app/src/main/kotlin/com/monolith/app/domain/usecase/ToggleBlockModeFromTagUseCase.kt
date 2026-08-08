@@ -2,6 +2,7 @@ package com.monolith.app.domain.usecase
 
 import android.nfc.Tag
 import com.monolith.app.domain.model.NfcTapResult
+import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.TagProvisioner
 import kotlinx.coroutines.flow.first
@@ -11,6 +12,7 @@ import javax.inject.Inject
 class ToggleBlockModeFromTagUseCase @Inject constructor(
     private val tagProvisioner: TagProvisioner,
     private val blockRepository: BlockRepository,
+    private val appUnlockRepository: AppUnlockRepository,
 ) {
     suspend operator fun invoke(tag: Tag): NfcTapResult {
         val linked = blockRepository.observeLinkedTag().first()
@@ -27,6 +29,12 @@ class ToggleBlockModeFromTagUseCase @Inject constructor(
         // countdown can't linger on screen after the tap turned Monolith off, and frees up the
         // one-bypass-per-cycle allowance for next time Monolith comes on.
         blockRepository.clearBypass()
+        // Same reasoning for per-app unlocks and their code-breakers: a five-minute unlock bought
+        // in the old cycle must not still be running when Monolith comes back on -- that app
+        // blocks again like any other, and its next attempt starts from a new puzzle. The session
+        // clock resets itself alongside this, since setBlockModeActive drops SESSION_STARTED_AT on
+        // the way off (fast-forwarded unlock window included) and restamps it on the way on.
+        appUnlockRepository.clearUnlocks()
         return NfcTapResult.Toggled(nowActive)
     }
 }

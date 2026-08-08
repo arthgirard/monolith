@@ -1,6 +1,7 @@
 package com.monolith.app.data.datastore
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -10,8 +11,10 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
+import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.SlotResult
 import com.monolith.app.domain.model.TagLinkMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -36,6 +39,42 @@ private data class BlockSessionDto(
     val end: Long,
 )
 
+@Serializable
+private data class AppUnlockDto(
+    val packageName: String,
+    val expiresAt: Long,
+)
+
+@Serializable
+private data class CodeBreakerGuessDto(
+    val values: List<Int>,
+    val slotResults: List<String>,
+)
+
+@Serializable
+private data class CodeBreakerDto(
+    val packageName: String,
+    val secret: List<Int>,
+    val guesses: List<CodeBreakerGuessDto> = emptyList(),
+) {
+    fun toDomain(): CodeBreaker = CodeBreaker(
+        secret = secret,
+        guesses = guesses.map { dto ->
+            CodeBreaker.Guess(dto.values, dto.slotResults.map { SlotResult.valueOf(it) })
+        },
+    )
+
+    companion object {
+        fun from(packageName: String, codeBreaker: CodeBreaker): CodeBreakerDto = CodeBreakerDto(
+            packageName = packageName,
+            secret = codeBreaker.secret,
+            guesses = codeBreaker.guesses.map { guess ->
+                CodeBreakerGuessDto(guess.values, guess.slotResults.map { it.name })
+            },
+        )
+    }
+}
+
 /** Sessions older than this are pruned on write; Year view only ever needs the trailing 12 months. */
 private const val SESSION_RETENTION_MILLIS: Long = 400L * 24 * 60 * 60 * 1000
 
@@ -54,6 +93,8 @@ class MonolithPreferences @Inject constructor(
         val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
         val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
         val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
+        val APP_UNLOCKS = stringPreferencesKey("app_unlocks")
+        val APP_CODE_BREAKERS = stringPreferencesKey("app_code_breakers")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -75,25 +116,7 @@ class MonolithPreferences @Inject constructor(
             } else if (!active && wasActive) {
                 val startedAt = prefs[Keys.SESSION_STARTED_AT]
                 if (startedAt != null) {
-                    val now = System.currentTimeMillis()
-                    val cutoff = now - SESSION_RETENTION_MILLIS
-                    // Bypass (emergency mode) minutes don't count toward time gained: carve the
-                    // bypass window out of this session instead of crediting the full span.
-                    val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]?.takeIf { it > 0 }
-                    val newSegments = if (bypassExpiresAt != null) {
-                        val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
-                        val beforeBypassEnd = bypassStartedAt.coerceIn(startedAt, now)
-                        val afterBypassStart = bypassExpiresAt.coerceIn(startedAt, now)
-                        listOfNotNull(
-                            BlockSessionDto(startedAt, beforeBypassEnd).takeIf { beforeBypassEnd > startedAt },
-                            BlockSessionDto(afterBypassStart, now).takeIf { now > afterBypassStart },
-                        )
-                    } else {
-                        listOf(BlockSessionDto(startedAt, now))
-                    }
-                    val updated = decodeBlockSessions(prefs[Keys.BLOCK_SESSIONS])
-                        .filter { it.end >= cutoff } + newSegments
-                    prefs[Keys.BLOCK_SESSIONS] = json.encodeToString(updated)
+                    commitRunningSegment(prefs, startedAt, System.currentTimeMillis())
                 }
                 prefs.remove(Keys.SESSION_STARTED_AT)
             }
@@ -108,6 +131,101 @@ class MonolithPreferences @Inject constructor(
 
     suspend fun clearBypass() {
         context.dataStore.edit { it.remove(Keys.BYPASS_EXPIRES_AT) }
+    }
+
+    /**
+     * Drops every per-app unlock and every stored code-breaker at once. A tag tap ends the cycle
+     * those belong to: an unlock window must not survive into the next time Monolith comes on
+     * (the app would silently stay exempt), and a puzzle from the old cycle must not be resumable.
+     */
+    suspend fun clearAppUnlocks() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.APP_UNLOCKS)
+            prefs.remove(Keys.APP_CODE_BREAKERS)
+        }
+    }
+
+    /**
+     * Persists [startedAt]..[now] as finished block-session segment(s), carving out any live
+     * bypass window exactly like the real session-end path below. Shared by session end and by
+     * [grantAppUnlock], since an app unlock ends the current streak the same way a bypass does --
+     * it just doesn't turn Monolith off to do it.
+     */
+    private fun commitRunningSegment(prefs: MutablePreferences, startedAt: Long, now: Long) {
+        // [startedAt] can sit in the future: [grantAppUnlock] fast-forwards the session clock past
+        // an app's unlock window. Nothing has accrued yet in that case -- committing anyway would
+        // write a negative-length segment, and hand the clamps below an inverted range that throws.
+        if (now <= startedAt) return
+        val cutoff = now - SESSION_RETENTION_MILLIS
+        // Bypass (emergency mode) minutes don't count toward time gained: carve the bypass
+        // window out of this session instead of crediting the full span.
+        val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]?.takeIf { it > 0 }
+        val newSegments = if (bypassExpiresAt != null) {
+            val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
+            val beforeBypassEnd = bypassStartedAt.coerceIn(startedAt, now)
+            val afterBypassStart = bypassExpiresAt.coerceIn(startedAt, now)
+            listOfNotNull(
+                BlockSessionDto(startedAt, beforeBypassEnd).takeIf { beforeBypassEnd > startedAt },
+                BlockSessionDto(afterBypassStart, now).takeIf { now > afterBypassStart },
+            )
+        } else {
+            listOf(BlockSessionDto(startedAt, now))
+        }
+        val updated = decodeBlockSessions(prefs[Keys.BLOCK_SESSIONS]).filter { it.end >= cutoff } + newSegments
+        prefs[Keys.BLOCK_SESSIONS] = json.encodeToString(updated)
+    }
+
+    /**
+     * Grants [packageName] an exception from enforcement until [durationMillis] from now, and
+     * ends the current streak the same way a bypass would: the running segment up to now is
+     * committed, and the session clock is fast-forwarded past the unlock window so nothing
+     * accrues during it. Unlike [startBypass] this doesn't touch [Keys.BYPASS_EXPIRES_AT] --
+     * every other blocked app stays blocked, only [packageName] is exempted.
+     */
+    suspend fun grantAppUnlock(packageName: String, durationMillis: Long) {
+        context.dataStore.edit { prefs ->
+            val now = System.currentTimeMillis()
+            val isActive = prefs[Keys.BLOCK_MODE_ACTIVE] ?: false
+            val startedAt = prefs[Keys.SESSION_STARTED_AT]
+            if (isActive && startedAt != null) {
+                if (now > startedAt) commitRunningSegment(prefs, startedAt, now)
+                prefs[Keys.SESSION_STARTED_AT] = maxOf(startedAt, now) + durationMillis
+            }
+
+            val unlocks = decodeAppUnlocks(prefs[Keys.APP_UNLOCKS]).filter {
+                it.expiresAt > now && it.packageName != packageName
+            } + AppUnlockDto(packageName, now + durationMillis)
+            prefs[Keys.APP_UNLOCKS] = json.encodeToString(unlocks)
+
+            val codeBreakers = decodeCodeBreakers(prefs[Keys.APP_CODE_BREAKERS]).filterNot { it.packageName == packageName }
+            prefs[Keys.APP_CODE_BREAKERS] = json.encodeToString(codeBreakers)
+        }
+    }
+
+    val appUnlocks: Flow<Map<String, Long>> = context.dataStore.data.map { prefs ->
+        decodeAppUnlocks(prefs[Keys.APP_UNLOCKS]).associate { it.packageName to it.expiresAt }
+    }
+
+    val codeBreakers: Flow<Map<String, CodeBreaker>> = context.dataStore.data.map { prefs ->
+        decodeCodeBreakers(prefs[Keys.APP_CODE_BREAKERS]).associate { it.packageName to it.toDomain() }
+    }
+
+    suspend fun saveCodeBreaker(packageName: String, codeBreaker: CodeBreaker) {
+        context.dataStore.edit { prefs ->
+            val updated = decodeCodeBreakers(prefs[Keys.APP_CODE_BREAKERS]).filterNot { it.packageName == packageName } +
+                CodeBreakerDto.from(packageName, codeBreaker)
+            prefs[Keys.APP_CODE_BREAKERS] = json.encodeToString(updated)
+        }
+    }
+
+    private fun decodeAppUnlocks(raw: String?): List<AppUnlockDto> {
+        if (raw == null) return emptyList()
+        return runCatching { json.decodeFromString<List<AppUnlockDto>>(raw) }.getOrDefault(emptyList())
+    }
+
+    private fun decodeCodeBreakers(raw: String?): List<CodeBreakerDto> {
+        if (raw == null) return emptyList()
+        return runCatching { json.decodeFromString<List<CodeBreakerDto>>(raw) }.getOrDefault(emptyList())
     }
 
     val linkedTag: Flow<NfcTagLink?> = context.dataStore.data.map { prefs ->
