@@ -52,19 +52,29 @@ class FakeBlockRepository(initiallyActive: Boolean = false) : BlockRepository {
 }
 
 class FakeAppUnlockRepository : AppUnlockRepository {
+    private val unlocks = MutableStateFlow<Map<String, Long>>(emptyMap())
+    private val codeBreakers = MutableStateFlow<Map<String, CodeBreaker>>(emptyMap())
+
     var clearUnlocksCount: Int = 0
         private set
 
-    override fun observeUnlockedPackages(): Flow<Map<String, Long>> = MutableStateFlow(emptyMap())
+    override fun observeUnlockedPackages(): Flow<Map<String, Long>> = unlocks
 
-    override fun observeCodeBreakers(): Flow<Map<String, CodeBreaker>> = MutableStateFlow(emptyMap())
+    override fun observeCodeBreakers(): Flow<Map<String, CodeBreaker>> = codeBreakers
 
-    override suspend fun saveCodeBreaker(packageName: String, codeBreaker: CodeBreaker) = Unit
+    override suspend fun saveCodeBreaker(packageName: String, codeBreaker: CodeBreaker) {
+        codeBreakers.value = codeBreakers.value + (packageName to codeBreaker)
+    }
 
-    override suspend fun grantUnlock(packageName: String, durationMillis: Long) = Unit
+    override suspend fun grantUnlock(packageName: String, durationMillis: Long) {
+        unlocks.value = unlocks.value + (packageName to System.currentTimeMillis() + durationMillis)
+        codeBreakers.value = codeBreakers.value - packageName
+    }
 
     override suspend fun clearUnlocks() {
         clearUnlocksCount++
+        unlocks.value = emptyMap()
+        codeBreakers.value = emptyMap()
     }
 }
 
