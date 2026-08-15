@@ -34,7 +34,7 @@
     <string name="block_mode_active">Monolith activated</string>
     <string name="block_mode_inactive">Monolith disabled</string>
     <string name="block_mode_active_desc">Tap your Monolith tag to unlock.</string>
-    <string name="block_mode_inactive_desc">Tap your Monolith tag to lock in.</string>
+    <string name="block_mode_inactive_desc">Tap your Monolith tag or this box to lock in.</string>
     <string name="no_tag_linked">No tag linked yet</string>
     <string name="link_tag_cta">Link an NFC tag</string>
     <string name="relink_tag_cta">Re-link tag</string>
@@ -50,6 +50,31 @@
     <string name="bypass_active_prefix">Bypass ends in</string>
     <string name="cancel">Cancel</string>
     <string name="copyright_notice">© Arthur Girard 2026</string>
+
+    <!-- Activation without the tag -->
+    <string name="activate_confirm_title">Turn Monolith on?</string>
+    <string name="activate_confirm_body">Blocking starts right away. Turning it back off needs your tag, so make sure you know where it is.</string>
+    <string name="activate_confirm_start">Turn on</string>
+    <string name="next_scheduled_prefix">Next block</string>
+
+    <!-- Schedules -->
+    <string name="schedules_cta">Manage schedules</string>
+    <string name="schedules_title">Schedules</string>
+    <string name="schedules_subtitle">Monolith switches on by itself at these times. It never switches off on its own, that still takes your tag.</string>
+    <string name="schedules_empty">No schedules yet. Add one to have Monolith come on without you.</string>
+    <string name="schedules_add_cta">Add schedule</string>
+    <string name="schedules_edit_title">Edit schedule</string>
+    <string name="schedules_new_title">New schedule</string>
+    <string name="schedules_days_label">Repeat on</string>
+    <string name="schedules_delete_cta">Delete schedule</string>
+    <string name="schedules_save_cta">Save</string>
+    <string name="schedules_every_day">Every day</string>
+    <string name="schedules_weekdays">Weekdays</string>
+    <string name="schedules_weekends">Weekends</string>
+    <string name="schedules_no_days">Pick at least one day</string>
+    <string name="schedule_notification_channel">Scheduled blocks</string>
+    <string name="schedule_notification_title">Monolith is on</string>
+    <string name="schedule_notification_body">A schedule started blocking. Tap your tag to unlock.</string>
 
     <!-- Updates -->
     <string name="update_check_cta">Check for updates</string>

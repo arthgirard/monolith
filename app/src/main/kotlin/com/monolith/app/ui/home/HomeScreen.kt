@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -58,6 +59,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -71,7 +73,9 @@ import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
 import com.monolith.app.ui.timesaved.TimeSavedBarChart
 import com.monolith.app.util.formatDuration
+import com.monolith.app.util.formatNextFire
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
 
 @Composable
 fun HomeScreen(
@@ -79,6 +83,7 @@ fun HomeScreen(
     onManageImportantPeople: () -> Unit,
     onLinkTag: () -> Unit,
     onViewTimeSaved: () -> Unit,
+    onManageSchedules: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -87,6 +92,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var showBypassConfirm by remember { mutableStateOf(false) }
+    var showActivateConfirm by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -183,6 +189,9 @@ fun HomeScreen(
                 isActive = uiState.blockState.isActive,
                 bypassSecondsRemaining = uiState.bypassSecondsRemaining,
                 linkedTag = uiState.linkedTag,
+                nextScheduledFire = uiState.nextScheduledFire,
+                // Only while off. There is no tap-to-deactivate counterpart: that stays tag-only.
+                onActivate = { showActivateConfirm = true }.takeIf { !uiState.blockState.isActive },
             )
 
             TimeSavedTodayCard(
@@ -209,6 +218,12 @@ fun HomeScreen(
                 Icon(Icons.Filled.People, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.manage_important_people_cta))
+            }
+
+            OutlinedButton(onClick = onManageSchedules, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.Schedule, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.schedules_cta))
             }
 
             if (uiState.blockState.isActive && !uiState.blockState.bypassUsed) {
@@ -250,6 +265,29 @@ fun HomeScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showBypassConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showActivateConfirm) {
+        AlertDialog(
+            onDismissRequest = { showActivateConfirm = false },
+            title = { Text(stringResource(R.string.activate_confirm_title)) },
+            // Turning on is free, turning off costs a tap. Worth one deliberate confirmation so
+            // nobody locks themselves out of their phone by brushing a button.
+            text = { Text(stringResource(R.string.activate_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.activate()
+                    showActivateConfirm = false
+                }) {
+                    Text(stringResource(R.string.activate_confirm_start))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showActivateConfirm = false }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
@@ -321,14 +359,25 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long, linkedTag: NfcTagLink?) {
+private fun BlockStatusCard(
+    isActive: Boolean,
+    bypassSecondsRemaining: Long,
+    linkedTag: NfcTagLink?,
+    nextScheduledFire: ZonedDateTime?,
+    onActivate: (() -> Unit)?,
+) {
     val background = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     val onBackground = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val shape = RoundedCornerShape(20.dp)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(background, RoundedCornerShape(20.dp))
+            .clip(shape)
+            .background(background, shape)
+            // Clip before clickable so the ripple follows the rounded corners rather than
+            // spilling into the square bounds.
+            .then(if (onActivate != null) Modifier.clickable(onClick = onActivate) else Modifier)
             .padding(24.dp),
     ) {
         Column {
@@ -355,6 +404,16 @@ private fun BlockStatusCard(isActive: Boolean, bypassSecondsRemaining: Long, lin
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.no_tag_linked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onBackground.copy(alpha = 0.7f),
+                )
+            }
+            // Only while Monolith is off: once it's on, the next fire is a no-op and saying so
+            // would read as a promise that something changes then.
+            if (!isActive && nextScheduledFire != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "${stringResource(R.string.next_scheduled_prefix)} ${formatNextFire(nextScheduledFire)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = onBackground.copy(alpha = 0.7f),
                 )

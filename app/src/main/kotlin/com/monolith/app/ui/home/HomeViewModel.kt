@@ -4,15 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.DownloadState
+import com.monolith.app.domain.model.earliestNextFire
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.NfcTapResult
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
 import com.monolith.app.domain.model.UpdateCheckResult
+import com.monolith.app.domain.usecase.ActivateBlockModeUseCase
 import com.monolith.app.domain.usecase.CanInstallPackagesUseCase
 import com.monolith.app.domain.usecase.CheckForUpdateUseCase
 import com.monolith.app.domain.usecase.DownloadUpdateUseCase
 import com.monolith.app.domain.usecase.ObserveActiveSessionStartUseCase
+import com.monolith.app.domain.usecase.ObserveBlockSchedulesUseCase
 import com.monolith.app.domain.usecase.ObserveBlockSessionsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.ObserveLinkedTagUseCase
@@ -23,6 +26,7 @@ import com.monolith.app.nfc.NfcBusMode
 import com.monolith.app.nfc.NfcTagBus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -36,6 +40,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -44,6 +49,8 @@ data class HomeUiState(
     val todaySavedMillis: Long = 0L,
     val todayBuckets: List<TimeSavedBucket> = emptyList(),
     val nowMillis: Long = System.currentTimeMillis(),
+    /** Next armed schedule, or null when none is set. Only worth showing while Monolith is off. */
+    val nextScheduledFire: ZonedDateTime? = null,
 ) {
     val bypassSecondsRemaining: Long
         get() {
@@ -75,7 +82,9 @@ class HomeViewModel @Inject constructor(
     observeLinkedTag: ObserveLinkedTagUseCase,
     observeBlockSessions: ObserveBlockSessionsUseCase,
     observeActiveSessionStart: ObserveActiveSessionStartUseCase,
+    observeBlockSchedules: ObserveBlockSchedulesUseCase,
     private val startBypass: StartBypassUseCase,
+    private val activateBlockMode: ActivateBlockModeUseCase,
     private val toggleFromTag: ToggleBlockModeFromTagUseCase,
     private val nfcTagBus: NfcTagBus,
     private val checkForUpdate: CheckForUpdateUseCase,
@@ -86,7 +95,9 @@ class HomeViewModel @Inject constructor(
     private val ticker = MutableStateFlow(System.currentTimeMillis())
     private val zone = ZoneId.systemDefault()
 
-    val uiState: StateFlow<HomeUiState> = combine(
+    // Split in two only because combine tops out at five typed flows; nesting keeps the types
+    // rather than dropping to the vararg overload's Array<Any?>.
+    private val coreState: Flow<HomeUiState> = combine(
         observeBlockState(),
         observeLinkedTag(),
         observeBlockSessions(),
@@ -102,6 +113,15 @@ class HomeViewModel @Inject constructor(
             todayBuckets = todayBuckets,
             nowMillis = now,
         )
+    }
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        coreState,
+        observeBlockSchedules(),
+    ) { state, schedules ->
+        // Recomputed off the same one-second ticker that drives coreState, so the label rolls over
+        // to the following occurrence the moment the current one fires.
+        state.copy(nextScheduledFire = schedules.earliestNextFire(ZonedDateTime.now(zone)))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
     private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 1)
@@ -131,6 +151,13 @@ class HomeViewModel @Inject constructor(
 
     fun startEmergencyBypass() {
         viewModelScope.launch { startBypass() }
+    }
+
+    /** Turns Monolith on without a tag. There is no matching "deactivate" -- that stays tag-only. */
+    fun activate() {
+        viewModelScope.launch {
+            if (activateBlockMode()) _events.tryEmit(HomeEvent.Toggled(nowActive = true))
+        }
     }
 
     fun checkForUpdates() {

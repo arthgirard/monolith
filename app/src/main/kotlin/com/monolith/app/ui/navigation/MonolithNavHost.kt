@@ -15,6 +15,7 @@ import com.monolith.app.ui.importantpeople.ImportantPeopleScreen
 import com.monolith.app.ui.nfclink.NfcLinkScreen
 import com.monolith.app.ui.onboarding.OnboardingCompleteScreen
 import com.monolith.app.ui.onboarding.OnboardingScreen
+import com.monolith.app.ui.schedule.ScheduleScreen
 import com.monolith.app.ui.timesaved.TimeSavedScreen
 
 private const val TRANSITION_DURATION_MILLIS = 300
@@ -71,6 +72,7 @@ fun MonolithNavHost(
                 onManageImportantPeople = { navController.navigate(MonolithDestination.ImportantPeople.route) },
                 onLinkTag = { navController.navigate(MonolithDestination.NfcLink.route) },
                 onViewTimeSaved = { navController.navigate(MonolithDestination.TimeSaved.route) },
+                onManageSchedules = { navController.navigate(MonolithDestination.Schedules.route) },
             )
         }
         composable(MonolithDestination.AppSelector.route) {
@@ -84,6 +86,9 @@ fun MonolithNavHost(
         }
         composable(MonolithDestination.TimeSaved.route) {
             TimeSavedScreen(onBack = { navController.popBackStack() })
+        }
+        composable(MonolithDestination.Schedules.route) {
+            ScheduleScreen(onBack = { navController.popBackStack() })
         }
     }
 }

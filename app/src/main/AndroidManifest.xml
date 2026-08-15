@@ -15,6 +15,13 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!--
+        Schedules must land on the minute even in Doze; an inexact alarm can be deferred long
+        enough that a 22:00 rule fires after midnight. Granted at install rather than prompted,
+        which Play restricts to alarm/clock apps. Monolith self-distributes via GitHub releases,
+        so that policy doesn't apply here.
+    -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <uses-feature
         android:name="android.hardware.nfc"
@@ -120,6 +127,29 @@
             android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Fires the single pending schedule alarm. Never reached from outside the app. -->
+        <receiver
+            android:name=".service.ScheduleAlarmReceiver"
+            android:exported="false" />
+
+        <!--
+            Re-arms the schedule alarm after anything that invalidates it. All four actions are
+            protected broadcasts, so exporting this doesn't let another app trigger blocking.
+        -->
+        <receiver
+            android:name=".service.ScheduleRearmReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

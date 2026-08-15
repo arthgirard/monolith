@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.monolith.app.domain.model.BlockSchedule
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.CodeBreaker
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.time.DayOfWeek
+import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,6 +47,39 @@ private data class AppUnlockDto(
     val packageName: String,
     val expiresAt: Long,
 )
+
+@Serializable
+private data class BlockScheduleDto(
+    val id: String,
+    val enabled: Boolean,
+    val days: List<String>,
+    val startMinuteOfDay: Int,
+) {
+    /**
+     * Unparseable day names and out-of-range times are dropped rather than thrown: a schedule
+     * store this app can't read is a schedule that silently stops firing, which is the safe
+     * failure for a rule that only ever turns blocking *on*.
+     */
+    fun toDomain(): BlockSchedule? {
+        if (startMinuteOfDay !in 0 until 24 * 60) return null
+        val parsedDays = days.mapNotNull { runCatching { DayOfWeek.valueOf(it) }.getOrNull() }
+        return BlockSchedule(
+            id = id,
+            enabled = enabled,
+            days = parsedDays.toSet(),
+            startTime = LocalTime.of(startMinuteOfDay / 60, startMinuteOfDay % 60),
+        )
+    }
+
+    companion object {
+        fun from(schedule: BlockSchedule): BlockScheduleDto = BlockScheduleDto(
+            id = schedule.id,
+            enabled = schedule.enabled,
+            days = schedule.days.map { it.name },
+            startMinuteOfDay = schedule.startTime.hour * 60 + schedule.startTime.minute,
+        )
+    }
+}
 
 @Serializable
 private data class CodeBreakerGuessDto(
@@ -95,6 +131,8 @@ class MonolithPreferences @Inject constructor(
         val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
         val APP_UNLOCKS = stringPreferencesKey("app_unlocks")
         val APP_CODE_BREAKERS = stringPreferencesKey("app_code_breakers")
+        val BLOCK_SCHEDULES = stringPreferencesKey("block_schedules")
+        val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -288,6 +326,38 @@ class MonolithPreferences @Inject constructor(
     private fun decodeImportantPeople(raw: String?): List<ImportantPersonDto> {
         if (raw == null) return emptyList()
         return runCatching { json.decodeFromString<List<ImportantPersonDto>>(raw) }.getOrDefault(emptyList())
+    }
+
+    val blockSchedules: Flow<List<BlockSchedule>> = context.dataStore.data.map { prefs ->
+        decodeBlockSchedules(prefs[Keys.BLOCK_SCHEDULES]).mapNotNull { it.toDomain() }
+    }
+
+    suspend fun setBlockSchedules(schedules: List<BlockSchedule>) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.BLOCK_SCHEDULES] = json.encodeToString(schedules.map { BlockScheduleDto.from(it) })
+        }
+    }
+
+    /**
+     * Timestamp of the most recent scheduled fire already acted on. Catch-up uses it as an
+     * exclusive lower bound so a missed occurrence is replayed at most once, however many times
+     * the reconcile path runs (boot broadcast, package replace, plain app start).
+     */
+    val scheduleLastFire: Flow<Long?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SCHEDULE_LAST_FIRE]
+    }
+
+    suspend fun setScheduleLastFire(millis: Long) {
+        context.dataStore.edit { prefs ->
+            // Never moves backwards: a stale fire arriving late must not reopen an older window.
+            val current = prefs[Keys.SCHEDULE_LAST_FIRE] ?: Long.MIN_VALUE
+            if (millis > current) prefs[Keys.SCHEDULE_LAST_FIRE] = millis
+        }
+    }
+
+    private fun decodeBlockSchedules(raw: String?): List<BlockScheduleDto> {
+        if (raw == null) return emptyList()
+        return runCatching { json.decodeFromString<List<BlockScheduleDto>>(raw) }.getOrDefault(emptyList())
     }
 
     val blockSessions: Flow<List<BlockSession>> = context.dataStore.data.map { prefs ->

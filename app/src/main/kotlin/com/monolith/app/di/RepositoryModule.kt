@@ -4,11 +4,13 @@ import com.monolith.app.data.repository.AppRepositoryImpl
 import com.monolith.app.data.repository.AppUnlockRepositoryImpl
 import com.monolith.app.data.repository.BlockRepositoryImpl
 import com.monolith.app.data.repository.ImportantPersonRepositoryImpl
+import com.monolith.app.data.repository.ScheduleRepositoryImpl
 import com.monolith.app.data.repository.UpdateRepositoryImpl
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.ImportantPersonRepository
+import com.monolith.app.domain.repository.ScheduleRepository
 import com.monolith.app.domain.repository.TagProvisioner
 import com.monolith.app.domain.repository.UpdateRepository
 import com.monolith.app.nfc.NfcManager
@@ -38,4 +40,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindAppUnlockRepository(impl: AppUnlockRepositoryImpl): AppUnlockRepository
+
+    @Binds
+    abstract fun bindScheduleRepository(impl: ScheduleRepositoryImpl): ScheduleRepository
 }
