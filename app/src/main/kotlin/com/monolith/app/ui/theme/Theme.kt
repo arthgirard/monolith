@@ -20,6 +20,9 @@ private val DarkColors = darkColorScheme(
     onBackground = MonolithWhite,
     surface = MonolithNearBlack,
     onSurface = MonolithWhite,
+    // Left unset, this defaults to Material's baseline purple, which elevated surfaces (dialogs,
+    // menus) then blend into their background. Matching it to the surface keeps them neutral.
+    surfaceTint = MonolithNearBlack,
     surfaceVariant = MonolithGrayDark,
     onSurfaceVariant = MonolithGray,
     error = MonolithRed,
@@ -36,6 +39,7 @@ private val LightColors = lightColorScheme(
     onBackground = MonolithBlack,
     surface = MonolithOffWhite,
     onSurface = MonolithBlack,
+    surfaceTint = MonolithOffWhite,
     surfaceVariant = MonolithOffWhite,
     onSurfaceVariant = MonolithGray,
     error = MonolithRed,
