@@ -169,4 +169,10 @@
     <string name="enforcement_notification_body">Tap your tag to stop the blocker.</string>
     <string name="enforcement_notification_body_paused">Timer paused — emergency bypass active.</string>
     <string name="enforcement_notification_body_paused_unlock">Timer paused — an app is unlocked.</string>
+
+    <!-- Home-screen widget -->
+    <string name="widget_time_saved_name">Time saved today</string>
+    <string name="widget_time_saved_label">TIME SAVED TODAY</string>
+    <string name="widget_time_saved_description">Today\'s time saved, hour by hour.</string>
+    <string name="widget_time_saved_chart_description">Hourly chart of time saved today</string>
 </resources>

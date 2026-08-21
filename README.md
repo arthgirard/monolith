@@ -19,6 +19,9 @@ tag isn't around.
   who matter still get through even while that app is blocked.
 - **Time saved stats.** A day/week/month/year breakdown of how much time Monolith actually spent
   enforcing, so you can see the habit changing instead of just trusting it is.
+- **Home-screen widget.** Today's time saved as a running total plus the same hour-by-hour bars
+  as the in-app screen, so the number is visible without opening anything. Tapping it opens the
+  full breakdown.
 - **In-app updates.** Since Monolith isn't on the Play Store, it checks GitHub releases on demand
   and can download and hand the APK straight to the system installer.
 

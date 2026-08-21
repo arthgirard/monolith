@@ -153,6 +153,26 @@
             </intent-filter>
         </receiver>
 
+        <!--
+            Home-screen widget for today's time saved. Exported because the launcher hosts it in
+            its own process; the extra actions are protected broadcasts that move which day
+            "today" is, so the chart rolls over instead of going stale.
+        -->
+        <receiver
+            android:name=".widget.TimeSavedWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_time_saved_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/time_saved_widget_info" />
+        </receiver>
+
         <!-- Exposes the downloaded update APK to the system installer via a content:// URI. -->
         <provider
             android:name="androidx.core.content.FileProvider"
