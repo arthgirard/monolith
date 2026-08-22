@@ -5,7 +5,7 @@
 
     <!-- Onboarding -->
     <string name="onboarding_title">Set up Monolith</string>
-    <string name="onboarding_subtitle">Four permissions. Grant them once, forget about it.</string>
+    <string name="onboarding_subtitle">Five permissions. Grant them once, forget about it.</string>
     <string name="restricted_settings_title">Toggle greyed out?</string>
     <string name="restricted_settings_body">Sideloaded apps start with Android\'s restricted settings on. Open App Info, tap ⋮ in the top corner, then \"Allow restricted settings\": the Accessibility and Notification Access toggles below will unlock.</string>
     <string name="restricted_settings_open">Open App Info</string>
