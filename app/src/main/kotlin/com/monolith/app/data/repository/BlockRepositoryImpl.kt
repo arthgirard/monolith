@@ -1,6 +1,7 @@
 package com.monolith.app.data.repository
 
 import com.monolith.app.data.datastore.MonolithPreferences
+import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.NfcTagLink
@@ -45,4 +46,10 @@ class BlockRepositoryImpl @Inject constructor(
     override fun observeBlockSessions(): Flow<List<BlockSession>> = preferences.blockSessions
 
     override fun observeActiveSessionStart(): Flow<Long?> = preferences.activeSessionStart
+
+    // No widget refresh: a hit records that the wall was met, which doesn't move the
+    // time-saved total the widget draws.
+    override suspend fun recordBlockHit(packageName: String) = preferences.recordBlockHit(packageName)
+
+    override fun observeBlockHits(): Flow<List<BlockHit>> = preferences.blockHits
 }

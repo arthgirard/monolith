@@ -49,13 +49,21 @@
             </intent-filter>
         </activity>
 
-        <!-- Full-screen block overlay, launched over the offending app -->
+        <!--
+            Full-screen block overlay, launched over the offending app. Empty taskAffinity:
+            singleInstance already gives it a dedicated task, but without this it still
+            inherits the package affinity and can be pulled into MainActivity's task record.
+            adjustResize is for the waiver step's multi-line field, which sits in a scrolling
+            column the IME would otherwise cover.
+        -->
         <activity
             android:name=".ui.bypass.BlockOverlayActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
-            android:theme="@style/Theme.Monolith.Overlay" />
+            android:taskAffinity=""
+            android:theme="@style/Theme.Monolith.Overlay"
+            android:windowSoftInputMode="adjustResize" />
 
         <!--
             Background NFC tap target: a tag scan while Monolith isn't foregrounded is routed
@@ -68,7 +76,8 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
-            android:theme="@style/Theme.Monolith.Overlay">
+            android:taskAffinity=""
+            android:theme="@style/Theme.Monolith.Overlay.Transparent">
             <!-- Smart tag provisioning: intercept taps on Monolith-written NDEF URI tags -->
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />

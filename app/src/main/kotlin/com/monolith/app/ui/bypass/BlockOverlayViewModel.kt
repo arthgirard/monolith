@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.NfcTapResult
+import com.monolith.app.domain.repository.AppRepository
+import com.monolith.app.domain.usecase.GetBlockHitsTodayUseCase
 import com.monolith.app.domain.usecase.GetCodeBreakerChallengeUseCase
+import com.monolith.app.domain.usecase.GetCurrentStreakUseCase
 import com.monolith.app.domain.usecase.GetSolvedCodeBreakerUseCase
 import com.monolith.app.domain.usecase.GetWaiverSentenceUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
@@ -15,9 +18,16 @@ import com.monolith.app.domain.usecase.SubmitWaiverUseCase
 import com.monolith.app.domain.usecase.ToggleBlockModeFromTagUseCase
 import com.monolith.app.nfc.NfcTagBus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -39,9 +49,24 @@ data class UnlockChallengeUiState(
     // A tag tap mid-challenge turns Monolith off entirely (see handleTagTap): true briefly while
     // that "Monolith disabled" feedback is shown, before the blocked app is launched.
     val tagDisabled: Boolean = false,
+    // How long the streak the tag tap just ended had run. Only set alongside tagDisabled.
+    val bankedStreakMillis: Long = 0L,
 ) {
     val waiverMatches: Boolean get() = waiverTarget != null && waiverInput == waiverTarget
 }
+
+/**
+ * What the wall knows about the app behind it. Empty until the package is pushed in and the
+ * label resolves, which is why [appLabel] is nullable rather than a placeholder string: the
+ * headline is the label, and a wall that flashed "Loading" before naming the app would undercut
+ * the whole point of naming it.
+ */
+data class BlockWallUiState(
+    val appLabel: String? = null,
+    val streakMillis: Long = 0L,
+    val opensToday: Int = 0,
+    val bypassJustEnded: Boolean = false,
+)
 
 @HiltViewModel
 class BlockOverlayViewModel @Inject constructor(
@@ -53,13 +78,19 @@ class BlockOverlayViewModel @Inject constructor(
     private val submitCodeBreakerGuess: SubmitCodeBreakerGuessUseCase,
     private val getWaiverSentence: GetWaiverSentenceUseCase,
     private val submitWaiver: SubmitWaiverUseCase,
+    private val appRepository: AppRepository,
+    private val getBlockHitsToday: GetBlockHitsTodayUseCase,
+    private val getCurrentStreak: GetCurrentStreakUseCase,
 ) : ViewModel() {
 
     // Pushed by the Activity from both onCreate and onNewIntent: the accessibility service can
     // relaunch this Activity with CLEAR_TOP into an already-alive instance (e.g. the user swipes
     // straight from one blocked app to another without dismissing the overlay first), so a value
     // captured once at construction would go stale and target the wrong app's unlock.
-    private var blockedPackage: String? = null
+    // A StateFlow rather than a plain var: the wall's label, streak and open-count all have to
+    // re-resolve when the service retargets this same overlay at a different app.
+    private val blockedPackageFlow = MutableStateFlow<String?>(null)
+    private val blockedPackage: String? get() = blockedPackageFlow.value
 
     // Seeded isActive=true: this activity is only ever launched by AppBlockAccessibilityService
     // after it already confirmed isEnforcing()==true. DataStore's first real read is async, so a
@@ -72,6 +103,44 @@ class BlockOverlayViewModel @Inject constructor(
     private val _challengeState = MutableStateFlow(UnlockChallengeUiState())
     val challengeState: StateFlow<UnlockChallengeUiState> = _challengeState
 
+    /**
+     * One tick a second, driving the "Held" readout. Emitting the timestamp rather than a bare
+     * signal keeps the whole chain a pure function of its inputs, so nothing downstream has to
+     * read the clock itself.
+     */
+    private val secondTicker: Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(TICK_INTERVAL_MILLIS)
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val wallState: StateFlow<BlockWallUiState> = blockedPackageFlow
+        .flatMapLatest { packageName ->
+            if (packageName == null) {
+                flowOf(BlockWallUiState())
+            } else {
+                combine(
+                    flow { emit(appRepository.getAppLabel(packageName)) },
+                    getCurrentStreak(secondTicker),
+                    getBlockHitsToday(packageName),
+                    // Combined with the ticker rather than mapped off blockState alone: blockState
+                    // doesn't re-emit when a bypass merely ages past the callout window, so a
+                    // plain map would latch this true for as long as the overlay stayed up.
+                    combine(blockState, secondTicker) { state, now -> state.bypassJustEnded(now) },
+                ) { label, streak, opens, bypassEnded ->
+                    BlockWallUiState(
+                        appLabel = label,
+                        streakMillis = streak,
+                        opensToday = opens,
+                        bypassJustEnded = bypassEnded,
+                    )
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BlockWallUiState())
+
     init {
         nfcTagBus.tagEvents.onEach { tag -> handleTagTap(tag) }.launchIn(viewModelScope)
     }
@@ -80,18 +149,23 @@ class BlockOverlayViewModel @Inject constructor(
     // ever active in here), same as anywhere else -- skip whatever's left of this app's own
     // puzzle/waiver and go straight to "Monolith disabled" feedback, then the app itself.
     private suspend fun handleTagTap(tag: Tag) {
+        // Read before the toggle: turning Monolith off commits the running segment and drops
+        // SESSION_STARTED_AT, so afterwards the streak this tap just ended reads as zero --
+        // which is the one number the feedback is there to report.
+        val streakBeforeTap = getCurrentStreak.current()
         val result = toggleFromTag(tag)
         if (result is NfcTapResult.Toggled && !result.nowActive) {
             _challengeState.value = _challengeState.value.copy(
                 tagDisabled = true,
                 unlockedPackage = blockedPackage,
+                bankedStreakMillis = streakBeforeTap,
             )
         }
     }
 
     fun setBlockedPackage(packageName: String) {
         if (blockedPackage == packageName) return
-        blockedPackage = packageName
+        blockedPackageFlow.value = packageName
         _challengeState.value = UnlockChallengeUiState()
         // An unsolved puzzle is gone for good by now (see GetCodeBreakerChallengeUseCase), so the
         // only thing worth restoring is a puzzle already beaten whose waiver was never confirmed:
@@ -170,5 +244,6 @@ class BlockOverlayViewModel @Inject constructor(
 
     companion object {
         const val APP_UNLOCK_DURATION_MILLIS: Long = 5 * 60 * 1000L
+        private const val TICK_INTERVAL_MILLIS: Long = 1000L
     }
 }

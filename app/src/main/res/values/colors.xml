@@ -3,6 +3,12 @@
     <color name="monolith_black">#0B0B0D</color>
     <color name="monolith_white">#F5F5F0</color>
 
+    <!-- The one colour every pre-Compose surface of an overlay paints: the WindowManager
+         cover BlockOverlayGuard puts up, and the overlay window background behind it. Both
+         used to be hard black, so a light-theme block flashed black before Compose drew
+         #F5F5F0 over it. Night-qualified here so all three layers agree on one value. -->
+    <color name="monolith_background">#F5F5F0</color>
+
     <!-- The accent, for notification tinting. Notifications sit on the system's own
          surfaces, not Monolith's, so they use the brand amber in both ramps rather than
          the darkened AmberDeep the light Compose scheme needs for text contrast. -->

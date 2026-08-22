@@ -1,13 +1,14 @@
 package com.monolith.app.service
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
+import androidx.core.content.ContextCompat
+import com.monolith.app.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,7 +44,11 @@ class BlockOverlayGuard @Inject constructor(
         if (coverView != null) return true
         if (!Settings.canDrawOverlays(context)) return false
 
-        val view = View(context).apply { setBackgroundColor(Color.BLACK) }
+        // Resolved per show() rather than cached: this is a @Singleton with an application
+        // Context, so a value captured once would keep painting the old ramp after the user
+        // flips light/dark. Hard black here used to flash against a light theme's #F5F5F0.
+        val coverColor = ContextCompat.getColor(context, R.color.monolith_background)
+        val view = View(context).apply { setBackgroundColor(coverColor) }
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,

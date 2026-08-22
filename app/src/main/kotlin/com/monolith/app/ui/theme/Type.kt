@@ -110,3 +110,12 @@ val MonolithTypography = Typography(
         letterSpacing = 0.5.sp,
     ),
 )
+
+/**
+ * Tabular figures. Inter's default numerals are proportional, so a value that ticks -- a streak
+ * counting up, a countdown counting down -- reflows every time a 1 replaces a 4, and the text
+ * around it jitters. This is also the app's "this is data, not prose" signal: the design
+ * direction asks for monospace on figures, and Inter's `tnum` gets the even rhythm without
+ * shipping a second font family.
+ */
+fun TextStyle.tabular(): TextStyle = copy(fontFeatureSettings = "tnum")

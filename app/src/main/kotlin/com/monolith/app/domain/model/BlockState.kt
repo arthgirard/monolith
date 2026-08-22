@@ -16,7 +16,21 @@ data class BlockState(
      */
     val bypassUsed: Boolean get() = bypassExpiresAtMillis != null
 
+    /**
+     * True for a short while after a bypass runs out. [bypassExpiresAtMillis] survives expiry
+     * (it's what [bypassUsed] reads), so the moment the window closes is otherwise invisible:
+     * the block overlay simply reappears with no explanation of where the bypass went. The wall
+     * uses this to say so once.
+     */
+    fun bypassJustEnded(nowMillis: Long): Boolean {
+        val expiresAt = bypassExpiresAtMillis ?: return false
+        return nowMillis >= expiresAt && nowMillis - expiresAt < BYPASS_RECENTLY_ENDED_MILLIS
+    }
+
     companion object {
         const val BYPASS_DURATION_MILLIS: Long = 15 * 60 * 1000L
+
+        /** How long after a bypass expires the wall still calls it out. */
+        const val BYPASS_RECENTLY_ENDED_MILLIS: Long = 2 * 60 * 1000L
     }
 }

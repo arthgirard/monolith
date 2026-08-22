@@ -1,5 +1,6 @@
 package com.monolith.app.domain.repository
 
+import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.NfcTagLink
@@ -21,4 +22,8 @@ interface BlockRepository {
     fun observeBlockSessions(): Flow<List<BlockSession>>
 
     fun observeActiveSessionStart(): Flow<Long?>
+
+    suspend fun recordBlockHit(packageName: String)
+
+    fun observeBlockHits(): Flow<List<BlockHit>>
 }

@@ -9,6 +9,7 @@ import com.monolith.app.domain.model.SystemPackages
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
+import com.monolith.app.domain.usecase.RecordBlockHitUseCase
 import com.monolith.app.ui.bypass.BlockOverlayActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -35,12 +36,18 @@ class AppBlockAccessibilityService : AccessibilityService() {
     @Inject lateinit var appRepository: AppRepository
     @Inject lateinit var appUnlockRepository: AppUnlockRepository
     @Inject lateinit var overlayGuard: BlockOverlayGuard
+    @Inject lateinit var recordBlockHit: RecordBlockHitUseCase
+    @Inject lateinit var statusNotifier: StatusNotifier
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Volatile private var blockState: BlockState = BlockState()
     @Volatile private var blockedPackages: Set<String> = emptySet()
     @Volatile private var unlockedPackages: Map<String, Long> = emptyMap()
+
+    /** Last time the missing-overlay-permission notice was posted, to keep it from repeating
+     *  on every single blocked app while the permission stays revoked. */
+    @Volatile private var overlayPermissionNotifiedAt: Long = 0L
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -88,6 +95,12 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
         Log.d(LOG_TAG, "blocking foreground=$foregroundPackage class=$foregroundClass")
 
+        // Recorded here rather than in the overlay: this is the moment the wall was actually met.
+        // The overlay can be retargeted, recreated or never reach onResume at all, so counting
+        // from its side would count something else. RecordBlockHitUseCase dedupes the repeat
+        // events one reach produces.
+        serviceScope.launch { recordBlockHit(foregroundPackage) }
+
         // Paint the opaque overlay before anything else: it's a pre-inflated window with no
         // Activity launch in the critical path, so it covers the blocked app's already-drawn
         // frame in this same tick. BlockOverlayActivity below still cold-starts its Hilt/Compose
@@ -101,6 +114,13 @@ class AppBlockAccessibilityService : AccessibilityService() {
         // to hide the blocked app immediately regardless.
         if (!overlayShown) {
             performGlobalAction(GLOBAL_ACTION_HOME)
+            // Without this the degradation is invisible: blocked apps just bounce to the home
+            // screen with no block screen and no explanation, which reads as Monolith breaking
+            // rather than as a permission it needs having been taken away.
+            if (now - overlayPermissionNotifiedAt > OVERLAY_PERMISSION_NOTICE_INTERVAL_MILLIS) {
+                overlayPermissionNotifiedAt = now
+                statusNotifier.notifyOverlayPermissionMissing()
+            }
         }
 
         val overlayIntent = Intent(this, BlockOverlayActivity::class.java).apply {
@@ -123,6 +143,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val LOG_TAG = "MonolithBlock"
+        private const val OVERLAY_PERMISSION_NOTICE_INTERVAL_MILLIS = 60L * 60 * 1000
 
         /**
          * Transient helper windows that report under the Settings package without being a real

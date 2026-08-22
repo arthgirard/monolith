@@ -136,12 +136,19 @@
     <string name="nfc_not_supported">This device has no NFC hardware.</string>
     <string name="not_now_cta">Not now</string>
 
-    <!-- Overlay -->
-    <string name="overlay_title">Monolith active</string>
-    <string name="overlay_body">This app is blocked. Tap your tag to unlock.</string>
+    <!-- Overlay. The app's own label is the headline, so there is no title string here: the
+         wall names what you reached for rather than naming itself. -->
+    <string name="overlay_body">blocked</string>
     <string name="overlay_go_home">Go to home screen</string>
     <string name="overlay_break_code_title">Break the code to unlock</string>
     <string name="overlay_break_code_subtitle">· 5 min</string>
+    <string name="overlay_stat_held">Held</string>
+    <string name="overlay_stat_opened">Opened today</string>
+    <string name="overlay_bypass_ended">Bypass ended</string>
+    <string name="overlay_unlocked_granted">Unlocked</string>
+    <string name="overlay_unlocked_granted_body">%1$s, for five minutes.</string>
+    <string name="overlay_a11y_wall">%1$s blocked. Held %2$s. Opened %3$d times today.</string>
+    <string name="overlay_a11y_wall_first">%1$s blocked. Held %2$s.</string>
 
     <!-- Code-breaker challenge -->
     <string name="codebreaker_title">Break the code</string>
@@ -152,6 +159,21 @@
     <string name="codebreaker_out_of_tries">Out of tries — new code, %1$d tries left</string>
     <string name="codebreaker_clear">Clear</string>
     <string name="codebreaker_submit">Submit guess</string>
+    <string name="codebreaker_empty_slot">Empty slot</string>
+    <string name="codebreaker_slot_state_exact">exact</string>
+    <string name="codebreaker_slot_state_partial">wrong slot</string>
+    <string name="codebreaker_slot_state_miss">absent</string>
+
+    <!-- Names for the eight fill patterns, so the puzzle is solvable with TalkBack and isn't
+         signalled by colour alone. -->
+    <string name="codebreaker_symbol_0">Solid</string>
+    <string name="codebreaker_symbol_1">Outline</string>
+    <string name="codebreaker_symbol_2">Lower half</string>
+    <string name="codebreaker_symbol_3">Upper half</string>
+    <string name="codebreaker_symbol_4">Left half</string>
+    <string name="codebreaker_symbol_5">Right half</string>
+    <string name="codebreaker_symbol_6">Diagonal</string>
+    <string name="codebreaker_symbol_7">Centre</string>
 
     <!-- Waiver step -->
     <string name="waiver_title">Type this exactly to continue</string>
@@ -169,9 +191,11 @@
 
     <!-- Tap overlay (background NFC tap feedback) -->
     <string name="tap_overlay_locked">Monolith activated</string>
+    <string name="tap_overlay_locked_body">Blocking is on.</string>
     <string name="tap_overlay_unlocked">Monolith disabled</string>
-    <string name="tap_overlay_unknown_tag">Unrecognized tag</string>
+    <string name="tap_overlay_unlocked_body">Blocking is off.</string>
     <string name="tap_overlay_no_tag_linked">No tag linked yet</string>
+    <string name="tap_overlay_no_tag_linked_body">Link one from the home screen.</string>
 
     <!-- Enforcement foreground notification -->
     <string name="enforcement_notification_channel">Monolith active</string>

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSchedule
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
@@ -17,6 +18,7 @@ import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.SlotResult
 import com.monolith.app.domain.model.TagLinkMode
+import com.monolith.app.domain.usecase.BlockHitLog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -40,6 +42,12 @@ private data class ImportantPersonDto(
 private data class BlockSessionDto(
     val start: Long,
     val end: Long,
+)
+
+@Serializable
+private data class BlockHitDto(
+    val packageName: String,
+    val atMillis: Long,
 )
 
 @Serializable
@@ -114,6 +122,7 @@ private data class CodeBreakerDto(
 /** Sessions older than this are pruned on write; Year view only ever needs the trailing 12 months. */
 private const val SESSION_RETENTION_MILLIS: Long = 400L * 24 * 60 * 60 * 1000
 
+
 @Singleton
 class MonolithPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -129,6 +138,7 @@ class MonolithPreferences @Inject constructor(
         val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
         val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
         val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
+        val BLOCK_HITS = stringPreferencesKey("block_hits")
         val APP_UNLOCKS = stringPreferencesKey("app_unlocks")
         val APP_CODE_BREAKERS = stringPreferencesKey("app_code_breakers")
         val BLOCK_SCHEDULES = stringPreferencesKey("block_schedules")
@@ -238,6 +248,31 @@ class MonolithPreferences @Inject constructor(
             val codeBreakers = decodeCodeBreakers(prefs[Keys.APP_CODE_BREAKERS]).filterNot { it.packageName == packageName }
             prefs[Keys.APP_CODE_BREAKERS] = json.encodeToString(codeBreakers)
         }
+    }
+
+    /**
+     * Records that [packageName] was reached for and blocked, applying [BlockHitLog]'s dedupe
+     * and retention rules inside the atomic edit so concurrent hits can't clobber each other.
+     */
+    suspend fun recordBlockHit(packageName: String) {
+        context.dataStore.edit { prefs ->
+            val existing = decodeBlockHits(prefs[Keys.BLOCK_HITS])
+                .map { BlockHit(it.packageName, it.atMillis) }
+            val updated = BlockHitLog.record(existing, packageName, System.currentTimeMillis())
+                ?: return@edit
+            prefs[Keys.BLOCK_HITS] = json.encodeToString(
+                updated.map { BlockHitDto(it.packageName, it.atMillis) },
+            )
+        }
+    }
+
+    val blockHits: Flow<List<BlockHit>> = context.dataStore.data.map { prefs ->
+        decodeBlockHits(prefs[Keys.BLOCK_HITS]).map { BlockHit(it.packageName, it.atMillis) }
+    }
+
+    private fun decodeBlockHits(raw: String?): List<BlockHitDto> {
+        if (raw == null) return emptyList()
+        return runCatching { json.decodeFromString<List<BlockHitDto>>(raw) }.getOrDefault(emptyList())
     }
 
     val appUnlocks: Flow<Map<String, Long>> = context.dataStore.data.map { prefs ->

@@ -8,10 +8,34 @@
 
     <style name="Theme.Monolith.Overlay" parent="Theme.Monolith">
         <item name="android:windowIsTranslucent">false</item>
-        <item name="android:windowBackground">@color/monolith_black</item>
+        <item name="android:windowBackground">@color/monolith_background</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:windowFullscreen">true</item>
+        <!-- Deliberately no windowFullscreen here: it is deprecated and ignored from API 30
+             on, so it looked like it was hiding the status bar while actually leaving the
+             window inset below it. The overlay Activities hide the bars in code instead.
+
+             These three are what actually let the slab reach the physical top edge. Without
+             windowDrawsSystemBarBackgrounds the window is laid out below the status bar however
+             it is asked not to be: the frame came back [0,173][1080,2424] on a 2424px screen,
+             leaving a hard black strip above the slab. Transparent bars because the plinth is
+             what should show through, and cutout mode always so the punch-hole doesn't
+             reintroduce the same inset on its own. -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowShowWallpaper">false</item>
+    </style>
+
+    <!--
+        The tap overlay opens for every tag that reaches it, and only then finds out whether the
+        tag is Monolith's. An opaque window would darken the screen for that moment even when the
+        answer is "not ours" and nothing is going to be drawn, so this one starts transparent and
+        the Compose content paints its own background once there is something to show.
+    -->
+    <style name="Theme.Monolith.Overlay.Transparent" parent="Theme.Monolith.Overlay">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 </resources>

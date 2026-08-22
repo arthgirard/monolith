@@ -1,5 +1,6 @@
 package com.monolith.app.domain.usecase
 
+import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSchedule
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
@@ -48,7 +49,19 @@ class FakeBlockRepository(initiallyActive: Boolean = false) : BlockRepository {
 
     override fun observeBlockSessions(): Flow<List<BlockSession>> = MutableStateFlow(emptyList())
 
-    override fun observeActiveSessionStart(): Flow<Long?> = MutableStateFlow(null)
+    private val activeSessionStart = MutableStateFlow<Long?>(null)
+
+    fun setActiveSessionStart(startedAt: Long?) { activeSessionStart.value = startedAt }
+
+    override fun observeActiveSessionStart(): Flow<Long?> = activeSessionStart
+
+    private val hits = MutableStateFlow<List<BlockHit>>(emptyList())
+
+    override suspend fun recordBlockHit(packageName: String) {
+        hits.value = BlockHitLog.record(hits.value, packageName, System.currentTimeMillis()) ?: hits.value
+    }
+
+    override fun observeBlockHits(): Flow<List<BlockHit>> = hits
 }
 
 class FakeAppUnlockRepository : AppUnlockRepository {
