@@ -12,6 +12,7 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.nfc.tech.NdefFormatable
+import com.monolith.app.domain.model.NfcDispatchTech
 import com.monolith.app.domain.model.NfcLinkResult
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.TagLinkMode
@@ -52,14 +53,24 @@ class NfcManager @Inject constructor(
         val wroteNdef = runCatching { writeNdefUri(tag, uri) }.getOrDefault(false)
 
         val link = if (wroteNdef) {
+            // Nothing to register: the tag now carries a monolith:// URI, and the NDEF filter
+            // that matches it cannot be triggered by anybody else's tag.
             NfcTagLink(uid = uid, mode = TagLinkMode.SMART_NDEF, ndefUri = uri)
         } else {
-            NfcTagLink(uid = uid, mode = TagLinkMode.FALLBACK_UID, ndefUri = null)
+            NfcTagLink(
+                uid = uid,
+                mode = TagLinkMode.FALLBACK_UID,
+                ndefUri = null,
+                dispatchTech = dispatchTechFor(tag),
+            )
         }
         NfcLinkResult.Success(link)
     }
 
     override fun identifyTag(tag: Tag): String = bytesToHex(tag.id)
+
+    override fun dispatchTechFor(tag: Tag): String? =
+        NfcDispatchTech.narrowest(tag.techList.toList())
 
     private fun writeNdefUri(tag: Tag, uri: String): Boolean {
         val message = NdefMessage(arrayOf(NdefRecord.createUri(uri)))

@@ -3,6 +3,7 @@ package com.monolith.app
 import android.app.Application
 import android.content.Intent
 import com.monolith.app.domain.repository.BlockRepository
+import com.monolith.app.nfc.NfcDispatchGate
 import com.monolith.app.service.EnforcementForegroundService
 import com.monolith.app.service.ScheduleTrigger
 import dagger.hilt.android.HiltAndroidApp
@@ -21,6 +22,7 @@ class MonolithApplication : Application() {
 
     @Inject lateinit var blockRepository: BlockRepository
     @Inject lateinit var scheduleTrigger: ScheduleTrigger
+    @Inject lateinit var nfcDispatchGate: NfcDispatchGate
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -46,6 +48,15 @@ class MonolithApplication : Application() {
                 // from the foreground picks it back up.
                 runCatching { startForegroundService(intent) }
             }
+            .launchIn(appScope)
+
+        // Narrow Monolith's share of the phone's NFC traffic to whatever the linked tag
+        // actually needs. Component state is persistent, so this is only a self-heal: it matters
+        // after a restore onto a fresh install, where the tag is in DataStore but the manifest
+        // aliases are back at their defaults.
+        blockRepository.observeLinkedTag()
+            .distinctUntilChanged()
+            .onEach { nfcDispatchGate.apply(it) }
             .launchIn(appScope)
 
         // Belt and braces for the schedule alarm. ScheduleRearmReceiver handles the normal cases,

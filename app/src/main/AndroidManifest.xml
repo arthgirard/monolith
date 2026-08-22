@@ -87,14 +87,114 @@
                     android:host="tag" />
             </intent-filter>
 
-            <!-- Generic/read-only tag fallback: any NFC tech discovery routed here for UID matching -->
+        </activity>
+
+        <!--
+            Background dispatch for UID-linked tags, one alias per NFC technology, all disabled
+            until NfcDispatchGate turns exactly one of them on.
+
+            A tag that could not be written (an old transit card, an expired bank card, an Amiibo,
+            a Skylander) is matched by its hardware UID, and the only way to see one arrive while
+            Monolith is in the background is a TECH_DISCOVERED filter. That filter used to live on
+            the Activity itself and list every technology Android knows, which made Monolith the
+            background handler for practically every tag the phone met and swallowed taps meant
+            for other apps.
+
+            Splitting it per technology lets the gate register only the one the linked tag
+            actually uses, and register nothing at all when the tag is NDEF-linked or when no tag
+            is linked yet. A Skylander user listens for MifareClassic and never sees a bank card.
+        -->
+        <activity-alias
+            android:name=".nfc.TagDispatchMifareClassic"
+            android:targetActivity=".ui.tapoverlay.NfcTapOverlayActivity"
+            android:exported="true"
+            android:enabled="false">
             <intent-filter>
                 <action android:name="android.nfc.action.TECH_DISCOVERED" />
             </intent-filter>
             <meta-data
                 android:name="android.nfc.action.TECH_DISCOVERED"
-                android:resource="@xml/nfc_tech_filter" />
-        </activity>
+                android:resource="@xml/nfc_tech_mifareclassic" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".nfc.TagDispatchMifareUltralight"
+            android:targetActivity=".ui.tapoverlay.NfcTapOverlayActivity"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_mifareultralight" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".nfc.TagDispatchNfcF"
+            android:targetActivity=".ui.tapoverlay.NfcTapOverlayActivity"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_nfcf" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".nfc.TagDispatchNfcV"
+            android:targetActivity=".ui.tapoverlay.NfcTapOverlayActivity"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_nfcv" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".nfc.TagDispatchIsoDep"
+            android:targetActivity=".ui.tapoverlay.NfcTapOverlayActivity"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_isodep" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".nfc.TagDispatchNfcB"
+            android:targetActivity=".ui.tapoverlay.NfcTapOverlayActivity"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_nfcb" />
+        </activity-alias>
+
+        <activity-alias
+            android:name=".nfc.TagDispatchNfcA"
+            android:targetActivity=".ui.tapoverlay.NfcTapOverlayActivity"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_nfca" />
+        </activity-alias>
+
 
         <service
             android:name=".service.AppBlockAccessibilityService"

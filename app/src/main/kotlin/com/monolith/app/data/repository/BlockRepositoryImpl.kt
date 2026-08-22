@@ -6,6 +6,7 @@ import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.repository.BlockRepository
+import com.monolith.app.nfc.NfcDispatchGate
 import com.monolith.app.widget.TimeSavedWidgetRefresher
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -15,6 +16,7 @@ import javax.inject.Singleton
 class BlockRepositoryImpl @Inject constructor(
     private val preferences: MonolithPreferences,
     private val widgetRefresher: TimeSavedWidgetRefresher,
+    private val nfcDispatchGate: NfcDispatchGate,
 ) : BlockRepository {
 
     override fun observeBlockState(): Flow<BlockState> = preferences.blockState
@@ -41,6 +43,10 @@ class BlockRepositoryImpl @Inject constructor(
 
     override suspend fun saveLinkedTag(link: NfcTagLink) {
         preferences.saveLinkedTag(link)
+        // Applied here rather than left to the next app start: linking a UID tag has to start
+        // working immediately, and re-linking from a UID tag to an NDEF one has to stop Monolith
+        // listening for that old technology just as promptly.
+        nfcDispatchGate.apply(link)
     }
 
     override fun observeBlockSessions(): Flow<List<BlockSession>> = preferences.blockSessions

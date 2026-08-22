@@ -13,4 +13,7 @@ interface TagProvisioner {
 
     /** Extracts a stable identifier (UID, or the NDEF URI if present) from a tapped tag. */
     fun identifyTag(tag: Tag): String
+
+    /** The narrowest NFC technology [tag] can be listened for on, or null if there is none. */
+    fun dispatchTechFor(tag: Tag): String?
 }

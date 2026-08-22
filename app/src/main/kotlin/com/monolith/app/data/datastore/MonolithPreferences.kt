@@ -135,6 +135,7 @@ class MonolithPreferences @Inject constructor(
         val TAG_NDEF_URI = stringPreferencesKey("tag_ndef_uri")
         val TAG_MODE = stringPreferencesKey("tag_mode")
         val TAG_LINKED_AT = longPreferencesKey("tag_linked_at")
+        val TAG_DISPATCH_TECH = stringPreferencesKey("tag_dispatch_tech")
         val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
         val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
         val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
@@ -309,6 +310,7 @@ class MonolithPreferences @Inject constructor(
                 ?: TagLinkMode.FALLBACK_UID,
             ndefUri = prefs[Keys.TAG_NDEF_URI],
             linkedAtMillis = prefs[Keys.TAG_LINKED_AT] ?: System.currentTimeMillis(),
+            dispatchTech = prefs[Keys.TAG_DISPATCH_TECH],
         )
     }
 
@@ -321,6 +323,11 @@ class MonolithPreferences @Inject constructor(
                 prefs[Keys.TAG_NDEF_URI] = link.ndefUri
             } else {
                 prefs.remove(Keys.TAG_NDEF_URI)
+            }
+            if (link.dispatchTech != null) {
+                prefs[Keys.TAG_DISPATCH_TECH] = link.dispatchTech
+            } else {
+                prefs.remove(Keys.TAG_DISPATCH_TECH)
             }
         }
     }
