@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.monolith.app.R
 import com.monolith.app.ui.MainActivity
@@ -35,7 +36,8 @@ class ScheduleNotifier @Inject constructor(
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setSmallIcon(R.drawable.ic_monolith_mark)
+            .setColor(ContextCompat.getColor(context, R.color.monolith_amber))
             .setContentTitle(context.getString(R.string.schedule_notification_title))
             .setContentText(context.getString(R.string.schedule_notification_body))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -53,7 +55,9 @@ class ScheduleNotifier @Inject constructor(
             CHANNEL_ID,
             context.getString(R.string.schedule_notification_channel),
             NotificationManager.IMPORTANCE_DEFAULT,
-        )
+        ).apply {
+            description = context.getString(R.string.schedule_notification_channel_description)
+        }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 

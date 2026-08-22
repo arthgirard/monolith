@@ -147,7 +147,10 @@ fun TimeSavedBarChart(
     showLabels: Boolean = true,
 ) {
     val barColor = MaterialTheme.colorScheme.primary
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    // Not surfaceVariant: the chart sits on the screen background on the stats screen and on a
+    // card on the home screen, so the track needs a tone that separates from both. Identical to
+    // surfaceVariant in light, a step lighter in dark.
+    val trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(modifier = modifier.fillMaxWidth()) {

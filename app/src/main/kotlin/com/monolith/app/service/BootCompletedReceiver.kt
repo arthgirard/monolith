@@ -1,15 +1,9 @@
 package com.monolith.app.service
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import androidx.core.app.NotificationCompat
 import com.monolith.app.domain.repository.BlockRepository
-import com.monolith.app.ui.MainActivity
 import com.monolith.app.util.PermissionUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +23,7 @@ import javax.inject.Inject
 class BootCompletedReceiver : BroadcastReceiver() {
 
     @Inject lateinit var blockRepository: BlockRepository
+    @Inject lateinit var statusNotifier: StatusNotifier
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
@@ -42,48 +37,11 @@ class BootCompletedReceiver : BroadcastReceiver() {
                     AppBlockAccessibilityService::class.java,
                 )
                 if (state.isActive && !serviceEnabled) {
-                    notifyServiceDisabled(context)
+                    statusNotifier.notifyAccessibilityServiceOff()
                 }
             } finally {
                 pendingResult.finish()
             }
         }
-    }
-
-    private fun notifyServiceDisabled(context: Context) {
-        val notificationManager = context.getSystemService(NotificationManager::class.java)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Monolith status",
-                NotificationManager.IMPORTANCE_HIGH,
-            )
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val openAppIntent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            openAppIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
-            .setContentTitle("Monolith needs re-enabling")
-            .setContentText("Monolith was active before reboot, but the Accessibility service was turned off. Tap to fix.")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(BOOT_NOTIFICATION_ID, notification)
-    }
-
-    companion object {
-        private const val CHANNEL_ID = "monolith_status"
-        private const val BOOT_NOTIFICATION_ID = 1001
     }
 }

@@ -9,8 +9,10 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.drawable.toBitmap
+import com.monolith.app.R
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.repository.AppRepository
@@ -174,7 +176,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
             val smallIcon = runCatching {
                 sbn.notification.smallIcon?.loadDrawable(this)?.toBitmap()
             }.getOrNull()?.let { IconCompat.createWithBitmap(it) }
-                ?: IconCompat.createWithResource(this, android.R.drawable.ic_lock_lock)
+                ?: IconCompat.createWithResource(this, R.drawable.ic_monolith_mark)
 
             // Reuse the original notification's own PendingIntent where possible: it opens the
             // exact screen the source app intended (e.g. a specific chat), not just its launcher.
@@ -192,7 +194,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
                 .setSmallIcon(smallIcon)
                 .setContentTitle(title ?: appLabel)
                 .setContentText(text)
-                .setSubText("Missed while Monolith was on • $appLabel")
+                .setSubText(getString(R.string.missed_notification_subtext, appLabel))
                 .setLargeIcon(appIcon)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
@@ -201,15 +203,37 @@ class NotificationBlockListenerService : NotificationListenerService() {
 
             notificationManager.notify(sbn.key.hashCode(), restored)
         }
+
+        postMissedSummary(notificationManager, toRestore.size)
+    }
+
+    /**
+     * The group summary. Without one, unlocking after a long block drops the whole held backlog
+     * into the shade as N loose notifications -- the individual entries already carry
+     * MISSED_GROUP_KEY, but a group with no summary is not reliably collapsed. One line saying
+     * how many there are keeps a catch-up from reading as an explosion.
+     */
+    private fun postMissedSummary(notificationManager: NotificationManager, count: Int) {
+        val summary = NotificationCompat.Builder(this, MISSED_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_monolith_mark)
+            .setColor(ContextCompat.getColor(this, R.color.monolith_amber))
+            .setContentTitle(getString(R.string.missed_notification_summary, count))
+            .setGroup(MISSED_GROUP_KEY)
+            .setGroupSummary(true)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(MISSED_SUMMARY_ID, summary)
     }
 
     private fun ensureMissedChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             MISSED_CHANNEL_ID,
-            "Missed notifications",
+            getString(R.string.missed_notification_channel),
             NotificationManager.IMPORTANCE_DEFAULT,
-        )
+        ).apply {
+            description = getString(R.string.missed_notification_channel_description)
+        }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -221,5 +245,9 @@ class NotificationBlockListenerService : NotificationListenerService() {
     companion object {
         private const val MISSED_CHANNEL_ID = "monolith_missed_notifications"
         private const val MISSED_GROUP_KEY = "monolith_missed_group"
+
+        // In the 2xxx status range, clear of EnforcementForegroundService's 1001 and of the
+        // restored notifications, which key off the original notification's own hash.
+        private const val MISSED_SUMMARY_ID = 2003
     }
 }

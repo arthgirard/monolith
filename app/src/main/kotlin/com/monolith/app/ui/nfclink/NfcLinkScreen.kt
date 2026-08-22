@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.TagLinkMode
+import com.monolith.app.ui.theme.MonolithButtonShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,7 +134,7 @@ fun NfcLinkScreen(
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             )
                             Spacer(Modifier.height(24.dp))
-                            Button(onClick = onLinked ?: onBack, modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = onLinked ?: onBack, modifier = Modifier.fillMaxWidth(), shape = MonolithButtonShape) {
                                 Text(stringResource(R.string.onboarding_continue))
                             }
                         }
@@ -142,11 +143,13 @@ fun NfcLinkScreen(
                             Text(
                                 stringResource(R.string.nfc_link_error),
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
+                                // Not `error`: that role is the bypass button's fill and stays the
+                                // deep red, which only manages 3:1 as text on the dark ground.
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             )
                             Spacer(Modifier.height(16.dp))
-                            Button(onClick = viewModel::retry) {
+                            Button(onClick = viewModel::retry, shape = MonolithButtonShape) {
                                 Text(stringResource(R.string.cancel))
                             }
                         }
@@ -155,7 +158,7 @@ fun NfcLinkScreen(
             }
 
             if (onSkip != null && status !is NfcLinkStatus.Success) {
-                Button(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = onSkip, modifier = Modifier.fillMaxWidth(), shape = MonolithButtonShape) {
                     Text(stringResource(R.string.not_now_cta))
                 }
             }

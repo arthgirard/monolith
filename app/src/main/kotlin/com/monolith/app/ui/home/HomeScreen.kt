@@ -5,11 +5,11 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
@@ -39,13 +40,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -71,6 +72,8 @@ import com.monolith.app.R
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
+import com.monolith.app.ui.components.MonolithSnackbarHost
+import com.monolith.app.ui.theme.MonolithButtonShape
 import com.monolith.app.ui.timesaved.TimeSavedBarChart
 import com.monolith.app.util.formatDuration
 import com.monolith.app.util.formatNextFire
@@ -97,11 +100,16 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
-            val message = when (event) {
-                HomeEvent.UnknownTag -> "That tag isn't linked to Monolith."
-                HomeEvent.NoTagLinked -> "Link a tag first from the home screen."
-                is HomeEvent.Toggled -> if (event.nowActive) "Monolith locked in." else "Monolith unlocked."
-            }
+            val message = context.getString(
+                when (event) {
+                    HomeEvent.UnknownTag -> R.string.snack_tag_unknown
+                    HomeEvent.NoTagLinked -> R.string.snack_tag_none_linked
+                    HomeEvent.BypassStarted -> R.string.snack_bypass_started
+                    HomeEvent.BypassEnded -> R.string.snack_bypass_ended
+                    is HomeEvent.Toggled ->
+                        if (event.nowActive) R.string.snack_tag_locked else R.string.snack_tag_unlocked
+                },
+            )
             scope.launch { snackbarHostState.showSnackbar(message) }
         }
     }
@@ -132,7 +140,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { MonolithSnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -143,14 +151,31 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                // Height pinned because the wordmark no longer sets it. The old asset carried
+                // ~16dp of blank artboard above and below its ink, which was quietly holding
+                // this header open; cropping the viewport took that away and collapsed the row
+                // onto the overflow button's 48dp.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Image(
                     painter = painterResource(R.drawable.ic_monolith_wordmark),
                     contentDescription = stringResource(R.string.home_title),
-                    modifier = Modifier.height(64.dp),
+                    // The height of the logo itself now, not of a half-empty artboard. Same
+                    // 28dp the block overlay uses, so the mark is one size across the app.
+                    //
+                    // The start inset replaces the blank space the old asset carried on its left
+                    // (54.5 of 616 units, ~16dp at the size this used to draw). Cropping the
+                    // viewport pulled the mark flush against the screen padding; restoring it as
+                    // real padding keeps the header looking as it did, and keeps it deliberate
+                    // rather than a side effect of the artboard. The block overlay wants the
+                    // opposite -- flush, on the same rule as its text -- so it sets no inset.
+                    modifier = Modifier
+                        .padding(start = 16.dp)
+                        .height(28.dp),
                 )
 
                 Box {
@@ -200,41 +225,63 @@ fun HomeScreen(
                 onClick = onViewTimeSaved,
             )
 
-            if (uiState.linkedTag == null) {
-                OutlinedButton(onClick = onLinkTag, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Nfc, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.link_tag_cta))
+            // One panel rather than three separate outlined buttons: these are places to go, not
+            // actions to take, and stacking them as full-width buttons made the screen read as a
+            // form. Sharing a surface with the cards above ties the whole column together.
+            SettingsGroup {
+                if (uiState.linkedTag == null) {
+                    SettingsRow(
+                        icon = Icons.Filled.Nfc,
+                        label = stringResource(R.string.link_tag_cta),
+                        onClick = onLinkTag,
+                    )
+                    SettingsDivider()
                 }
+                SettingsRow(
+                    icon = Icons.Filled.Apps,
+                    label = stringResource(R.string.manage_apps_cta),
+                    onClick = onManageApps,
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Filled.People,
+                    label = stringResource(R.string.manage_important_people_cta),
+                    onClick = onManageImportantPeople,
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Filled.Schedule,
+                    label = stringResource(R.string.schedules_cta),
+                    onClick = onManageSchedules,
+                )
             }
 
-            OutlinedButton(onClick = onManageApps, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Apps, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.manage_apps_cta))
-            }
-
-            OutlinedButton(onClick = onManageImportantPeople, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.People, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.manage_important_people_cta))
-            }
-
-            OutlinedButton(onClick = onManageSchedules, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Schedule, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.schedules_cta))
-            }
-
-            if (uiState.blockState.isActive && !uiState.blockState.bypassUsed) {
+            if (uiState.blockState.isActive) {
+                // Spent bypasses leave the button in place, disabled, with the rule underneath.
+                // It used to disappear outright, which reads as a bug rather than as a limit --
+                // the user is left wondering where the escape hatch went, at the exact moment
+                // they were looking for it.
+                val bypassUsed = uiState.blockState.bypassUsed
                 Button(
+                    shape = MonolithButtonShape,
                     onClick = { showBypassConfirm = true },
+                    enabled = !bypassUsed,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Filled.Warning, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.emergency_bypass))
+                }
+                if (bypassUsed) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.bypass_used_caption),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
 
@@ -359,6 +406,57 @@ fun HomeScreen(
 }
 
 @Composable
+private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface),
+        content = content,
+    )
+}
+
+@Composable
+private fun SettingsRow(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(14.dp))
+        Text(label, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.weight(1f))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+/** Inset past the icon column, so the rows read as one list rather than stacked slices. */
+@Composable
+private fun SettingsDivider() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant,
+        modifier = Modifier.padding(start = 54.dp),
+    )
+}
+
+@Composable
 private fun BlockStatusCard(
     isActive: Boolean,
     bypassSecondsRemaining: Long,
@@ -459,11 +557,16 @@ private fun TimeSavedTodayCard(
     todayBuckets: List<TimeSavedBucket>,
     onClick: () -> Unit,
 ) {
+    val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // Filled like every other card on this screen rather than outlined. This used to be
+            // border-only because surface and surfaceVariant were the same value in light, so a
+            // filled card swallowed the chart's track; they are distinct now.
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surface, shape)
             .clickable(onClick = onClick)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -63,6 +63,14 @@ sealed interface HomeEvent {
     data object UnknownTag : HomeEvent
     data object NoTagLinked : HomeEvent
     data class Toggled(val nowActive: Boolean) : HomeEvent
+    data object BypassStarted : HomeEvent
+
+    /**
+     * The bypass window closed. Nothing used to mark this: the countdown on the status card
+     * simply vanished, and the next blocked app produced a block screen with no explanation of
+     * where the bypass had gone.
+     */
+    data object BypassEnded : HomeEvent
 }
 
 sealed interface UpdateUiState {
@@ -133,9 +141,17 @@ class HomeViewModel @Inject constructor(
     init {
         // Countdown ticks once a second only matter while a bypass is running; cheap either way.
         viewModelScope.launch {
+            // Watched from the same tick that drives the countdown rather than from a timer in
+            // the enforcement service: a snackbar is only worth emitting while Home is actually
+            // on screen, which is exactly when this ViewModel is alive.
+            var bypassWasActive = false
             while (true) {
                 delay(1000)
-                ticker.value = System.currentTimeMillis()
+                val now = System.currentTimeMillis()
+                ticker.value = now
+                val bypassActive = uiState.value.blockState.isBypassActive(now)
+                if (bypassWasActive && !bypassActive) _events.tryEmit(HomeEvent.BypassEnded)
+                bypassWasActive = bypassActive
             }
         }
 
@@ -150,7 +166,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun startEmergencyBypass() {
-        viewModelScope.launch { startBypass() }
+        viewModelScope.launch {
+            startBypass()
+            _events.tryEmit(HomeEvent.BypassStarted)
+        }
     }
 
     /** Turns Monolith on without a tag. There is no matching "deactivate" -- that stays tag-only. */

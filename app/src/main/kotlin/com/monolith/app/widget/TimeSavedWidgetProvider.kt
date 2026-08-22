@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.RemoteViews
-import androidx.core.content.ContextCompat
 import com.monolith.app.R
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
@@ -121,11 +120,6 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
             widthPx = (chartWidthDp * density).toInt(),
             heightPx = (chartHeightDp * density).toInt(),
             density = density,
-            colors = TimeSavedChartRenderer.Colors(
-                bar = ContextCompat.getColor(context, R.color.widget_bar),
-                track = ContextCompat.getColor(context, R.color.widget_track),
-                label = ContextCompat.getColor(context, R.color.widget_muted),
-            ),
         )
         views.setImageViewBitmap(R.id.widget_chart, chart)
 

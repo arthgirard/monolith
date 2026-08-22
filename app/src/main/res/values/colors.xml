@@ -3,11 +3,15 @@
     <color name="monolith_black">#0B0B0D</color>
     <color name="monolith_white">#F5F5F0</color>
 
+    <!-- The accent, for notification tinting. Notifications sit on the system's own
+         surfaces, not Monolith's, so they use the brand amber in both ramps rather than
+         the darkened AmberDeep the light Compose scheme needs for text contrast. -->
+    <color name="monolith_amber">#D97706</color>
+
     <!-- Widget palette. RemoteViews can't read MaterialTheme, so the colours the Time Saved
          screen pulls from the Compose scheme are mirrored here, with -night for dark mode. -->
-    <color name="widget_background">#F5F5F0</color>
+    <color name="widget_background">#FFFFFF</color>
     <color name="widget_text">#0B0B0D</color>
     <color name="widget_muted">#8A8A8F</color>
     <color name="widget_bar">#0B0B0D</color>
-    <color name="widget_track">#E8E8E2</color>
 </resources>

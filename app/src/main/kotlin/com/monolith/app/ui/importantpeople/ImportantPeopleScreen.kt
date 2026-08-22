@@ -31,7 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
+import com.monolith.app.ui.components.MonolithSnackbarHost
 import com.monolith.app.domain.model.AppInfo
 import com.monolith.app.domain.model.ImportantPerson
 import kotlinx.coroutines.launch
@@ -82,7 +82,7 @@ fun ImportantPeopleScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { MonolithSnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (!uiState.isLocked) {
                 FloatingActionButton(

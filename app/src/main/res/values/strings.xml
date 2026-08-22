@@ -75,6 +75,7 @@
     <string name="schedule_notification_channel">Scheduled blocks</string>
     <string name="schedule_notification_title">Monolith is on</string>
     <string name="schedule_notification_body">A schedule started blocking. Tap your tag to unlock.</string>
+    <string name="schedule_notification_channel_description">A quiet note when a schedule turns blocking on.</string>
 
     <!-- Updates -->
     <string name="update_check_cta">Check for updates</string>
@@ -157,6 +158,15 @@
     <string name="waiver_placeholder">Type the sentence above</string>
     <string name="waiver_continue">Continue</string>
 
+    <!-- Transient feedback (snackbars) -->
+    <string name="snack_tag_locked">Monolith locked in.</string>
+    <string name="snack_tag_unlocked">Monolith unlocked.</string>
+    <string name="snack_tag_unknown">That tag isn\'t linked to Monolith.</string>
+    <string name="snack_tag_none_linked">Link a tag first from the home screen.</string>
+    <string name="snack_bypass_started">Bypass running · 15 minutes</string>
+    <string name="snack_bypass_ended">Bypass ended. Monolith is enforcing again.</string>
+    <string name="bypass_used_caption">One bypass per lock. Tap your tag to reset.</string>
+
     <!-- Tap overlay (background NFC tap feedback) -->
     <string name="tap_overlay_locked">Monolith activated</string>
     <string name="tap_overlay_unlocked">Monolith disabled</string>
@@ -167,8 +177,24 @@
     <string name="enforcement_notification_channel">Monolith active</string>
     <string name="enforcement_notification_title">Monolith is active</string>
     <string name="enforcement_notification_body">Tap your tag to stop the blocker.</string>
-    <string name="enforcement_notification_body_paused">Timer paused — emergency bypass active.</string>
-    <string name="enforcement_notification_body_paused_unlock">Timer paused — an app is unlocked.</string>
+    <string name="enforcement_notification_body_paused">Paused · emergency bypass</string>
+    <string name="enforcement_notification_body_paused_unlock">Paused · an app is unlocked</string>
+    <string name="enforcement_notification_channel_description">The ongoing, silent notification Android requires while Monolith is blocking.</string>
+
+    <!-- Status notifications: something needs the user's attention before blocking can work -->
+    <string name="status_notification_channel">Monolith status</string>
+    <string name="status_notification_channel_description">Rare alerts for when Monolith has been switched off or has lost a permission it needs.</string>
+    <string name="status_boot_title">Monolith needs re-enabling</string>
+    <string name="status_boot_body">Monolith was active before reboot, but its Accessibility service is off. Blocking is not running.</string>
+    <string name="status_overlay_permission_title">Monolith can\'t show the block screen</string>
+    <string name="status_overlay_permission_body">Display over other apps is off, so blocked apps are only sent to the home screen.</string>
+    <string name="status_open_settings">Open settings</string>
+
+    <!-- Missed notifications, restored when Monolith stops blocking -->
+    <string name="missed_notification_channel">Missed notifications</string>
+    <string name="missed_notification_channel_description">Notifications held back while Monolith was blocking, reposted once it stops.</string>
+    <string name="missed_notification_subtext">Missed while Monolith was on · %1$s</string>
+    <string name="missed_notification_summary">%1$d missed while Monolith was on</string>
 
     <!-- Home-screen widget -->
     <string name="widget_time_saved_name">Time saved today</string>

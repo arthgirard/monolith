@@ -54,6 +54,7 @@
         android:layout_weight="1"
         android:layout_marginTop="8dp"
         android:scaleType="fitXY"
+        android:tint="@color/widget_bar"
         android:contentDescription="@string/widget_time_saved_chart_description" />
 
 </LinearLayout>

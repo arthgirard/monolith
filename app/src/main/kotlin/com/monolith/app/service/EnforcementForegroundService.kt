@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.monolith.app.R
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.repository.AppUnlockRepository
@@ -131,7 +132,11 @@ class EnforcementForegroundService : Service() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            // Monolith's own mark rather than Android's stock padlock, and the brand amber
+            // for the tint the system applies to it. Notifications are the app's only presence
+            // in the shade; borrowing a system glyph there gives that presence to no one.
+            .setSmallIcon(R.drawable.ic_monolith_mark)
+            .setColor(ContextCompat.getColor(this, R.color.monolith_amber))
             .setContentTitle(getString(R.string.enforcement_notification_title))
             .setContentIntent(contentIntent)
             .setOngoing(true)
@@ -162,7 +167,9 @@ class EnforcementForegroundService : Service() {
             CHANNEL_ID,
             getString(R.string.enforcement_notification_channel),
             NotificationManager.IMPORTANCE_MIN,
-        )
+        ).apply {
+            description = getString(R.string.enforcement_notification_channel_description)
+        }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 

@@ -52,6 +52,7 @@ import android.text.format.DateFormat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.BlockSchedule
+import com.monolith.app.ui.theme.MonolithButtonShape
 import com.monolith.app.util.formatScheduleDays
 import com.monolith.app.util.formatScheduleTime
 import com.monolith.app.util.weekOrder
@@ -300,7 +301,7 @@ private fun ScheduleEditorDialog(
                     Text(
                         stringResource(R.string.schedules_no_days),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -329,6 +330,7 @@ private fun ScheduleEditorDialog(
         },
         confirmButton = {
             Button(
+                shape = MonolithButtonShape,
                 enabled = days.isNotEmpty(),
                 onClick = { onSave(days, LocalTime.of(timeState.hour, timeState.minute)) },
             ) {

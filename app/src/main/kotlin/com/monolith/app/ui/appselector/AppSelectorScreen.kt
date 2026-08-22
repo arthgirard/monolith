@@ -46,6 +46,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.AppInfo
+import com.monolith.app.ui.theme.MonolithButtonShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,6 +127,7 @@ fun AppSelectorScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
+                    shape = MonolithButtonShape,
                     onClick = viewModel::toggleSelectAll,
                     enabled = !uiState.isLocked,
                     modifier = Modifier.weight(1f),
@@ -137,6 +139,7 @@ fun AppSelectorScreen(
                     )
                 }
                 OutlinedButton(
+                    shape = MonolithButtonShape,
                     onClick = { showDumbPhoneConfirm = true },
                     enabled = !uiState.isLocked,
                     modifier = Modifier.weight(1f),
@@ -160,6 +163,7 @@ fun AppSelectorScreen(
 
             if (onContinue != null) {
                 Button(
+                    shape = MonolithButtonShape,
                     onClick = onContinue,
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                 ) {

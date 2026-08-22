@@ -46,6 +46,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
+import com.monolith.app.ui.theme.MonolithButtonShape
 
 @Composable
 fun OnboardingScreen(
@@ -173,6 +174,7 @@ fun OnboardingScreen(
             Spacer(Modifier.height(24.dp))
 
             Button(
+                shape = MonolithButtonShape,
                 onClick = onFinished,
                 enabled = uiState.allGranted,
                 modifier = Modifier.fillMaxWidth(),
@@ -198,7 +200,7 @@ private fun RestrictedSettingsHint(onOpenAppInfo: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick = onOpenAppInfo) {
+            OutlinedButton(onClick = onOpenAppInfo, shape = MonolithButtonShape) {
                 Text(stringResource(R.string.restricted_settings_open))
             }
         }
@@ -236,7 +238,7 @@ private fun PermissionCard(
             }
             Spacer(Modifier.width(12.dp))
             if (!granted) {
-                OutlinedButton(onClick = onGrant) {
+                OutlinedButton(onClick = onGrant, shape = MonolithButtonShape) {
                     Text(stringResource(R.string.perm_grant))
                 }
             }

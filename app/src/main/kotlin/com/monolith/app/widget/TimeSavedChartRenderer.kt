@@ -12,6 +12,14 @@ import java.time.ZoneId
  * Draws the day's hourly bars into a bitmap for the widget's ImageView. RemoteViews has no
  * Canvas, and a 24-view LinearLayout would blow past the update transaction budget, so the whole
  * chart -- bars and hour labels -- travels as one bitmap.
+ *
+ * The bitmap is drawn as an alpha mask in white, never in a real colour, and the layout tints it
+ * with `@color/widget_bar`. That matters: a colour looked up here would be resolved against *this*
+ * process's configuration, while everything else in the widget is resolved by the launcher against
+ * its own. The two disagree whenever the app process outlives a day/night switch -- which it does,
+ * because the enforcement service keeps it alive -- and the chart would then be drawn from
+ * values-night while the background and labels came from values. Letting the host resolve the one
+ * colour keeps the whole widget on a single configuration.
  */
 object TimeSavedChartRenderer {
 
@@ -22,18 +30,24 @@ object TimeSavedChartRenderer {
      */
     private const val MAX_PIXELS = 200_000
 
-    data class Colors(
-        val bar: Int,
-        val track: Int,
-        val label: Int,
-    )
+    /**
+     * Opacities within the mask. The track and the labels are the bar colour held back rather than
+     * separate colours, solved against the in-app chart over the widget's own ground. That ground
+     * is pure white / pitch black, which is further from the track than the app's is, so the exact
+     * match differs by theme -- 9.4% in light, 14.1% in dark. 12% splits them and lands within a
+     * couple of shades either way. The labels match the widget's own header label rather than the
+     * app's, so the two rows of muted text in the widget agree.
+     */
+    private const val TRACK_ALPHA = 0.12f
+    private const val LABEL_ALPHA = 0.50f
+
+    private fun mask(alpha: Float): Int = ((alpha * 255).toInt() shl 24) or 0x00FFFFFF
 
     fun render(
         buckets: List<TimeSavedBucket>,
         widthPx: Int,
         heightPx: Int,
         density: Float,
-        colors: Colors,
         zone: ZoneId = ZoneId.systemDefault(),
     ): Bitmap {
         val scale = scaleFor(widthPx, heightPx)
@@ -60,17 +74,17 @@ object TimeSavedChartRenderer {
         )
 
         slots.forEach { slot ->
-            paint.color = colors.track
+            paint.color = mask(TRACK_ALPHA)
             canvas.drawRect(slot.left, slot.top, slot.right, slot.bottom, paint)
             if (slot.hasFill) {
-                paint.color = colors.bar
+                paint.color = mask(1f)
                 canvas.drawRect(slot.left, slot.fillTop, slot.right, slot.bottom, paint)
             }
         }
 
         if (labelBand > 0f) {
             val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = colors.label
+                color = mask(LABEL_ALPHA)
                 textSize = labelSize
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.DEFAULT
