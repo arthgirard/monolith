@@ -129,14 +129,15 @@
             android:orientation="vertical">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_stat_blocks"
                 android:textColor="@color/widget_muted"
                 android:textSize="9sp"
                 android:fontFamily="@font/inter_medium"
                 android:letterSpacing="0.08"
-                android:maxLines="1" />
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/widget_stat_blocks_value"
@@ -157,14 +158,15 @@
             android:orientation="vertical">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_stat_held"
                 android:textColor="@color/widget_muted"
                 android:textSize="9sp"
                 android:fontFamily="@font/inter_medium"
                 android:letterSpacing="0.08"
-                android:maxLines="1" />
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/widget_stat_held_value"
