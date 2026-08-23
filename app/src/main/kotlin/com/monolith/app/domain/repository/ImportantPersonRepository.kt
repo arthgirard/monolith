@@ -8,5 +8,7 @@ interface ImportantPersonRepository {
 
     suspend fun addImportantPerson(person: ImportantPerson)
 
+    suspend fun updateImportantPerson(original: ImportantPerson, updated: ImportantPerson)
+
     suspend fun removeImportantPerson(person: ImportantPerson)
 }

@@ -113,7 +113,10 @@
     <string name="important_people_name_label">Name (optional)</string>
     <string name="important_people_handle_label">Handle (optional)</string>
     <string name="important_people_field_hint">Enter a name or a handle. At least one is required.</string>
+    <string name="important_people_edit_title">Edit important person</string>
     <string name="important_people_add_cta">Add</string>
+    <string name="important_people_save_cta">Save</string>
+    <string name="important_people_edit_cta">Edit</string>
     <string name="important_people_remove_cta">Remove</string>
 
     <!-- Time saved -->

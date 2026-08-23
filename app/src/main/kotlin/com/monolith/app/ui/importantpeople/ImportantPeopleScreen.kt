@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -64,6 +65,7 @@ fun ImportantPeopleScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var personBeingEdited by remember { mutableStateOf<ImportantPerson?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -117,6 +119,7 @@ fun ImportantPeopleScreen(
                         person = person,
                         app = app,
                         isAppBlocked = person.packageName in uiState.blockedPackages,
+                        onEdit = { personBeingEdited = person },
                         onRemove = { viewModel.removePerson(person) },
                     )
                 }
@@ -125,12 +128,29 @@ fun ImportantPeopleScreen(
     }
 
     if (showAddDialog) {
-        AddPersonDialog(
+        PersonDialog(
             apps = uiState.blockableApps,
+            editing = null,
+            editingApp = null,
             onDismiss = { showAddDialog = false },
-            onAdd = { packageName, name, handle ->
+            onConfirm = { packageName, name, handle ->
                 viewModel.addPerson(packageName, name, handle)
                 showAddDialog = false
+            },
+        )
+    }
+
+    personBeingEdited?.let { person ->
+        PersonDialog(
+            apps = uiState.blockableApps,
+            editing = person,
+            // Looked up in the full installed list, not the blockable one: an entry whose app has
+            // since been dropped from the block list still shows which app it was made against.
+            editingApp = uiState.installedApps.firstOrNull { it.packageName == person.packageName },
+            onDismiss = { personBeingEdited = null },
+            onConfirm = { packageName, name, handle ->
+                viewModel.updatePerson(person, packageName, name, handle)
+                personBeingEdited = null
             },
         )
     }
@@ -141,6 +161,7 @@ private fun PersonRow(
     person: ImportantPerson,
     app: AppInfo?,
     isAppBlocked: Boolean,
+    onEdit: () -> Unit,
     onRemove: () -> Unit,
 ) {
     val contentAlpha = if (isAppBlocked) 1f else 0.4f
@@ -177,34 +198,60 @@ private fun PersonRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
             )
         }
-        IconButton(onClick = onRemove) {
-            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.important_people_remove_cta))
+        Row {
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.important_people_edit_cta))
+            }
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.important_people_remove_cta))
+            }
         }
     }
 }
 
+/**
+ * Add and edit share one dialog: the fields are identical, and [editing] only decides what it is
+ * seeded with and what the wording says. [editingApp] is the entry's app resolved against every
+ * installed app, so an entry made against an app that has since left the block list still opens
+ * showing that app rather than an empty picker.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddPersonDialog(
+private fun PersonDialog(
     apps: List<AppInfo>,
+    editing: ImportantPerson?,
+    editingApp: AppInfo?,
     onDismiss: () -> Unit,
-    onAdd: (packageName: String, name: String?, handle: String?) -> Unit,
+    onConfirm: (packageName: String, name: String?, handle: String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedApp by remember { mutableStateOf<AppInfo?>(null) }
-    var name by remember { mutableStateOf("") }
-    var handle by remember { mutableStateOf("") }
+    var selectedApp by remember { mutableStateOf(editingApp) }
+    var name by remember { mutableStateOf(editing?.name.orEmpty()) }
+    var handle by remember { mutableStateOf(editing?.handle.orEmpty()) }
 
-    val canAdd = selectedApp != null && (name.isNotBlank() || handle.isNotBlank())
+    // An entry whose app is no longer installed keeps working off its stored package name: the
+    // picker can't resolve a label for it, but nothing here needs one to save a corrected handle.
+    val packageName = selectedApp?.packageName ?: editing?.packageName
+    val canConfirm = packageName != null && (name.isNotBlank() || handle.isNotBlank())
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.important_people_add_title)) },
+        title = {
+            Text(
+                stringResource(
+                    if (editing != null) {
+                        R.string.important_people_edit_title
+                    } else {
+                        R.string.important_people_add_title
+                    },
+                ),
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
                     OutlinedTextField(
-                        value = selectedApp?.label ?: "",
+                        value = selectedApp?.label ?: editing?.packageName.orEmpty(),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.important_people_app_label)) },
@@ -247,10 +294,18 @@ private fun AddPersonDialog(
         },
         confirmButton = {
             Button(
-                enabled = canAdd,
-                onClick = { onAdd(selectedApp!!.packageName, name.ifBlank { null }, handle.ifBlank { null }) },
+                enabled = canConfirm,
+                onClick = { onConfirm(packageName!!, name.ifBlank { null }, handle.ifBlank { null }) },
             ) {
-                Text(stringResource(R.string.important_people_add_cta))
+                Text(
+                    stringResource(
+                        if (editing != null) {
+                            R.string.important_people_save_cta
+                        } else {
+                            R.string.important_people_add_cta
+                        },
+                    ),
+                )
             }
         },
         dismissButton = {

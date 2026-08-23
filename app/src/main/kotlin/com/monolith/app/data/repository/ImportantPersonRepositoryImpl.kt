@@ -18,6 +18,10 @@ class ImportantPersonRepositoryImpl @Inject constructor(
         preferences.addImportantPerson(person)
     }
 
+    override suspend fun updateImportantPerson(original: ImportantPerson, updated: ImportantPerson) {
+        preferences.updateImportantPerson(original, updated)
+    }
+
     override suspend fun removeImportantPerson(person: ImportantPerson) {
         preferences.removeImportantPerson(person)
     }

@@ -9,6 +9,7 @@ import com.monolith.app.domain.usecase.GetInstalledAppsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockedPackagesUseCase
 import com.monolith.app.domain.usecase.ObserveImportantPeopleUseCase
 import com.monolith.app.domain.usecase.RemoveImportantPersonUseCase
+import com.monolith.app.domain.usecase.UpdateImportantPersonUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,7 @@ class ImportantPeopleViewModel @Inject constructor(
     private val getInstalledApps: GetInstalledAppsUseCase,
     private val addImportantPerson: AddImportantPersonUseCase,
     private val removeImportantPerson: RemoveImportantPersonUseCase,
+    private val updateImportantPerson: UpdateImportantPersonUseCase,
 ) : ViewModel() {
 
     private val installedApps = MutableStateFlow<List<AppInfo>>(emptyList())
@@ -70,6 +72,14 @@ class ImportantPeopleViewModel @Inject constructor(
     fun addPerson(packageName: String, name: String?, handle: String?) {
         viewModelScope.launch {
             val result = addImportantPerson(ImportantPerson(packageName, name?.trim(), handle?.trim()))
+            result.exceptionOrNull()?.message?.let { _errors.tryEmit(it) }
+        }
+    }
+
+    fun updatePerson(original: ImportantPerson, packageName: String, name: String?, handle: String?) {
+        viewModelScope.launch {
+            val updated = ImportantPerson(packageName, name?.trim(), handle?.trim())
+            val result = updateImportantPerson(original, updated)
             result.exceptionOrNull()?.message?.let { _errors.tryEmit(it) }
         }
     }

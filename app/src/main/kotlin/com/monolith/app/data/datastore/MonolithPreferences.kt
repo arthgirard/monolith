@@ -374,6 +374,25 @@ class MonolithPreferences @Inject constructor(
         }
     }
 
+    /**
+     * Replaces [original] with [updated] in place, in one edit, so the entry keeps its position
+     * in the list rather than jumping to the end the way a remove-then-add would. A no-op if
+     * [original] is gone, which means a stale edit dialog can't resurrect a deleted person.
+     */
+    suspend fun updateImportantPerson(original: ImportantPerson, updated: ImportantPerson) {
+        context.dataStore.edit { prefs ->
+            val current = decodeImportantPeople(prefs[Keys.IMPORTANT_PEOPLE])
+            val index = current.indexOfFirst {
+                it.packageName == original.packageName && it.name == original.name && it.handle == original.handle
+            }
+            if (index < 0) return@edit
+            val replaced = current.toMutableList().also {
+                it[index] = ImportantPersonDto(updated.packageName, updated.name, updated.handle)
+            }
+            prefs[Keys.IMPORTANT_PEOPLE] = json.encodeToString(replaced)
+        }
+    }
+
     suspend fun removeImportantPerson(person: ImportantPerson) {
         context.dataStore.edit { prefs ->
             val current = decodeImportantPeople(prefs[Keys.IMPORTANT_PEOPLE])
