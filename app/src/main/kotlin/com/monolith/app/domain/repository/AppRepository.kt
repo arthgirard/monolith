@@ -1,5 +1,6 @@
 package com.monolith.app.domain.repository
 
+import android.graphics.Bitmap
 import com.monolith.app.domain.model.AppInfo
 import kotlinx.coroutines.flow.Flow
 
@@ -16,4 +17,7 @@ interface AppRepository {
 
     /** The launcher-visible label for [packageName], or the package name itself if unresolvable. */
     suspend fun getAppLabel(packageName: String): String
+
+    /** The launcher icon for [packageName] at [sizeDp], or null if the app is no longer installed. */
+    suspend fun getAppIcon(packageName: String, sizeDp: Int): Bitmap?
 }

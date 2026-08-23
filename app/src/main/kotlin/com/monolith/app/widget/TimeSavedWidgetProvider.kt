@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
@@ -172,7 +173,11 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
 
         val hits = observeBlockHits().first()
         val topApps = if (sizes.any { it.tier.showApps }) {
-            val ranked = BlockHitLog.topPackagesToday(hits, now, WidgetTiers.APP_ROWS)
+            // A hit logged while an app was blocked shouldn't keep it on the list after it's been
+            // removed from blocking -- the list reflects what's blocked now, not history.
+            val blockedPackages = appRepository.observeBlockedPackages().first()
+            val currentHits = hits.filter { it.packageName in blockedPackages }
+            val ranked = BlockHitLog.topPackagesToday(currentHits, now, WidgetTiers.MAX_APP_ROWS)
             // Every bar is measured against the busiest app, so the leader's bar is always full
             // and the rest read as a share of it rather than of some invisible ceiling.
             val topCount = ranked.firstOrNull()?.second ?: 0
@@ -183,6 +188,7 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
                     // long enough to be read back, and a static one would go stale on an app
                     // update or a locale change.
                     label = appRepository.getAppLabel(packageName),
+                    icon = appRepository.getAppIcon(packageName, APP_ICON_DP),
                     count = count,
                     barFraction = WidgetRowBarRenderer.fraction(count, topCount),
                 )
@@ -227,22 +233,26 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.widget_stat_held_value, formatDuration(detail.streakMillis))
 
         APP_ROW_IDS.forEachIndexed { index, row ->
-            val app = detail.topApps.getOrNull(index)
+            // Rows beyond what this height earns stay collapsed even if there's data for them --
+            // the tier, not the data, decides how many rows the band is tall enough to hold.
+            val app = if (index < tier.appRows) detail.topApps.getOrNull(index) else null
             // The first row carries the empty state, so a day with nothing reached for reads as a
             // finished list rather than as a band that failed to draw. The rows below it collapse,
             // but the band around them keeps its fixed height, so the chart's budget never moves.
-            val isEmptyState = app == null && index == 0
+            val isEmptyState = app == null && index == 0 && tier.appRows > 0
             views.setViewVisibility(row.rowId, if (app != null || isEmptyState) View.VISIBLE else View.GONE)
             views.setTextViewText(
                 row.labelId,
                 app?.label ?: if (isEmptyState) context.getString(R.string.widget_apps_empty) else "",
             )
             views.setTextViewText(row.countId, app?.count?.toString() ?: "")
-            // The empty-state row is visible but has no share to show, and its bar would otherwise
-            // be whatever the last render left there.
+            // The empty-state row is visible but has no share or icon to show, and either would
+            // otherwise be whatever the last render left there.
             views.setViewVisibility(row.barId, if (app != null) View.VISIBLE else View.GONE)
+            views.setViewVisibility(row.iconId, if (app?.icon != null) View.VISIBLE else View.GONE)
             if (app != null) {
                 views.setImageViewBitmap(row.barId, WidgetRowBarRenderer.render(app.barFraction))
+                app.icon?.let { views.setImageViewBitmap(row.iconId, it) }
             }
         }
     }
@@ -257,9 +267,9 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         val enforcing: Boolean = false,
     )
 
-    private data class TopApp(val label: String, val count: Int, val barFraction: Float)
+    private data class TopApp(val label: String, val icon: Bitmap?, val count: Int, val barFraction: Float)
 
-    private data class AppRowIds(val rowId: Int, val barId: Int, val labelId: Int, val countId: Int)
+    private data class AppRowIds(val rowId: Int, val iconId: Int, val barId: Int, val labelId: Int, val countId: Int)
 
     private fun buildViews(
         context: Context,
@@ -327,10 +337,16 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
 
     private companion object {
         val APP_ROW_IDS = listOf(
-            AppRowIds(R.id.widget_app_1, R.id.widget_app_1_bar, R.id.widget_app_1_label, R.id.widget_app_1_count),
-            AppRowIds(R.id.widget_app_2, R.id.widget_app_2_bar, R.id.widget_app_2_label, R.id.widget_app_2_count),
-            AppRowIds(R.id.widget_app_3, R.id.widget_app_3_bar, R.id.widget_app_3_label, R.id.widget_app_3_count),
+            AppRowIds(R.id.widget_app_1, R.id.widget_app_1_icon, R.id.widget_app_1_bar, R.id.widget_app_1_label, R.id.widget_app_1_count),
+            AppRowIds(R.id.widget_app_2, R.id.widget_app_2_icon, R.id.widget_app_2_bar, R.id.widget_app_2_label, R.id.widget_app_2_count),
+            AppRowIds(R.id.widget_app_3, R.id.widget_app_3_icon, R.id.widget_app_3_bar, R.id.widget_app_3_label, R.id.widget_app_3_count),
+            AppRowIds(R.id.widget_app_4, R.id.widget_app_4_icon, R.id.widget_app_4_bar, R.id.widget_app_4_label, R.id.widget_app_4_count),
+            AppRowIds(R.id.widget_app_5, R.id.widget_app_5_icon, R.id.widget_app_5_bar, R.id.widget_app_5_label, R.id.widget_app_5_count),
+            AppRowIds(R.id.widget_app_6, R.id.widget_app_6_icon, R.id.widget_app_6_bar, R.id.widget_app_6_label, R.id.widget_app_6_count),
         )
+
+        /** Matches the 16dp ImageView each app row lays out to its left. */
+        const val APP_ICON_DP = 16
 
         const val ACTION_MANUAL_REFRESH = "com.monolith.app.widget.MANUAL_REFRESH"
         const val REFRESH_REQUEST_CODE = 1

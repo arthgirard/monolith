@@ -10,9 +10,11 @@ package com.monolith.app.widget
  */
 data class WidgetTier(
     val showStats: Boolean,
-    val showApps: Boolean,
+    val appRows: Int,
     val reservedBandDp: Int,
-)
+) {
+    val showApps: Boolean get() = appRows > 0
+}
 
 /**
  * The detail the widget adds as it grows taller. Kept free of Android so the thresholds can be
@@ -29,11 +31,25 @@ object WidgetTiers {
     /** One row of caption-over-value readouts. */
     const val STATS_BAND_DP = 32
 
-    /** [APP_ROWS] rows of 20dp -- a line of text, its rule, and the air below it -- plus the
-     * band's top margin. */
-    const val APPS_BAND_DP = 68
+    /** A line of text, its rule, and the air above and below the rule. */
+    const val APP_ROW_HEIGHT_DP = 26
 
+    /** The apps band's top margin, on top of however many rows it's showing. */
+    const val APPS_BAND_MARGIN_DP = 8
+
+    /**
+     * Slack a resize has to clear, beyond one row's own height, before it earns another row. A
+     * launcher's grid cells rarely land exactly on APPS_MIN_HEIGHT_DP, so without this an
+     * placement barely past the threshold could tip into 4 rows unasked -- the same jitter
+     * STATS_MIN_HEIGHT_DP and APPS_MIN_HEIGHT_DP already leave room for.
+     */
+    const val APP_ROW_MARGIN_DP = 24
+
+    /** Rows shown the moment the band clears [APPS_MIN_HEIGHT_DP]. */
     const val APP_ROWS = 3
+
+    /** Rows shown once the widget is tall enough to earn every one of them. */
+    const val MAX_APP_ROWS = 6
 
     /**
      * Heights at which each band starts being worth drawing. Both are the point where the chart
@@ -45,15 +61,27 @@ object WidgetTiers {
     const val STATS_MIN_HEIGHT_DP = 200
     const val APPS_MIN_HEIGHT_DP = 272
 
+    /** Space the apps band claims for [appRows] rows, including its own top margin. */
+    fun appsBandDp(appRows: Int): Int = APPS_BAND_MARGIN_DP + appRows * APP_ROW_HEIGHT_DP
+
     fun forHeight(heightDp: Int): WidgetTier {
         val showStats = heightDp >= STATS_MIN_HEIGHT_DP
         val showApps = heightDp >= APPS_MIN_HEIGHT_DP
+        // Every row past the base 3 costs its own height plus APP_ROW_MARGIN_DP of slack, so a
+        // resize has to clearly mean the next row rather than barely clip its threshold.
+        val appRows = if (showApps) {
+            val extraRowStep = APP_ROW_HEIGHT_DP + APP_ROW_MARGIN_DP
+            val extraRows = (heightDp - APPS_MIN_HEIGHT_DP) / extraRowStep
+            (APP_ROWS + extraRows).coerceAtMost(MAX_APP_ROWS)
+        } else {
+            0
+        }
         return WidgetTier(
             showStats = showStats,
-            showApps = showApps,
+            appRows = appRows,
             reservedBandDp = TEXT_BAND_DP +
                 (if (showStats) DIVIDER_BAND_DP + STATS_BAND_DP else 0) +
-                (if (showApps) APPS_BAND_DP else 0),
+                (if (showApps) appsBandDp(appRows) else 0),
         )
     }
 }

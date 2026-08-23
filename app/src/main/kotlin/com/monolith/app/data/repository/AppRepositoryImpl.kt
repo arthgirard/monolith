@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.provider.AlarmClock
 import android.provider.MediaStore
 import android.provider.Telephony
 import android.telecom.TelecomManager
+import androidx.core.graphics.drawable.toBitmap
 import com.monolith.app.data.datastore.MonolithPreferences
 import com.monolith.app.domain.model.AppInfo
 import com.monolith.app.domain.model.SystemPackages
@@ -56,6 +58,12 @@ class AppRepositoryImpl @Inject constructor(
         val pm = context.packageManager
         runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }
             .getOrDefault(packageName)
+    }
+
+    override suspend fun getAppIcon(packageName: String, sizeDp: Int): Bitmap? = withContext(Dispatchers.IO) {
+        val pm = context.packageManager
+        val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        runCatching { pm.getApplicationIcon(packageName).toBitmap(sizePx, sizePx) }.getOrNull()
     }
 
     override suspend fun getEssentialPackages(): Set<String> = withContext(Dispatchers.IO) {

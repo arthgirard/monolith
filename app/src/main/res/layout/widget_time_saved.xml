@@ -185,7 +185,7 @@
     <LinearLayout
         android:id="@+id/widget_apps"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:orientation="vertical"
         android:contentDescription="@string/widget_apps_description"
@@ -194,7 +194,7 @@
         <LinearLayout
             android:id="@+id/widget_app_1"
             android:layout_width="match_parent"
-            android:layout_height="20dp"
+            android:layout_height="26dp"
             android:orientation="vertical"
             android:visibility="gone">
 
@@ -203,6 +203,13 @@
                 android:layout_height="16dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/widget_app_1_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="6dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/widget_app_1_label"
@@ -237,6 +244,8 @@
                 android:id="@+id/widget_app_1_bar"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
                 android:scaleType="fitXY"
                 android:tint="@color/widget_bar"
                 android:importantForAccessibility="no" />
@@ -246,7 +255,7 @@
         <LinearLayout
             android:id="@+id/widget_app_2"
             android:layout_width="match_parent"
-            android:layout_height="20dp"
+            android:layout_height="26dp"
             android:orientation="vertical"
             android:visibility="gone">
 
@@ -255,6 +264,13 @@
                 android:layout_height="16dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/widget_app_2_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="6dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/widget_app_2_label"
@@ -289,6 +305,8 @@
                 android:id="@+id/widget_app_2_bar"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
                 android:scaleType="fitXY"
                 android:tint="@color/widget_bar"
                 android:importantForAccessibility="no" />
@@ -298,7 +316,7 @@
         <LinearLayout
             android:id="@+id/widget_app_3"
             android:layout_width="match_parent"
-            android:layout_height="20dp"
+            android:layout_height="26dp"
             android:orientation="vertical"
             android:visibility="gone">
 
@@ -307,6 +325,13 @@
                 android:layout_height="16dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/widget_app_3_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="6dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/widget_app_3_label"
@@ -341,6 +366,176 @@
                 android:id="@+id/widget_app_3_bar"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
+                android:scaleType="fitXY"
+                android:tint="@color/widget_bar"
+                android:importantForAccessibility="no" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_app_4"
+            android:layout_width="match_parent"
+            android:layout_height="26dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/widget_app_4_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="6dp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:id="@+id/widget_app_4_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_regular"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_app_4_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/widget_app_4_bar"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
+                android:scaleType="fitXY"
+                android:tint="@color/widget_bar"
+                android:importantForAccessibility="no" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_app_5"
+            android:layout_width="match_parent"
+            android:layout_height="26dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/widget_app_5_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="6dp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:id="@+id/widget_app_5_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_regular"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_app_5_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/widget_app_5_bar"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
+                android:scaleType="fitXY"
+                android:tint="@color/widget_bar"
+                android:importantForAccessibility="no" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_app_6"
+            android:layout_width="match_parent"
+            android:layout_height="26dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/widget_app_6_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="6dp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:id="@+id/widget_app_6_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_regular"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_app_6_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/widget_app_6_bar"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
                 android:scaleType="fitXY"
                 android:tint="@color/widget_bar"
                 android:importantForAccessibility="no" />
