@@ -273,9 +273,14 @@ class MonolithPreferences @Inject constructor(
     /**
      * Records that [packageName] was reached for and blocked, applying [BlockHitLog]'s dedupe
      * and retention rules inside the atomic edit so concurrent hits can't clobber each other.
+     * Returns whether a hit was actually written, which the dedupe can decline.
      */
-    suspend fun recordBlockHit(packageName: String) {
+    suspend fun recordBlockHit(packageName: String): Boolean {
+        var recorded = false
         context.dataStore.edit { prefs ->
+            // Reset per attempt: DataStore can run this block more than once for one call, and a
+            // retry that dedupes must not inherit the first attempt's answer.
+            recorded = false
             val existing = decodeBlockHits(prefs[Keys.BLOCK_HITS])
                 .map { BlockHit(it.packageName, it.atMillis) }
             val updated = BlockHitLog.record(existing, packageName, System.currentTimeMillis())
@@ -283,7 +288,9 @@ class MonolithPreferences @Inject constructor(
             prefs[Keys.BLOCK_HITS] = json.encodeToString(
                 updated.map { BlockHitDto(it.packageName, it.atMillis) },
             )
+            recorded = true
         }
+        return recorded
     }
 
     val blockHits: Flow<List<BlockHit>> = context.dataStore.data.map { prefs ->

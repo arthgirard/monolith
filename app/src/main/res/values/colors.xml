@@ -20,4 +20,7 @@
     <color name="widget_text">#0B0B0D</color>
     <color name="widget_muted">#8A8A8F</color>
     <color name="widget_bar">#0B0B0D</color>
+    <!-- The rule above the detail bands. The text colour at 12%, matching both the in-app
+         Hairline and TimeSavedChartRenderer.TRACK_ALPHA, so the widget has one rule weight. -->
+    <color name="widget_divider">#1F0B0B0D</color>
 </resources>

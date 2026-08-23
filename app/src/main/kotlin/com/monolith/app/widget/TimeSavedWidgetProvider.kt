@@ -11,9 +11,14 @@ import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import com.monolith.app.R
+import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
+import com.monolith.app.domain.repository.AppRepository
+import com.monolith.app.domain.usecase.BlockHitLog
+import com.monolith.app.domain.usecase.GetCurrentStreakUseCase
 import com.monolith.app.domain.usecase.ObserveActiveSessionStartUseCase
+import com.monolith.app.domain.usecase.ObserveBlockHitsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockSessionsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.TimeSavedCalculator
@@ -40,6 +45,8 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
     @Inject lateinit var observeBlockSessions: ObserveBlockSessionsUseCase
     @Inject lateinit var observeBlockState: ObserveBlockStateUseCase
     @Inject lateinit var observeActiveSessionStart: ObserveActiveSessionStartUseCase
+    @Inject lateinit var observeBlockHits: ObserveBlockHitsUseCase
+    @Inject lateinit var appRepository: AppRepository
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
@@ -95,6 +102,13 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
                 )
                 val total = buckets.sumOf { it.durationMillis }
 
+                // Sizes first, so the detail below is fetched only if some widget is tall enough
+                // to show it. Two widgets can be placed at two sizes, so each renders its own.
+                val sizes = appWidgetIds.associateWith { sizeOf(context, manager, it) }
+                // A bypass pauses enforcement without ending the session, and the mark shouldn't claim to
+                // be holding the line while it's paused.
+                val detail = detailFor(sizes.values, ongoing, blockState.isEnforcing(now), now)
+
                 // Reading a day of sessions is usually quicker than the eye can register, so
                 // without a floor the spinner is a flicker that reads as a glitch rather than as
                 // a refresh. Only the manual path waits: nothing is watching the other ones.
@@ -104,7 +118,7 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
                 }
 
                 appWidgetIds.forEach { id ->
-                    manager.updateAppWidget(id, buildViews(context, manager, id, buckets, total))
+                    manager.updateAppWidget(id, buildViews(context, sizes.getValue(id), buckets, total, detail))
                 }
             } finally {
                 pendingResult.finish()
@@ -125,12 +139,134 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         appWidgetIds.forEach { id -> manager.partiallyUpdateAppWidget(id, views) }
     }
 
+    /**
+     * The widget's own size in dp and the tier it earns. The chart bitmap is stretched to fill
+     * its ImageView, so it has to be sized for the orientation actually on screen or the labels
+     * get squashed. The host reports both: the portrait box is MIN_WIDTH x MAX_HEIGHT, the
+     * landscape one MAX_WIDTH x MIN_HEIGHT.
+     */
+    private fun sizeOf(context: Context, manager: AppWidgetManager, appWidgetId: Int): WidgetSize {
+        val options = manager.getAppWidgetOptions(appWidgetId)
+        val portrait = context.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
+        val widthKey = if (portrait) AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
+        val heightKey = if (portrait) AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
+        val widthDp = options.getInt(widthKey, DEFAULT_WIDTH_DP).takeIf { it > 0 } ?: DEFAULT_WIDTH_DP
+        val heightDp = options.getInt(heightKey, DEFAULT_HEIGHT_DP).takeIf { it > 0 } ?: DEFAULT_HEIGHT_DP
+        return WidgetSize(widthDp, heightDp, WidgetTiers.forHeight(heightDp))
+    }
+
+    /**
+     * The numbers only the taller tiers draw. Read once for every widget rather than per widget,
+     * and not read at all by a widget too short to show them, so the default size costs exactly
+     * what it did before.
+     */
+    private suspend fun detailFor(
+        sizes: Collection<WidgetSize>,
+        ongoing: List<BlockSession>,
+        enforcing: Boolean,
+        now: Long,
+    ): WidgetDetail {
+        // The mark is coloured at every size, so that flag survives the early return the bands
+        // don't need.
+        if (sizes.none { it.tier.showStats }) return WidgetDetail(enforcing = enforcing)
+
+        val hits = observeBlockHits().first()
+        val topApps = if (sizes.any { it.tier.showApps }) {
+            val ranked = BlockHitLog.topPackagesToday(hits, now, WidgetTiers.APP_ROWS)
+            // Every bar is measured against the busiest app, so the leader's bar is always full
+            // and the rest read as a share of it rather than of some invisible ceiling.
+            val topCount = ranked.firstOrNull()?.second ?: 0
+            ranked.map { (packageName, count) ->
+                TopApp(
+                    // Looked up fresh each time rather than cached: a provider is a
+                    // BroadcastReceiver, a new instance per broadcast, so a field would never live
+                    // long enough to be read back, and a static one would go stale on an app
+                    // update or a locale change.
+                    label = appRepository.getAppLabel(packageName),
+                    count = count,
+                    barFraction = WidgetRowBarRenderer.fraction(count, topCount),
+                )
+            }
+        } else {
+            emptyList()
+        }
+
+        return WidgetDetail(
+            blocksToday = BlockHitLog.countToday(hits, now),
+            // Through the use case rather than summed here, so the widget and the block wall can't
+            // end up with two definitions of the same streak.
+            streakMillis = GetCurrentStreakUseCase.streakOf(ongoing),
+            topApps = topApps,
+            enforcing = enforcing,
+        )
+    }
+
+    /**
+     * Writes the state of every band, on and off, with nothing behind a condition that could skip
+     * a view. The host reuses the inflated views when the layout id hasn't changed and applies
+     * only the actions this object carries, so a band left unmentioned keeps whatever the last
+     * render left on screen -- which is how the refresh spinner once got stuck on.
+     */
+    private fun applyDetail(context: Context, views: RemoteViews, tier: WidgetTier, detail: WidgetDetail) {
+        // Amber while Monolith is actually enforcing, muted otherwise. Resolved in this process
+        // rather than left to the launcher, which the chart deliberately avoids -- safe only
+        // because both of these are defined once in values/ with no night variant, so there is no
+        // second value for this process to pick the wrong one of.
+        views.setInt(
+            R.id.widget_mark,
+            "setColorFilter",
+            context.getColor(if (detail.enforcing) R.color.monolith_amber else R.color.widget_muted),
+        )
+
+        val statsVisibility = if (tier.showStats) View.VISIBLE else View.GONE
+        views.setViewVisibility(R.id.widget_divider, statsVisibility)
+        views.setViewVisibility(R.id.widget_stats, statsVisibility)
+        views.setViewVisibility(R.id.widget_apps, if (tier.showApps) View.VISIBLE else View.GONE)
+
+        views.setTextViewText(R.id.widget_stat_blocks_value, detail.blocksToday.toString())
+        views.setTextViewText(R.id.widget_stat_held_value, formatDuration(detail.streakMillis))
+
+        APP_ROW_IDS.forEachIndexed { index, row ->
+            val app = detail.topApps.getOrNull(index)
+            // The first row carries the empty state, so a day with nothing reached for reads as a
+            // finished list rather than as a band that failed to draw. The rows below it collapse,
+            // but the band around them keeps its fixed height, so the chart's budget never moves.
+            val isEmptyState = app == null && index == 0
+            views.setViewVisibility(row.rowId, if (app != null || isEmptyState) View.VISIBLE else View.GONE)
+            views.setTextViewText(
+                row.labelId,
+                app?.label ?: if (isEmptyState) context.getString(R.string.widget_apps_empty) else "",
+            )
+            views.setTextViewText(row.countId, app?.count?.toString() ?: "")
+            // The empty-state row is visible but has no share to show, and its bar would otherwise
+            // be whatever the last render left there.
+            views.setViewVisibility(row.barId, if (app != null) View.VISIBLE else View.GONE)
+            if (app != null) {
+                views.setImageViewBitmap(row.barId, WidgetRowBarRenderer.render(app.barFraction))
+            }
+        }
+    }
+
+    private data class WidgetSize(val widthDp: Int, val heightDp: Int, val tier: WidgetTier)
+
+    private data class WidgetDetail(
+        val blocksToday: Int = 0,
+        val streakMillis: Long = 0L,
+        val topApps: List<TopApp> = emptyList(),
+        /** Whether Monolith is actually holding the line right now, which colours the mark. */
+        val enforcing: Boolean = false,
+    )
+
+    private data class TopApp(val label: String, val count: Int, val barFraction: Float)
+
+    private data class AppRowIds(val rowId: Int, val barId: Int, val labelId: Int, val countId: Int)
+
     private fun buildViews(
         context: Context,
-        manager: AppWidgetManager,
-        appWidgetId: Int,
+        size: WidgetSize,
         buckets: List<TimeSavedBucket>,
         totalMillis: Long,
+        detail: WidgetDetail,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_time_saved)
         views.setTextViewText(R.id.widget_total, formatDuration(totalMillis))
@@ -141,19 +277,14 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         views.setViewVisibility(R.id.widget_refresh_icon, View.VISIBLE)
         views.setViewVisibility(R.id.widget_refresh_progress, View.GONE)
 
-        val density = context.resources.displayMetrics.density
-        val options = manager.getAppWidgetOptions(appWidgetId)
-        // The chart bitmap is stretched to fill its ImageView, so it has to be sized for the
-        // orientation actually on screen or the labels get squashed. The host reports both: the
-        // portrait box is MIN_WIDTH x MAX_HEIGHT, the landscape one MAX_WIDTH x MIN_HEIGHT.
-        val portrait = context.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
-        val widthKey = if (portrait) AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH
-        val heightKey = if (portrait) AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT
-        val widthDp = options.getInt(widthKey, DEFAULT_WIDTH_DP).takeIf { it > 0 } ?: DEFAULT_WIDTH_DP
-        val heightDp = options.getInt(heightKey, DEFAULT_HEIGHT_DP).takeIf { it > 0 } ?: DEFAULT_HEIGHT_DP
+        applyDetail(context, views, size.tier, detail)
 
-        val chartWidthDp = (widthDp - PADDING_DP * 2).coerceAtLeast(MIN_CHART_WIDTH_DP)
-        val chartHeightDp = (heightDp - PADDING_DP * 2 - TEXT_BAND_DP).coerceAtLeast(MIN_CHART_HEIGHT_DP)
+        val density = context.resources.displayMetrics.density
+        val chartWidthDp = (size.widthDp - PADDING_DP * 2).coerceAtLeast(MIN_CHART_WIDTH_DP)
+        // Whatever the visible bands claim comes out of the chart's budget, so the bitmap is drawn
+        // for the space it will actually be given rather than being squashed into what's left.
+        val chartHeightDp = (size.heightDp - PADDING_DP * 2 - size.tier.reservedBandDp)
+            .coerceAtLeast(MIN_CHART_HEIGHT_DP)
 
         val chart = TimeSavedChartRenderer.render(
             buckets = buckets,
@@ -194,6 +325,12 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
     }
 
     private companion object {
+        val APP_ROW_IDS = listOf(
+            AppRowIds(R.id.widget_app_1, R.id.widget_app_1_bar, R.id.widget_app_1_label, R.id.widget_app_1_count),
+            AppRowIds(R.id.widget_app_2, R.id.widget_app_2_bar, R.id.widget_app_2_label, R.id.widget_app_2_count),
+            AppRowIds(R.id.widget_app_3, R.id.widget_app_3_bar, R.id.widget_app_3_label, R.id.widget_app_3_count),
+        )
+
         const val ACTION_MANUAL_REFRESH = "com.monolith.app.widget.MANUAL_REFRESH"
         const val REFRESH_REQUEST_CODE = 1
 
@@ -210,9 +347,9 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         const val DEFAULT_WIDTH_DP = 250
         const val DEFAULT_HEIGHT_DP = 110
 
-        // All from widget_time_saved.xml: its padding, and the header plus total above the chart.
+        // From widget_time_saved.xml. The bands above and below the chart live in WidgetTiers,
+        // which is what decides how many of them this widget is tall enough to show.
         const val PADDING_DP = 16
-        const val TEXT_BAND_DP = 63
         /**
          * Floors for the bitmap itself. A host that honours minResizeHeight can't squeeze the
          * widget this far (see time_saved_widget_info.xml), but some launchers ignore it, and a

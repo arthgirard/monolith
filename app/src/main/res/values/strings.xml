@@ -231,4 +231,8 @@
     <string name="widget_time_saved_description">Today\'s time saved, hour by hour.</string>
     <string name="widget_time_saved_chart_description">Hourly chart of time saved today</string>
     <string name="widget_refresh_description">Refresh</string>
+    <string name="widget_stat_blocks">BLOCKS</string>
+    <string name="widget_stat_held">HELD</string>
+    <string name="widget_apps_description">Apps you reached for most today</string>
+    <string name="widget_apps_empty">Nothing reached for today</string>
 </resources>

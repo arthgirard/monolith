@@ -92,4 +92,80 @@ class BlockHitLogTest {
 
         assertEquals(0, count)
     }
+
+    @Test
+    fun `the all-apps count sums today's hits across packages`() {
+        val hits = listOf(
+            BlockHit(app, noon(today)),
+            BlockHit(other, noon(today) + 1000),
+            BlockHit(app, noon(today) + 2000),
+        )
+
+        assertEquals(3, BlockHitLog.countToday(hits, noon(today) + 3000, zone))
+    }
+
+    @Test
+    fun `the all-apps count excludes days that aren't today`() {
+        val hits = listOf(
+            BlockHit(app, noon(today.minusDays(1))),
+            BlockHit(other, noon(today)),
+        )
+
+        assertEquals(1, BlockHitLog.countToday(hits, noon(today) + 1000, zone))
+    }
+
+    @Test
+    fun `top packages are ranked by today's count`() {
+        val hits = listOf(
+            BlockHit(other, noon(today)),
+            BlockHit(app, noon(today) + 1000),
+            BlockHit(app, noon(today) + 2000),
+        )
+
+        val top = BlockHitLog.topPackagesToday(hits, noon(today) + 3000, limit = 3, zone = zone)
+
+        assertEquals(listOf(app to 2, other to 1), top)
+    }
+
+    @Test
+    fun `a tie is broken by the most recent hit`() {
+        // Same count each, so the one reached for most recently leads -- and the order has to be
+        // this every time, not whatever the grouping happens to yield.
+        val hits = listOf(
+            BlockHit(app, noon(today)),
+            BlockHit(other, noon(today) + 1000),
+        )
+
+        val top = BlockHitLog.topPackagesToday(hits, noon(today) + 2000, limit = 2, zone = zone)
+
+        assertEquals(listOf(other to 1, app to 1), top)
+    }
+
+    @Test
+    fun `top packages honours the limit`() {
+        val hits = listOf(
+            BlockHit(app, noon(today)),
+            BlockHit(other, noon(today) + 1000),
+        )
+
+        val top = BlockHitLog.topPackagesToday(hits, noon(today) + 2000, limit = 1, zone = zone)
+
+        assertEquals(1, top.size)
+    }
+
+    @Test
+    fun `top packages returns fewer than the limit when fewer apps qualify`() {
+        val hits = listOf(BlockHit(app, noon(today.minusDays(1))), BlockHit(other, noon(today)))
+
+        val top = BlockHitLog.topPackagesToday(hits, noon(today) + 1000, limit = 3, zone = zone)
+
+        assertEquals(listOf(other to 1), top)
+    }
+
+    @Test
+    fun `top packages is empty when nothing was reached for today`() {
+        val top = BlockHitLog.topPackagesToday(emptyList(), noon(today), limit = 3, zone = zone)
+
+        assertEquals(emptyList<Pair<String, Int>>(), top)
+    }
 }

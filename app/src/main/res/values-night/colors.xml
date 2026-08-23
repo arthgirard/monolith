@@ -5,4 +5,5 @@
     <color name="widget_background">#0B0B0D</color>
     <color name="widget_text">#F5F5F0</color>
     <color name="widget_bar">#F5F5F0</color>
+    <color name="widget_divider">#1FF5F5F0</color>
 </resources>

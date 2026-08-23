@@ -21,7 +21,8 @@ tag isn't around.
   enforcing, so you can see the habit changing instead of just trusting it is.
 - **Home-screen widget.** Today's time saved as a running total plus the same hour-by-hour bars
   as the in-app screen, so the number is visible without opening anything. Tapping it opens the
-  full breakdown.
+  full breakdown, and a refresh button redraws it on demand. Made taller, it adds today's block
+  count and current streak, then the apps you reached for most today.
 - **In-app updates.** Since Monolith isn't on the Play Store, it checks GitHub releases on demand
   and can download and hand the APK straight to the system installer.
 

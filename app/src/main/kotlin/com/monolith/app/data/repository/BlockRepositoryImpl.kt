@@ -53,9 +53,13 @@ class BlockRepositoryImpl @Inject constructor(
 
     override fun observeActiveSessionStart(): Flow<Long?> = preferences.activeSessionStart
 
-    // No widget refresh: a hit records that the wall was met, which doesn't move the
-    // time-saved total the widget draws.
-    override suspend fun recordBlockHit(packageName: String) = preferences.recordBlockHit(packageName)
+    // A hit still doesn't move the time-saved total, but the widget's taller sizes report today's
+    // block count beneath the chart, and that number would sit stale until the next tick. Only a
+    // hit that actually landed is worth a redraw: the dedupe declines the repeat events one reach
+    // produces, and each of those would otherwise cost a broadcast and a fresh chart bitmap.
+    override suspend fun recordBlockHit(packageName: String) {
+        if (preferences.recordBlockHit(packageName)) widgetRefresher.refresh()
+    }
 
     override fun observeBlockHits(): Flow<List<BlockHit>> = preferences.blockHits
 }

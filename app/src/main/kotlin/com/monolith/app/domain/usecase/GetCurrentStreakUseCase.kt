@@ -1,5 +1,6 @@
 package com.monolith.app.domain.usecase
 
+import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.repository.BlockRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -40,7 +41,14 @@ class GetCurrentStreakUseCase @Inject constructor(
         blockState: com.monolith.app.domain.model.BlockState,
         activeSessionStart: Long?,
         now: Long,
-    ): Long = TimeSavedCalculator
-        .ongoingSessions(blockState, activeSessionStart, now)
-        .sumOf { it.durationMillis }
+    ): Long = streakOf(TimeSavedCalculator.ongoingSessions(blockState, activeSessionStart, now))
+
+    companion object {
+        /**
+         * The streak carried by sessions already in hand, for a caller that has computed
+         * [TimeSavedCalculator.ongoingSessions] for its own reasons -- the widget does, to draw
+         * today's bars -- and would otherwise re-read the same two values to get this number.
+         */
+        fun streakOf(ongoing: List<BlockSession>): Long = ongoing.sumOf { it.durationMillis }
+    }
 }

@@ -46,8 +46,55 @@ object BlockHitLog {
         now: Long,
         zone: ZoneId = ZoneId.systemDefault(),
     ): Int {
-        val startOfDay = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
-            .atStartOfDay(zone).toInstant().toEpochMilli()
+        val startOfDay = startOfDay(now, zone)
         return hits.count { it.packageName == packageName && it.atMillis >= startOfDay }
     }
+
+    /**
+     * How many times any blocked app was reached for today, on the same calendar day the
+     * per-package count uses. The widget reports this as one number across every blocked app,
+     * where the wall reports only the app it is standing in front of.
+     */
+    fun countToday(
+        hits: List<BlockHit>,
+        now: Long,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): Int {
+        val startOfDay = startOfDay(now, zone)
+        return hits.count { it.atMillis >= startOfDay }
+    }
+
+    /**
+     * The [limit] packages reached for most today, most-reached first, each with its count.
+     * A tie goes to whichever was reached for most recently: without that the order would come
+     * out of the grouping's iteration order and could shuffle between two renders of the same
+     * unchanged data.
+     */
+    fun topPackagesToday(
+        hits: List<BlockHit>,
+        now: Long,
+        limit: Int,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): List<Pair<String, Int>> {
+        if (limit <= 0) return emptyList()
+        val startOfDay = startOfDay(now, zone)
+        return hits.asSequence()
+            .filter { it.atMillis >= startOfDay }
+            .groupBy { it.packageName }
+            .map { (packageName, packageHits) ->
+                Triple(packageName, packageHits.size, packageHits.maxOf { it.atMillis })
+            }
+            .sortedWith(
+                compareByDescending<Triple<String, Int, Long>> { it.second }
+                    .thenByDescending { it.third }
+                    .thenBy { it.first },
+            )
+            .take(limit)
+            .map { it.first to it.second }
+    }
+
+    /** Local midnight of the day [now] falls in. */
+    private fun startOfDay(now: Long, zone: ZoneId): Long =
+        Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+            .atStartOfDay(zone).toInstant().toEpochMilli()
 }

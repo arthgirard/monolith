@@ -92,4 +92,259 @@
         android:tint="@color/widget_bar"
         android:contentDescription="@string/widget_time_saved_chart_description" />
 
+
+    <!--
+        The detail bands, drawn only once the widget is tall enough to hold them (see WidgetTiers).
+        Their heights are fixed rather than wrap_content, and WidgetTiers reserves exactly these
+        numbers out of the chart's budget: a band that measured itself would let the chart and the
+        band fight over the same pixels every time a count changed width.
+    -->
+
+    <!--
+        An ImageView rather than a View: RemoteViews inflates only classes carrying @RemoteView,
+        and android.view.View isn't one of them.
+    -->
+    <ImageView
+        android:id="@+id/widget_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@color/widget_divider"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/widget_stats"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/widget_stat_blocks"
+                android:textColor="@color/widget_muted"
+                android:textSize="9sp"
+                android:fontFamily="@font/inter_medium"
+                android:letterSpacing="0.08"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/widget_stat_blocks_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/widget_text"
+                android:textSize="16sp"
+                android:fontFamily="@font/inter_semibold"
+                android:fontFeatureSettings="tnum"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/widget_stat_held"
+                android:textColor="@color/widget_muted"
+                android:textSize="9sp"
+                android:fontFamily="@font/inter_medium"
+                android:letterSpacing="0.08"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/widget_stat_held_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/widget_text"
+                android:textSize="16sp"
+                android:fontFamily="@font/inter_semibold"
+                android:fontFeatureSettings="tnum"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_apps"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:contentDescription="@string/widget_apps_description"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/widget_app_1"
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/widget_app_1_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_regular"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_app_1_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <!--
+                This app's share of the busiest one. The bitmap is a partial fill stretched across
+                the full width, so the bar's length is in the pixels rather than in a layout weight
+                RemoteViews has no way to set at runtime.
+            -->
+            <ImageView
+                android:id="@+id/widget_app_1_bar"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:scaleType="fitXY"
+                android:tint="@color/widget_bar"
+                android:importantForAccessibility="no" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_app_2"
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/widget_app_2_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_regular"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_app_2_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <!--
+                This app's share of the busiest one. The bitmap is a partial fill stretched across
+                the full width, so the bar's length is in the pixels rather than in a layout weight
+                RemoteViews has no way to set at runtime.
+            -->
+            <ImageView
+                android:id="@+id/widget_app_2_bar"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:scaleType="fitXY"
+                android:tint="@color/widget_bar"
+                android:importantForAccessibility="no" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_app_3"
+            android:layout_width="match_parent"
+            android:layout_height="20dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/widget_app_3_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_regular"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/widget_app_3_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/widget_muted"
+                    android:textSize="11sp"
+                    android:fontFamily="@font/inter_medium"
+                    android:fontFeatureSettings="tnum"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <!--
+                This app's share of the busiest one. The bitmap is a partial fill stretched across
+                the full width, so the bar's length is in the pixels rather than in a layout weight
+                RemoteViews has no way to set at runtime.
+            -->
+            <ImageView
+                android:id="@+id/widget_app_3_bar"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:scaleType="fitXY"
+                android:tint="@color/widget_bar"
+                android:importantForAccessibility="no" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
 </LinearLayout>
