@@ -107,7 +107,6 @@
     <!-- Important people -->
     <string name="important_people_title">Important People</string>
     <string name="important_people_subtitle">Notifications from these people get through Monolith, per app.</string>
-    <string name="important_people_locked_banner">Unlock Monolith to edit this list</string>
     <string name="important_people_empty">No one added yet. Tap + to add someone.</string>
     <string name="important_people_add_title">Add important person</string>
     <string name="important_people_app_label">App</string>

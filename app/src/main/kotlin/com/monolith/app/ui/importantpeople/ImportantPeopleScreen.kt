@@ -84,14 +84,12 @@ fun ImportantPeopleScreen(
         },
         snackbarHost = { MonolithSnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (!uiState.isLocked) {
-                FloatingActionButton(
-                    onClick = { showAddDialog = true },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.important_people_add_cta))
-                }
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.onSecondary,
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.important_people_add_cta))
             }
         },
     ) { padding ->
@@ -102,20 +100,6 @@ fun ImportantPeopleScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
-
-            if (uiState.isLocked) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.errorContainer)
-                        .padding(12.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.important_people_locked_banner),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
-            }
 
             if (uiState.people.isEmpty() && !uiState.isLoading) {
                 Text(
@@ -133,7 +117,6 @@ fun ImportantPeopleScreen(
                         person = person,
                         app = app,
                         isAppBlocked = person.packageName in uiState.blockedPackages,
-                        enabled = !uiState.isLocked,
                         onRemove = { viewModel.removePerson(person) },
                     )
                 }
@@ -158,7 +141,6 @@ private fun PersonRow(
     person: ImportantPerson,
     app: AppInfo?,
     isAppBlocked: Boolean,
-    enabled: Boolean,
     onRemove: () -> Unit,
 ) {
     val contentAlpha = if (isAppBlocked) 1f else 0.4f
@@ -195,7 +177,7 @@ private fun PersonRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
             )
         }
-        IconButton(onClick = onRemove, enabled = enabled) {
+        IconButton(onClick = onRemove) {
             Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.important_people_remove_cta))
         }
     }
