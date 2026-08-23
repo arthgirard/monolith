@@ -230,4 +230,5 @@
     <string name="widget_time_saved_label">TIME SAVED TODAY</string>
     <string name="widget_time_saved_description">Today\'s time saved, hour by hour.</string>
     <string name="widget_time_saved_chart_description">Hourly chart of time saved today</string>
+    <string name="widget_refresh_description">Refresh</string>
 </resources>

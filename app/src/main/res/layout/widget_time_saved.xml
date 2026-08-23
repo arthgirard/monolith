@@ -26,11 +26,46 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
+        <!--
+            32dp box for a real tap target, with 8dp padding drawing the icon back down to the
+            16dp the mark uses. The negative vertical margins cancel the extra height so the
+            header stays the size TimeSavedWidgetProvider.TEXT_BAND_DP assumes, and the padding
+            doubles as the gap to the label and the mark.
+        -->
+        <FrameLayout
+            android:id="@+id/widget_refresh"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginTop="-8dp"
+            android:layout_marginBottom="-8dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/widget_refresh_description">
+
+            <ImageView
+                android:id="@+id/widget_refresh_icon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp"
+                android:src="@drawable/ic_refresh"
+                android:tint="@color/widget_muted"
+                android:contentDescription="@string/widget_refresh_description" />
+
+            <!-- Takes the icon's place while a manual refresh is in flight. -->
+            <ProgressBar
+                android:id="@+id/widget_refresh_progress"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/widget_muted"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
         <ImageView
             android:id="@+id/widget_mark"
             android:layout_width="16dp"
             android:layout_height="16dp"
-            android:layout_marginStart="8dp"
             android:src="@drawable/ic_monolith_mark"
             android:tint="@color/widget_muted"
             android:contentDescription="@string/app_name" />

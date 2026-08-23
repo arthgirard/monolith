@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.view.View
 import android.widget.RemoteViews
 import com.monolith.app.R
 import com.monolith.app.domain.model.TimePeriodType
@@ -21,6 +22,7 @@ import com.monolith.app.util.formatDuration
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -43,10 +45,13 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         // Midnight, a manual clock change or a flight across timezones all move which day "today"
         // is; without these the widget would keep drawing yesterday's bars until its next tick.
-        if (intent.action in ROLLOVER_ACTIONS) {
+        // The refresh button lands here too, for anyone who doesn't want to wait for a tick.
+        if (intent.action in ROLLOVER_ACTIONS || intent.action == ACTION_MANUAL_REFRESH) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, TimeSavedWidgetProvider::class.java))
-            if (ids.isNotEmpty()) render(context, manager, ids)
+            if (ids.isNotEmpty()) {
+                render(context, manager, ids, showProgress = intent.action == ACTION_MANUAL_REFRESH)
+            }
         }
     }
 
@@ -64,10 +69,18 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         render(context, appWidgetManager, intArrayOf(appWidgetId))
     }
 
-    private fun render(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
+    private fun render(
+        context: Context,
+        manager: AppWidgetManager,
+        appWidgetIds: IntArray,
+        showProgress: Boolean = false,
+    ) {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
+                val startedAt = System.currentTimeMillis()
+                if (showProgress) showRefreshSpinner(context, manager, appWidgetIds)
+
                 val sessions = observeBlockSessions().first()
                 val blockState = observeBlockState().first()
                 val activeSessionStart = observeActiveSessionStart().first()
@@ -82,6 +95,14 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
                 )
                 val total = buckets.sumOf { it.durationMillis }
 
+                // Reading a day of sessions is usually quicker than the eye can register, so
+                // without a floor the spinner is a flicker that reads as a glitch rather than as
+                // a refresh. Only the manual path waits: nothing is watching the other ones.
+                if (showProgress) {
+                    val elapsed = System.currentTimeMillis() - startedAt
+                    if (elapsed < MIN_PROGRESS_MILLIS) delay(MIN_PROGRESS_MILLIS - elapsed)
+                }
+
                 appWidgetIds.forEach { id ->
                     manager.updateAppWidget(id, buildViews(context, manager, id, buckets, total))
                 }
@@ -89,6 +110,19 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
                 pendingResult.finish()
             }
         }
+    }
+
+    /**
+     * Swaps the refresh icon for a spinner without touching the rest of the widget, so the bars
+     * and total stay on screen while the new ones are computed. A partial update is safe here:
+     * the button can only be tapped on a widget that has already been fully rendered once.
+     */
+    private fun showRefreshSpinner(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
+        val views = RemoteViews(context.packageName, R.layout.widget_time_saved).apply {
+            setViewVisibility(R.id.widget_refresh_icon, View.INVISIBLE)
+            setViewVisibility(R.id.widget_refresh_progress, View.VISIBLE)
+        }
+        appWidgetIds.forEach { id -> manager.partiallyUpdateAppWidget(id, views) }
     }
 
     private fun buildViews(
@@ -100,6 +134,12 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_time_saved)
         views.setTextViewText(R.id.widget_total, formatDuration(totalMillis))
+
+        // The host reuses the inflated views when the layout id hasn't changed, applying only the
+        // actions this object carries rather than starting from the XML again. So the spinner
+        // showRefreshSpinner() turned on stays on unless the resting state is stated every time.
+        views.setViewVisibility(R.id.widget_refresh_icon, View.VISIBLE)
+        views.setViewVisibility(R.id.widget_refresh_progress, View.GONE)
 
         val density = context.resources.displayMetrics.density
         val options = manager.getAppWidgetOptions(appWidgetId)
@@ -136,10 +176,30 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             ),
         )
+
+        // A click bound to a child wins over the one on the root, so refreshing never also opens
+        // the app. The broadcast names this component explicitly, which is what lets it reach the
+        // receiver without a matching action in the manifest's intent-filter.
+        val refresh = Intent(context, TimeSavedWidgetProvider::class.java).setAction(ACTION_MANUAL_REFRESH)
+        views.setOnClickPendingIntent(
+            R.id.widget_refresh,
+            PendingIntent.getBroadcast(
+                context,
+                REFRESH_REQUEST_CODE,
+                refresh,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ),
+        )
         return views
     }
 
     private companion object {
+        const val ACTION_MANUAL_REFRESH = "com.monolith.app.widget.MANUAL_REFRESH"
+        const val REFRESH_REQUEST_CODE = 1
+
+        /** How long the spinner stays up even when the data comes back sooner. */
+        const val MIN_PROGRESS_MILLIS = 400L
+
         val ROLLOVER_ACTIONS = setOf(
             Intent.ACTION_DATE_CHANGED,
             Intent.ACTION_TIME_CHANGED,
