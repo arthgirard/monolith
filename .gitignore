@@ -14,3 +14,7 @@ local.properties
 *.keystore
 *.jks
 keystore.properties
+.agent/
+package.json
+package-lock.json
+node_modules/
