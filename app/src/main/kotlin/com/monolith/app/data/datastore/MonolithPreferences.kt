@@ -201,9 +201,22 @@ class MonolithPreferences @Inject constructor(
         }
     }
 
+    /**
+     * Starts emergency bypass and ends the current streak the same way [grantAppUnlock] does:
+     * the running segment up to now is committed (carving out the bypass window itself), and the
+     * session clock is fast-forwarded past the bypass window so nothing accrues during it.
+     */
     suspend fun startBypass(durationMillis: Long) {
-        context.dataStore.edit {
-            it[Keys.BYPASS_EXPIRES_AT] = System.currentTimeMillis() + durationMillis
+        context.dataStore.edit { prefs ->
+            val now = System.currentTimeMillis()
+            prefs[Keys.BYPASS_EXPIRES_AT] = now + durationMillis
+
+            val isActive = prefs[Keys.BLOCK_MODE_ACTIVE] ?: false
+            val startedAt = prefs[Keys.SESSION_STARTED_AT]
+            if (isActive && startedAt != null) {
+                if (now > startedAt) commitRunningSegment(prefs, startedAt, now)
+                prefs[Keys.SESSION_STARTED_AT] = maxOf(startedAt, now) + durationMillis
+            }
         }
     }
 
