@@ -209,7 +209,7 @@
     <string name="enforcement_notification_body_paused">Paused · emergency bypass</string>
     <string name="enforcement_notification_body_paused_unlock">Paused · an app is unlocked</string>
     <string name="enforcement_notification_body_paused_unlock_app">Paused · %1$s is unlocked</string>
-    <string name="enforcement_notification_state_held">Holding</string>
+    <string name="enforcement_notification_state_held">Blocking</string>
     <string name="enforcement_notification_channel_description">The ongoing, silent notification Android requires while Monolith is blocking.</string>
 
     <!-- Status notifications: something needs the user's attention before blocking can work -->
