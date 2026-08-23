@@ -4,6 +4,7 @@ import android.nfc.Tag
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monolith.app.domain.model.BlockState
+import com.monolith.app.domain.model.AppUnlock
 import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.NfcTapResult
 import com.monolith.app.domain.repository.AppRepository
@@ -224,7 +225,7 @@ class BlockOverlayViewModel @Inject constructor(
         val state = _challengeState.value
         if (!state.waiverMatches) return
         viewModelScope.launch {
-            submitWaiver(packageName, APP_UNLOCK_DURATION_MILLIS)
+            submitWaiver(packageName, AppUnlock.DURATION_MILLIS)
             _challengeState.value = state.copy(unlocked = true, unlockedPackage = packageName)
         }
     }
@@ -243,7 +244,6 @@ class BlockOverlayViewModel @Inject constructor(
     }
 
     companion object {
-        const val APP_UNLOCK_DURATION_MILLIS: Long = 5 * 60 * 1000L
         private const val TICK_INTERVAL_MILLIS: Long = 1000L
     }
 }

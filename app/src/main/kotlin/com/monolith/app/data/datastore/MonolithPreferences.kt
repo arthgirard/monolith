@@ -138,6 +138,13 @@ class MonolithPreferences @Inject constructor(
         val TAG_DISPATCH_TECH = stringPreferencesKey("tag_dispatch_tech")
         val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
         val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
+
+        /**
+         * When Monolith was last turned on. Distinct from [SESSION_STARTED_AT], which an app
+         * unlock fast-forwards past its window: the streak restarts there, but the cycle does
+         * not, and the notification draws the whole cycle including the holes in it.
+         */
+        val CYCLE_STARTED_AT = longPreferencesKey("cycle_started_at")
         val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
         val BLOCK_HITS = stringPreferencesKey("block_hits")
         val APP_UNLOCKS = stringPreferencesKey("app_unlocks")
@@ -180,13 +187,16 @@ class MonolithPreferences @Inject constructor(
             prefs[Keys.BLOCK_MODE_ACTIVE] = active
 
             if (active && !wasActive) {
-                prefs[Keys.SESSION_STARTED_AT] = System.currentTimeMillis()
+                val now = System.currentTimeMillis()
+                prefs[Keys.SESSION_STARTED_AT] = now
+                prefs[Keys.CYCLE_STARTED_AT] = now
             } else if (!active && wasActive) {
                 val startedAt = prefs[Keys.SESSION_STARTED_AT]
                 if (startedAt != null) {
                     commitRunningSegment(prefs, startedAt, System.currentTimeMillis())
                 }
                 prefs.remove(Keys.SESSION_STARTED_AT)
+                prefs.remove(Keys.CYCLE_STARTED_AT)
             }
         }
     }
@@ -453,6 +463,10 @@ class MonolithPreferences @Inject constructor(
 
     val activeSessionStart: Flow<Long?> = context.dataStore.data.map { prefs ->
         prefs[Keys.SESSION_STARTED_AT]
+    }
+
+    val cycleStartedAt: Flow<Long?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.CYCLE_STARTED_AT]
     }
 
     private fun decodeBlockSessions(raw: String?): List<BlockSessionDto> {

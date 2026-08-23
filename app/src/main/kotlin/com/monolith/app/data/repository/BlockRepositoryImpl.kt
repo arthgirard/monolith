@@ -53,6 +53,8 @@ class BlockRepositoryImpl @Inject constructor(
 
     override fun observeActiveSessionStart(): Flow<Long?> = preferences.activeSessionStart
 
+    override fun observeCycleStart(): Flow<Long?> = preferences.cycleStartedAt
+
     // A hit still doesn't move the time-saved total, but the widget's taller sizes report today's
     // block count beneath the chart, and that number would sit stale until the next tick. Only a
     // hit that actually landed is worth a redraw: the dedupe declines the repeat events one reach

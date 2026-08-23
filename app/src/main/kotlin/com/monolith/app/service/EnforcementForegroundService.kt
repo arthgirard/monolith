@@ -1,6 +1,7 @@
 package com.monolith.app.service
 
 import android.app.Notification
+import android.graphics.Bitmap
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -8,9 +9,14 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.view.View
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toBitmap
 import com.monolith.app.R
+import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
@@ -46,21 +52,38 @@ class EnforcementForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Fires exactly when the last thing pausing the timer (a bypass, a per-app unlock) expires, so
-    // the chronometer resumes the instant it's over even though nothing writes to the block-state
-    // store at that moment. Re-armed (and any stale prior instance cancelled) on every change.
-    private var resumeJob: Job? = null
+    // Keeps the drawn session honest between state changes. It walks a breach's countdown down a
+    // minute at a time and draws the last one at the moment the window closes -- so the
+    // chronometer resumes the instant it's over even though nothing writes to the block-state
+    // store then -- and then keeps going at a slower step, because the portrait's right edge is
+    // now and the newest held time is missing from the bitmap until something redraws it.
+    // Re-armed (and any stale prior instance cancelled) on every change.
+    private var renderJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIFICATION_ID, buildNotification(elapsedMillis = 0L, pauseBodyRes = null))
+        // Nothing has been read yet, so this first post claims only what is certain: Monolith is
+        // on, the session is at zero, and the wall is whole. Any breach lands on the next render.
+        startForeground(
+            NOTIFICATION_ID,
+            buildNotification(
+                status = EnforcementStatus.Enforcing,
+                elapsedMillis = 0L,
+                spans = emptyList(),
+                now = System.currentTimeMillis(),
+            ),
+        )
 
         combine(
             blockRepository.observeBlockState(),
             blockRepository.observeActiveSessionStart(),
             appUnlockRepository.observeUnlockedPackages(),
-        ) { state, sessionStart, unlocks -> Triple(state, sessionStart, unlocks) }
-            .onEach { (state, sessionStart, unlocks) -> onStateChanged(state, sessionStart, unlocks) }
+            blockRepository.observeCycleStart(),
+            blockRepository.observeBlockSessions(),
+        ) { state, sessionStart, unlocks, cycleStart, sessions ->
+            Snapshot(state, sessionStart, unlocks, cycleStart, sessions)
+        }
+            .onEach(::onStateChanged)
             .launchIn(serviceScope)
     }
 
@@ -73,33 +96,53 @@ class EnforcementForegroundService : Service() {
         super.onDestroy()
     }
 
-    private fun onStateChanged(state: BlockState, sessionStart: Long?, unlocks: Map<String, Long>) {
-        resumeJob?.cancel()
+    /** Everything one render needs, so the five flows above stay one value from here down. */
+    private data class Snapshot(
+        val state: BlockState,
+        val sessionStart: Long?,
+        val unlocks: Map<String, Long>,
+        val cycleStart: Long?,
+        val sessions: List<BlockSession>,
+    )
 
-        if (!state.isActive) {
+    private fun onStateChanged(snapshot: Snapshot) {
+        renderJob?.cancel()
+
+        if (!snapshot.state.isActive) {
             stopSelf()
             return
         }
 
-        render(state, sessionStart, unlocks)
-
-        val now = System.currentTimeMillis()
-        val pausedUntil = pausedUntil(state, unlocks, now) ?: return
-        resumeJob = serviceScope.launch {
-            delay(pausedUntil - now)
-            render(state, sessionStart, unlocks)
-        }
+        render(snapshot)
+        renderJob = serviceScope.launch { keepDrawn(snapshot) }
     }
 
     /**
-     * When the timer stops being paused, or null if it isn't. Both a running emergency bypass and
-     * a live per-app unlock pause it: neither one's minutes count toward the streak, so neither
-     * should tick. Overlapping windows hold the pause until the last of them expires.
+     * Redraws for as long as Monolith is on: once per remaining minute while a breach counts
+     * down, and at a slower step the rest of the time, since a bar whose right edge is now goes
+     * stale on its own. The step is deliberately coarse -- every re-post is a chance for the
+     * shade to collapse a row the user had opened.
+     *
+     * The state is recomputed each pass rather than captured, because a bypass ending while an
+     * app unlock is still live moves the display from one to the other at an instant no store is
+     * written to, and nothing else would notice.
      */
-    private fun pausedUntil(state: BlockState, unlocks: Map<String, Long>, now: Long): Long? {
-        val bypassUntil = state.bypassExpiresAtMillis?.takeIf { state.isBypassActive(now) }
-        val unlockUntil = unlocks.values.filter { it > now }.maxOrNull()
-        return listOfNotNull(bypassUntil, unlockUntil).maxOrNull()
+    private suspend fun keepDrawn(snapshot: Snapshot) {
+        while (true) {
+            val now = System.currentTimeMillis()
+            val expiresAt = EnforcementSegments
+                .statusFor(snapshot.state, snapshot.unlocks, now)
+                .expiresAtMillis
+            val wait = if (expiresAt != null) {
+                EnforcementSegments.millisToNextMinute(expiresAt, now)
+            } else {
+                EnforcementSegments.millisToNextPortraitStep(cycleStartOf(snapshot, now), now)
+            }
+            // A breach reported live but already expired: let the clock move on rather than
+            // spinning, and re-read above.
+            delay(if (wait <= 0L) SETTLE_MILLIS else wait)
+            render(snapshot)
+        }
     }
 
     /**
@@ -110,20 +153,35 @@ class EnforcementForegroundService : Service() {
      * past the unlock window (see MonolithPreferences.grantAppUnlock), so this reads as zero for
      * the whole window and the timer starts counting up from zero when it expires.
      */
-    private fun render(state: BlockState, sessionStart: Long?, unlocks: Map<String, Long>) {
+    /**
+     * The portrait's left edge. A session already running when the cycle start was first recorded
+     * has none, so it falls back to the streak's own start: that draws less than the whole cycle,
+     * which is honest, where claiming an unbroken bar would not be.
+     */
+    private fun cycleStartOf(snapshot: Snapshot, now: Long): Long =
+        snapshot.cycleStart ?: snapshot.sessionStart?.coerceAtMost(now) ?: now
+
+    private fun render(snapshot: Snapshot) {
         val now = System.currentTimeMillis()
-        val elapsedMillis = TimeSavedCalculator.ongoingSessions(state, sessionStart, now).sumOf { it.durationMillis }
-        val pauseBodyRes = when {
-            pausedUntil(state, unlocks, now) == null -> null
-            state.isBypassActive(now) -> R.string.enforcement_notification_body_paused
-            else -> R.string.enforcement_notification_body_paused_unlock
-        }
-        val notification = buildNotification(elapsedMillis, pauseBodyRes)
+        val ongoing = TimeSavedCalculator.ongoingSessions(snapshot.state, snapshot.sessionStart, now)
+        val status = EnforcementSegments.statusFor(snapshot.state, snapshot.unlocks, now)
+
+        // The cycle's held time comes from two places: the segments already committed -- an app
+        // unlock commits the running one on its way past -- and the one still running. Everything
+        // between them is a pause, which is what draws the holes without this having to know what
+        // kind of pause each one was.
+        val spans = SessionPortrait.spansFor(cycleStartOf(snapshot, now), now, snapshot.sessions + ongoing)
+
+        val notification = buildNotification(status, ongoing.sumOf { it.durationMillis }, spans, now)
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
     }
 
-    /** [pauseBodyRes] non-null means the timer is paused, and says which pause the user is in. */
-    private fun buildNotification(elapsedMillis: Long, pauseBodyRes: Int?): Notification {
+    private fun buildNotification(
+        status: EnforcementStatus,
+        elapsedMillis: Long,
+        spans: List<PortraitSpan>,
+        now: Long,
+    ): Notification {
         ensureChannel()
         val contentIntent = PendingIntent.getActivity(
             this,
@@ -143,22 +201,117 @@ class EnforcementForegroundService : Service() {
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
 
-        if (pauseBodyRes != null) {
-            // Chronometer off: freezes the displayed time at exactly what render() last computed,
-            // instead of ticking through a window it's not supposed to count.
-            builder
-                .setContentText(getString(pauseBodyRes))
-                .setShowWhen(false)
-                .setUsesChronometer(false)
+        builder
+            .setContentText(stateLine(status))
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomBigContentView(buildStatusView(status, spans, now))
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+
+        val expiresAt = status.expiresAtMillis
+        if (expiresAt != null) {
+            // Counting down to the moment the wall closes again, rather than freezing the elapsed
+            // time as this used to. The chronometer counts toward `when`, so the remaining time
+            // ticks itself and a breach costs no re-posts beyond the once-a-minute segment redraw.
+            builder.setChronometerCountDown(true).setWhen(expiresAt)
         } else {
-            builder
-                .setContentText(getString(R.string.enforcement_notification_body))
-                .setShowWhen(true)
-                .setUsesChronometer(true)
-                .setWhen(System.currentTimeMillis() - elapsedMillis)
+            builder.setChronometerCountDown(false).setWhen(now - elapsedMillis)
         }
 
         return builder.build()
+    }
+
+    /** The one line of text, in the collapsed row and again above the segments. */
+    private fun stateLine(status: EnforcementStatus): String = when (status) {
+        EnforcementStatus.Enforcing -> getString(R.string.enforcement_notification_body)
+        is EnforcementStatus.Bypass -> getString(R.string.enforcement_notification_body_paused)
+        is EnforcementStatus.AppUnlocked -> getString(
+            R.string.enforcement_notification_body_paused_unlock_app,
+            appLabel(status.packageName),
+        )
+    }
+
+    /**
+     * The expanded body: the state named, and the wall drawn either whole or with a segment left
+     * for each minute the breach still has.
+     */
+    private fun buildStatusView(
+        status: EnforcementStatus,
+        spans: List<PortraitSpan>,
+        now: Long,
+    ): RemoteViews {
+        val views = RemoteViews(packageName, R.layout.notification_enforcement)
+
+        // Amber marks the wall that is open right now; a pause already closed recedes to a hole.
+        // All three are resolved here rather than left to the shade because none has a night
+        // variant to resolve wrongly, the same exemption the widget's mark relies on.
+        val muted = ContextCompat.getColor(this, R.color.widget_muted)
+        views.setImageViewBitmap(
+            R.id.notification_segments,
+            SessionPortraitRenderer.render(
+                spans = spans,
+                heldColor = muted,
+                pausedColor = ColorUtils.setAlphaComponent(muted, PAST_PAUSE_ALPHA),
+                livePausedColor = ContextCompat.getColor(this, R.color.monolith_amber),
+            ),
+        )
+
+        // The minutes left in the pause, under the session it is interrupting. Both the bitmap and
+        // the visibility are written every render: the host reapplies onto the views already on
+        // screen, so a row left unmentioned keeps whatever the last render put in it.
+        val minutes = EnforcementSegments.rowFor(status, now)
+        if (minutes != null) {
+            views.setImageViewBitmap(
+                R.id.notification_minutes,
+                MinuteSegmentRenderer.render(
+                    row = minutes,
+                    litColor = ContextCompat.getColor(this, R.color.monolith_amber),
+                    spentColor = ColorUtils.setAlphaComponent(muted, PAST_PAUSE_ALPHA),
+                ),
+            )
+        }
+        views.setViewVisibility(
+            R.id.notification_minutes,
+            if (minutes != null) View.VISIBLE else View.GONE,
+        )
+
+        views.setTextViewText(
+            R.id.notification_state,
+            if (status is EnforcementStatus.Enforcing) {
+                getString(R.string.enforcement_notification_state_held)
+            } else {
+                stateLine(status)
+            },
+        )
+
+        val icon = (status as? EnforcementStatus.AppUnlocked)?.let { appIcon(it.packageName) }
+        views.setViewVisibility(
+            R.id.notification_app_icon,
+            if (icon != null) View.VISIBLE else View.GONE,
+        )
+        if (icon != null) views.setImageViewBitmap(R.id.notification_app_icon, icon)
+
+        return views
+    }
+
+    // Read straight off PackageManager, the way NotificationBlockListenerService does for the
+    // notifications it restores: both run off the main thread and both want the label the user
+    // knows the app by. An uninstall between the unlock and this render falls back to the
+    // package name, and to no icon at all.
+    private fun appLabel(packageName: String): String = runCatching {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+    }.getOrDefault(packageName)
+
+    /**
+     * Sized explicitly: an adaptive icon's intrinsic size is 108dp at the display's density, which
+     * is a few hundred kilobytes of ARGB_8888 posted into a notification once a minute. The icon
+     * draws as the full square the app ships, unmasked, matching how the app selector shows it.
+     */
+    private fun appIcon(packageName: String): Bitmap? {
+        val sizePx = (ICON_DP * resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        return runCatching {
+            packageManager.getApplicationIcon(packageName).toBitmap(sizePx, sizePx)
+        }.getOrNull()
     }
 
     private fun ensureChannel() {
@@ -175,6 +328,14 @@ class EnforcementForegroundService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "monolith_enforcement"
+
+        /** How long the breach loop waits before re-reading a state that has just run out. */
+        private const val SETTLE_MILLIS = 1_000L
+
+        /** A pause that has closed, held back far enough to read as a hole without vanishing. */
+        private const val PAST_PAUSE_ALPHA = 56
+
+        private const val ICON_DP = 32f
         private const val NOTIFICATION_ID = 1001
     }
 }

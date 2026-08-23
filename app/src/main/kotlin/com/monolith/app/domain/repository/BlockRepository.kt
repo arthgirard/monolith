@@ -23,6 +23,13 @@ interface BlockRepository {
 
     fun observeActiveSessionStart(): Flow<Long?>
 
+    /**
+     * When Monolith was last turned on, or null while it is off. Unlike
+     * [observeActiveSessionStart] this survives an app unlock rather than being moved past its
+     * window, so it is the left edge of the session the notification draws.
+     */
+    fun observeCycleStart(): Flow<Long?>
+
     suspend fun recordBlockHit(packageName: String)
 
     fun observeBlockHits(): Flow<List<BlockHit>>

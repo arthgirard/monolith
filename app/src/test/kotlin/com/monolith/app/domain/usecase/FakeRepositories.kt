@@ -55,6 +55,10 @@ class FakeBlockRepository(initiallyActive: Boolean = false) : BlockRepository {
 
     override fun observeActiveSessionStart(): Flow<Long?> = activeSessionStart
 
+    val cycleStart = MutableStateFlow<Long?>(null)
+
+    override fun observeCycleStart(): Flow<Long?> = cycleStart
+
     private val hits = MutableStateFlow<List<BlockHit>>(emptyList())
 
     override suspend fun recordBlockHit(packageName: String) {

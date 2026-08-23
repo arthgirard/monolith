@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The expanded body of the ongoing enforcement notification. DecoratedCustomViewStyle supplies
+    the header around this, which is where the chronometer keeps ticking, so nothing here draws a
+    time. Only ImageView, TextView and LinearLayout: RemoteViews inflates nothing else.
+
+    No background and no horizontal padding: the notification template owns both. Text colours come
+    from androidx's notification text appearances, which exist for exactly this case and follow the
+    shade on every version; the segment strip carries its own baked colours for the same reason.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="2dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- The unlocked app's own icon, so the exception names itself. Gone in every other state. -->
+        <ImageView
+            android:id="@+id/notification_app_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:visibility="gone" />
+
+        <!--
+            Nothing sits to the right of this: the expand chevron owns the top-right corner of the
+            template, and anything placed there is either covered or pushed out of view.
+        -->
+        <TextView
+            android:id="@+id/notification_state"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="@style/TextAppearance.Compat.Notification.Title"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+    </LinearLayout>
+
+    <!--
+        The wall: one unbroken bar while Monolith holds, a segment per remaining minute while a
+        breach runs. Marked non-important for accessibility because the line above already states
+        the same thing in words, and a screen reader should hear it once.
+    -->
+    <ImageView
+        android:id="@+id/notification_segments"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_marginTop="10dp"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no" />
+
+    <!--
+        The minutes left in the pause running now, beneath the session it interrupted. Gone while
+        Monolith is holding, when there is nothing counting down.
+    -->
+    <ImageView
+        android:id="@+id/notification_minutes"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_marginTop="6dp"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
+</LinearLayout>
