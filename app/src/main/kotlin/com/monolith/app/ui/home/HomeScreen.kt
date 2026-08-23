@@ -274,7 +274,9 @@ fun HomeScreen(
                     Text(stringResource(R.string.emergency_bypass))
                 }
                 if (bypassUsed) {
-                    Spacer(Modifier.height(8.dp))
+                    // No extra Spacer here: the Column's own 16dp arrangement already separates
+                    // this from the button above it, matching the gap everywhere else in the
+                    // column instead of doubling up.
                     Text(
                         stringResource(R.string.bypass_used_caption),
                         style = MaterialTheme.typography.labelMedium,
