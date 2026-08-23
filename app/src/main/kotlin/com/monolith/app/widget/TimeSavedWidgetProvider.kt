@@ -295,6 +295,7 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         views.setImageViewBitmap(R.id.widget_chart, chart)
 
         val launch = Intent(context, MainActivity::class.java).apply {
+            action = MainActivity.ACTION_OPEN_TIME_SAVED
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(MainActivity.EXTRA_OPEN_TIME_SAVED, true)
         }
@@ -302,7 +303,7 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
             R.id.widget_root,
             PendingIntent.getActivity(
                 context,
-                0,
+                WIDGET_LAUNCH_REQUEST_CODE,
                 launch,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             ),
@@ -333,6 +334,7 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
 
         const val ACTION_MANUAL_REFRESH = "com.monolith.app.widget.MANUAL_REFRESH"
         const val REFRESH_REQUEST_CODE = 1
+        const val WIDGET_LAUNCH_REQUEST_CODE = 100
 
         /** How long the spinner stays up even when the data comes back sooner. */
         const val MIN_PROGRESS_MILLIS = 400L

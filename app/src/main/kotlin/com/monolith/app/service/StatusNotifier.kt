@@ -35,7 +35,10 @@ class StatusNotifier @Inject constructor(
             id = BOOT_NOTIFICATION_ID,
             title = context.getString(R.string.status_boot_title),
             body = context.getString(R.string.status_boot_body),
-            actionIntent = Intent(context, MainActivity::class.java),
+            actionIntent = Intent(context, MainActivity::class.java).apply {
+                action = MainActivity.ACTION_OPEN_HOME
+                putExtra(MainActivity.EXTRA_OPEN_HOME, true)
+            },
         )
     }
 
@@ -72,7 +75,7 @@ class StatusNotifier @Inject constructor(
         val pendingIntent = PendingIntent.getActivity(
             context,
             id,
-            actionIntent.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+            actionIntent.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP) },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 

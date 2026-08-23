@@ -34,6 +34,8 @@ class MainActivity : ComponentActivity() {
 
     // Set by the home-screen widget's tap intent, consumed once the NavHost exists.
     private val openTimeSaved = mutableStateOf(false)
+    // Set by notifications to ensure tapping a notification opens Monolith's home screen.
+    private val openHome = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +66,21 @@ class MainActivity : ComponentActivity() {
                     // stats aren't worth dropping someone into the middle of that.
                     if (route == MonolithDestination.Home.route) {
                         navController.navigate(MonolithDestination.TimeSaved.route)
+                    }
+                }
+
+                val shouldOpenHome by openHome
+                LaunchedEffect(shouldOpenHome) {
+                    if (!shouldOpenHome) return@LaunchedEffect
+                    openHome.value = false
+                    if (route == MonolithDestination.Home.route) {
+                        val popped = navController.popBackStack(MonolithDestination.Home.route, inclusive = false)
+                        if (!popped && navController.currentDestination?.route != MonolithDestination.Home.route) {
+                            navController.navigate(MonolithDestination.Home.route) {
+                                popUpTo(MonolithDestination.Home.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
                     }
                 }
             }
@@ -111,14 +128,22 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent) {
         nfcManager.extractTagFromIntent(intent)?.let { nfcTagBus.emit(it) }
-        if (intent.getBooleanExtra(EXTRA_OPEN_TIME_SAVED, false)) {
+        if (intent.action == ACTION_OPEN_TIME_SAVED || intent.getBooleanExtra(EXTRA_OPEN_TIME_SAVED, false)) {
             openTimeSaved.value = true
+            openHome.value = false
             intent.removeExtra(EXTRA_OPEN_TIME_SAVED)
+        } else if (intent.action == ACTION_OPEN_HOME || intent.getBooleanExtra(EXTRA_OPEN_HOME, false)) {
+            openHome.value = true
+            openTimeSaved.value = false
+            intent.removeExtra(EXTRA_OPEN_HOME)
         }
     }
 
     companion object {
+        const val ACTION_OPEN_HOME = "com.monolith.app.action.OPEN_HOME"
+        const val ACTION_OPEN_TIME_SAVED = "com.monolith.app.action.OPEN_TIME_SAVED"
         const val EXTRA_OPEN_TIME_SAVED = "com.monolith.app.extra.OPEN_TIME_SAVED"
+        const val EXTRA_OPEN_HOME = "com.monolith.app.extra.OPEN_HOME"
 
         /** Screens that already handle missing permissions themselves. */
         private val SETUP_ROUTES = setOf(

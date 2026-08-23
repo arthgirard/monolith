@@ -185,9 +185,13 @@ class EnforcementForegroundService : Service() {
         ensureChannel()
         val contentIntent = PendingIntent.getActivity(
             this,
-            0,
-            Intent(this, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            PendingIntent.FLAG_IMMUTABLE,
+            NOTIFICATION_ID,
+            Intent(this, MainActivity::class.java).apply {
+                action = MainActivity.ACTION_OPEN_HOME
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(MainActivity.EXTRA_OPEN_HOME, true)
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             // Monolith's own mark rather than Android's stock padlock, and the brand amber
