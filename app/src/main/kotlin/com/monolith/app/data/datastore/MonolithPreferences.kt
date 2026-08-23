@@ -144,9 +144,28 @@ class MonolithPreferences @Inject constructor(
         val APP_CODE_BREAKERS = stringPreferencesKey("app_code_breakers")
         val BLOCK_SCHEDULES = stringPreferencesKey("block_schedules")
         val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Whether the one-time setup flow (permissions, app picking, tag linking) has been walked
+     * through. Permissions can be revoked by Android long after that -- an accessibility service
+     * killed off, a "restricted settings" reset -- and those users need the permission step back,
+     * not the whole tour again.
+     *
+     * Installs that finished onboarding before this flag existed have no value stored, so a
+     * linked tag or a non-empty block list stands in as proof the tour was completed.
+     */
+    val onboardingCompleted: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.ONBOARDING_COMPLETED]
+            ?: (prefs[Keys.TAG_UID] != null || !prefs[Keys.BLOCKED_PACKAGES].isNullOrEmpty())
+    }
+
+    suspend fun setOnboardingCompleted() {
+        context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
+    }
 
     val blockState: Flow<BlockState> = context.dataStore.data.map { prefs ->
         BlockState(

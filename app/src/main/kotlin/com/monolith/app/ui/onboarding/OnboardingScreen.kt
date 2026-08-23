@@ -48,9 +48,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.ui.theme.MonolithButtonShape
 
+/**
+ * The permission step. [recovery] is for someone who already finished setup and had a permission
+ * taken back by Android: same cards, wording that doesn't pretend this is a first run, and
+ * [onFinished] drops them straight back into the app instead of into app picking.
+ */
 @Composable
 fun OnboardingScreen(
     onFinished: () -> Unit,
+    recovery: Boolean = false,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -89,12 +95,16 @@ fun OnboardingScreen(
                 .padding(24.dp),
         ) {
             Text(
-                text = stringResource(R.string.onboarding_title),
+                text = stringResource(
+                    if (recovery) R.string.permissions_recovery_title else R.string.onboarding_title,
+                ),
                 style = MaterialTheme.typography.headlineLarge,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.onboarding_subtitle),
+                text = stringResource(
+                    if (recovery) R.string.permissions_recovery_subtitle else R.string.onboarding_subtitle,
+                ),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -179,7 +189,11 @@ fun OnboardingScreen(
                 enabled = uiState.allGranted,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.onboarding_continue))
+                Text(
+                    stringResource(
+                        if (recovery) R.string.permissions_recovery_continue else R.string.onboarding_continue,
+                    ),
+                )
             }
         }
     }

@@ -5,6 +5,9 @@ sealed class MonolithDestination(val route: String) {
     data object OnboardingAppSelector : MonolithDestination("onboarding_app_selector")
     data object OnboardingNfcLink : MonolithDestination("onboarding_nfc_link")
     data object OnboardingComplete : MonolithDestination("onboarding_complete")
+
+    /** Permission step on its own, for installs that finished setup and later lost a permission. */
+    data object Permissions : MonolithDestination("permissions")
     data object Home : MonolithDestination("home")
     data object AppSelector : MonolithDestination("app_selector")
     data object ImportantPeople : MonolithDestination("important_people")

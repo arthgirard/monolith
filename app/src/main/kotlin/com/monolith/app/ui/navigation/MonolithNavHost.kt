@@ -24,6 +24,7 @@ private const val TRANSITION_DURATION_MILLIS = 300
 fun MonolithNavHost(
     navController: NavHostController,
     startDestination: String,
+    onOnboardingCompleted: () -> Unit = {},
 ) {
     NavHost(
         navController = navController,
@@ -57,9 +58,20 @@ fun MonolithNavHost(
                 onLinked = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
             )
         }
+        composable(MonolithDestination.Permissions.route) {
+            OnboardingScreen(
+                recovery = true,
+                onFinished = {
+                    navController.navigate(MonolithDestination.Home.route) {
+                        popUpTo(MonolithDestination.Permissions.route) { inclusive = true }
+                    }
+                },
+            )
+        }
         composable(MonolithDestination.OnboardingComplete.route) {
             OnboardingCompleteScreen(
                 onFinished = {
+                    onOnboardingCompleted()
                     navController.navigate(MonolithDestination.Home.route) {
                         popUpTo(MonolithDestination.Onboarding.route) { inclusive = true }
                     }

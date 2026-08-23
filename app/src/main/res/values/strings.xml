@@ -6,6 +6,9 @@
     <!-- Onboarding -->
     <string name="onboarding_title">Set up Monolith</string>
     <string name="onboarding_subtitle">Five permissions. Grant them once, forget about it.</string>
+    <string name="permissions_recovery_title">Permissions dropped</string>
+    <string name="permissions_recovery_subtitle">Android took one of Monolith\'s permissions back. Grant it again and blocking picks up where it left off.</string>
+    <string name="permissions_recovery_continue">Back to Monolith</string>
     <string name="restricted_settings_title">Toggle greyed out?</string>
     <string name="restricted_settings_body">Sideloaded apps start with Android\'s restricted settings on. Open App Info, tap ⋮ in the top corner, then \"Allow restricted settings\": the Accessibility and Notification Access toggles below will unlock.</string>
     <string name="restricted_settings_open">Open App Info</string>
