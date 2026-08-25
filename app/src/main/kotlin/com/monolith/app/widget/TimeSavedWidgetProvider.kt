@@ -213,7 +213,7 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
      * only the actions this object carries, so a band left unmentioned keeps whatever the last
      * render left on screen -- which is how the refresh spinner once got stuck on.
      */
-    private fun applyDetail(context: Context, views: RemoteViews, tier: WidgetTier, detail: WidgetDetail) {
+    private fun applyDetail(context: Context, views: RemoteViews, appRows: Int, detail: WidgetDetail, tier: WidgetTier) {
         // Amber while Monolith is actually enforcing, muted otherwise. Resolved in this process
         // rather than left to the launcher, which the chart deliberately avoids -- safe only
         // because both of these are defined once in values/ with no night variant, so there is no
@@ -233,13 +233,13 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.widget_stat_held_value, formatDuration(detail.streakMillis))
 
         APP_ROW_IDS.forEachIndexed { index, row ->
-            // Rows beyond what this height earns stay collapsed even if there's data for them --
-            // the tier, not the data, decides how many rows the band is tall enough to hold.
-            val app = if (index < tier.appRows) detail.topApps.getOrNull(index) else null
+            // [appRows] is what this widget actually draws: the tier's ceiling, cut down to the
+            // apps there are. Everything past it collapses, and buildViews has already handed
+            // that height to the chart.
+            val app = if (index < appRows) detail.topApps.getOrNull(index) else null
             // The first row carries the empty state, so a day with nothing reached for reads as a
-            // finished list rather than as a band that failed to draw. The rows below it collapse,
-            // but the band around them keeps its fixed height, so the chart's budget never moves.
-            val isEmptyState = app == null && index == 0 && tier.appRows > 0
+            // finished list rather than as a band that failed to draw.
+            val isEmptyState = app == null && index == 0 && appRows > 0
             views.setViewVisibility(row.rowId, if (app != null || isEmptyState) View.VISIBLE else View.GONE)
             views.setTextViewText(
                 row.labelId,
@@ -256,6 +256,13 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
             }
         }
     }
+
+    /**
+     * How many app rows this widget draws: the most its height can hold, capped by the apps there
+     * are, and never below the one row the empty state needs.
+     */
+    private fun appRowsFor(tier: WidgetTier, detail: WidgetDetail): Int =
+        if (!tier.showApps) 0 else detail.topApps.size.coerceIn(1, tier.appRows)
 
     private data class WidgetSize(val widthDp: Int, val heightDp: Int, val tier: WidgetTier)
 
@@ -287,13 +294,19 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
         views.setViewVisibility(R.id.widget_refresh_icon, View.VISIBLE)
         views.setViewVisibility(R.id.widget_refresh_progress, View.GONE)
 
-        applyDetail(context, views, size.tier, detail)
+        val appRows = appRowsFor(size.tier, detail)
+        applyDetail(context, views, appRows, detail, size.tier)
 
         val density = context.resources.displayMetrics.density
         val chartWidthDp = (size.widthDp - PADDING_DP * 2).coerceAtLeast(MIN_CHART_WIDTH_DP)
         // Whatever the visible bands claim comes out of the chart's budget, so the bitmap is drawn
         // for the space it will actually be given rather than being squashed into what's left.
-        val chartHeightDp = (size.heightDp - PADDING_DP * 2 - size.tier.reservedBandDp)
+        // The apps band is measured by the rows actually drawn, not by the tier's ceiling: the
+        // band is wrap_content and the chart is the only weighted view, so on a day with fewer
+        // apps than the height could hold, the difference lands in the chart -- and a bitmap sized
+        // for the ceiling would be stretched over it.
+        val reservedBandDp = WidgetTiers.reservedBandDp(size.tier.showStats, appRows)
+        val chartHeightDp = (size.heightDp - PADDING_DP * 2 - reservedBandDp)
             .coerceAtLeast(MIN_CHART_HEIGHT_DP)
 
         val chart = TimeSavedChartRenderer.render(

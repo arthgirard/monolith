@@ -81,6 +81,30 @@ class WidgetTiersTest {
     }
 
     @Test
+    fun `drawing fewer rows than the tier holds reserves less and leaves the chart taller`() {
+        // A day with two apps on a six-row widget: the four rows nobody drew are the chart's, and
+        // the bitmap has to be sized for that or it gets stretched over them.
+        val tier = WidgetTiers.forHeight(2000)
+
+        val reserved = WidgetTiers.reservedBandDp(tier.showStats, appRows = 2)
+
+        assertEquals(
+            tier.reservedBandDp - (WidgetTiers.MAX_APP_ROWS - 2) * WidgetTiers.APP_ROW_HEIGHT_DP,
+            reserved,
+        )
+    }
+
+    @Test
+    fun `a tier's own reserve is the band drawn at its full row count`() {
+        val tier = WidgetTiers.forHeight(WidgetTiers.APPS_MIN_HEIGHT_DP)
+
+        assertEquals(
+            WidgetTiers.reservedBandDp(tier.showStats, tier.appRows),
+            tier.reservedBandDp,
+        )
+    }
+
+    @Test
     fun `app rows cap out at MAX_APP_ROWS and never grow further`() {
         val extraRowStep = WidgetTiers.APP_ROW_HEIGHT_DP + WidgetTiers.APP_ROW_MARGIN_DP
         val heightForMax = WidgetTiers.APPS_MIN_HEIGHT_DP +

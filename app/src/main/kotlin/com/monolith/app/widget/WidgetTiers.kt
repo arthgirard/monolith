@@ -64,6 +64,17 @@ object WidgetTiers {
     /** Space the apps band claims for [appRows] rows, including its own top margin. */
     fun appsBandDp(appRows: Int): Int = APPS_BAND_MARGIN_DP + appRows * APP_ROW_HEIGHT_DP
 
+    /**
+     * Everything above and below the chart for a widget drawing [appRows] rows. A tier's own
+     * number is the most rows its height can hold, but a day with fewer apps than that draws
+     * fewer, and the caller passes what it actually drew: the band is wrap_content and the chart
+     * is the only weighted view, so rows that aren't there are chart height, not blank space.
+     */
+    fun reservedBandDp(showStats: Boolean, appRows: Int): Int =
+        TEXT_BAND_DP +
+            (if (showStats) DIVIDER_BAND_DP + STATS_BAND_DP else 0) +
+            (if (appRows > 0) appsBandDp(appRows) else 0)
+
     fun forHeight(heightDp: Int): WidgetTier {
         val showStats = heightDp >= STATS_MIN_HEIGHT_DP
         val showApps = heightDp >= APPS_MIN_HEIGHT_DP
@@ -79,9 +90,7 @@ object WidgetTiers {
         return WidgetTier(
             showStats = showStats,
             appRows = appRows,
-            reservedBandDp = TEXT_BAND_DP +
-                (if (showStats) DIVIDER_BAND_DP + STATS_BAND_DP else 0) +
-                (if (showApps) appsBandDp(appRows) else 0),
+            reservedBandDp = reservedBandDp(showStats, appRows),
         )
     }
 }
