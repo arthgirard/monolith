@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Text is sized in dp rather than sp, and tools:ignore="SpUsage" covers the whole tree for it.
+    Every band here is a fixed dp height that WidgetTiers reserves out of the chart's budget by
+    the same number, so text that grew with the device's font-size setting would overflow a box
+    that didn't: on a large-font device the stat values were clipped mid-glyph and the app labels
+    lost their descenders. dp also puts this text on the same footing as the chart's hour labels,
+    which TimeSavedChartRenderer already draws at a dp size because they live in a bitmap.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="SpUsage"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -20,7 +30,7 @@
             android:layout_weight="1"
             android:text="@string/widget_time_saved_label"
             android:textColor="@color/widget_muted"
-            android:textSize="11sp"
+            android:textSize="11dp"
             android:fontFamily="@font/inter_medium"
             android:letterSpacing="0.08"
             android:maxLines="1"
@@ -78,7 +88,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:textColor="@color/widget_text"
-        android:textSize="28sp"
+        android:textSize="28dp"
         android:fontFamily="@font/inter_semibold"
         android:maxLines="1" />
 
@@ -133,7 +143,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/widget_stat_blocks"
                 android:textColor="@color/widget_muted"
-                android:textSize="9sp"
+                android:textSize="9dp"
                 android:fontFamily="@font/inter_medium"
                 android:letterSpacing="0.08"
                 android:maxLines="1"
@@ -144,7 +154,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/widget_text"
-                android:textSize="16sp"
+                android:textSize="16dp"
                 android:fontFamily="@font/inter_semibold"
                 android:fontFeatureSettings="tnum"
                 android:maxLines="1" />
@@ -162,7 +172,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/widget_stat_held"
                 android:textColor="@color/widget_muted"
-                android:textSize="9sp"
+                android:textSize="9dp"
                 android:fontFamily="@font/inter_medium"
                 android:letterSpacing="0.08"
                 android:maxLines="1"
@@ -173,7 +183,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/widget_text"
-                android:textSize="16sp"
+                android:textSize="16dp"
                 android:fontFamily="@font/inter_semibold"
                 android:fontFeatureSettings="tnum"
                 android:maxLines="1" />
@@ -217,7 +227,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/widget_text"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_regular"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -228,7 +238,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textColor="@color/widget_muted"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_medium"
                     android:fontFeatureSettings="tnum"
                     android:maxLines="1" />
@@ -278,7 +288,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/widget_text"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_regular"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -289,7 +299,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textColor="@color/widget_muted"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_medium"
                     android:fontFeatureSettings="tnum"
                     android:maxLines="1" />
@@ -339,7 +349,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/widget_text"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_regular"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -350,7 +360,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textColor="@color/widget_muted"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_medium"
                     android:fontFeatureSettings="tnum"
                     android:maxLines="1" />
@@ -400,7 +410,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/widget_text"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_regular"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -411,7 +421,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textColor="@color/widget_muted"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_medium"
                     android:fontFeatureSettings="tnum"
                     android:maxLines="1" />
@@ -456,7 +466,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/widget_text"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_regular"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -467,7 +477,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textColor="@color/widget_muted"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_medium"
                     android:fontFeatureSettings="tnum"
                     android:maxLines="1" />
@@ -512,7 +522,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/widget_text"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_regular"
                     android:maxLines="1"
                     android:ellipsize="end" />
@@ -523,7 +533,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:textColor="@color/widget_muted"
-                    android:textSize="11sp"
+                    android:textSize="11dp"
                     android:fontFamily="@font/inter_medium"
                     android:fontFeatureSettings="tnum"
                     android:maxLines="1" />
