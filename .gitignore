@@ -15,6 +15,7 @@ local.properties
 *.jks
 keystore.properties
 .agent/
+.serena/
 package.json
 package-lock.json
 node_modules/
