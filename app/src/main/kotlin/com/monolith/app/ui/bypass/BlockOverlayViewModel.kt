@@ -7,6 +7,7 @@ import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.AppUnlock
 import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.NfcTapResult
+import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.usecase.GetBlockHitsTodayUseCase
 import com.monolith.app.domain.usecase.GetCodeBreakerChallengeUseCase
@@ -14,6 +15,7 @@ import com.monolith.app.domain.usecase.GetCurrentStreakUseCase
 import com.monolith.app.domain.usecase.GetSolvedCodeBreakerUseCase
 import com.monolith.app.domain.usecase.GetWaiverSentenceUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
+import com.monolith.app.domain.usecase.ObserveStrictnessUseCase
 import com.monolith.app.domain.usecase.SubmitCodeBreakerGuessUseCase
 import com.monolith.app.domain.usecase.SubmitWaiverUseCase
 import com.monolith.app.domain.usecase.ToggleBlockModeFromTagUseCase
@@ -67,11 +69,18 @@ data class BlockWallUiState(
     val streakMillis: Long = 0L,
     val opensToday: Int = 0,
     val bypassJustEnded: Boolean = false,
+    /**
+     * Whether this wall has a way through it at all. False above STANDARD, which turns the wall
+     * into the dead end its level promised: the streak and the count still read, but the only
+     * action left is going home.
+     */
+    val canBreakCode: Boolean = true,
 )
 
 @HiltViewModel
 class BlockOverlayViewModel @Inject constructor(
     observeBlockState: ObserveBlockStateUseCase,
+    observeStrictness: ObserveStrictnessUseCase,
     private val toggleFromTag: ToggleBlockModeFromTagUseCase,
     private val nfcTagBus: NfcTagBus,
     private val getCodeBreakerChallenge: GetCodeBreakerChallengeUseCase,
@@ -100,6 +109,12 @@ class BlockOverlayViewModel @Inject constructor(
     // blocked app win the race every time.
     val blockState: StateFlow<BlockState> =
         observeBlockState().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BlockState(isActive = true))
+
+    // Seeded at the default for the same reason blockState seeds isActive=true: DataStore's first
+    // read is async, and a first frame that guessed ABSOLUTE would flash a wall with no way out
+    // at someone who has one.
+    private val strictness: StateFlow<StrictnessLevel> =
+        observeStrictness().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StrictnessLevel.DEFAULT)
 
     private val _challengeState = MutableStateFlow(UnlockChallengeUiState())
     val challengeState: StateFlow<UnlockChallengeUiState> = _challengeState
@@ -130,12 +145,14 @@ class BlockOverlayViewModel @Inject constructor(
                     // doesn't re-emit when a bypass merely ages past the callout window, so a
                     // plain map would latch this true for as long as the overlay stayed up.
                     combine(blockState, secondTicker) { state, now -> state.bypassJustEnded(now) },
-                ) { label, streak, opens, bypassEnded ->
+                    strictness,
+                ) { label, streak, opens, bypassEnded, level ->
                     BlockWallUiState(
                         appLabel = label,
                         streakMillis = streak,
                         opensToday = opens,
                         bypassJustEnded = bypassEnded,
+                        canBreakCode = level.allowsAppUnlock,
                     )
                 }
             }
@@ -172,6 +189,10 @@ class BlockOverlayViewModel @Inject constructor(
         // only thing worth restoring is a puzzle already beaten whose waiver was never confirmed:
         // that reopens straight onto the waiver instead of the idle screen.
         viewModelScope.launch {
+            // A puzzle solved under a looser level must not reopen its waiver under a stricter
+            // one. Tightening requires Monolith to be off and the next activation clears unlocks,
+            // so this is belt and braces rather than a live case.
+            if (!strictness.value.allowsAppUnlock) return@launch
             val pending = getSolvedCodeBreaker(packageName) ?: return@launch
             // The service can retarget this same overlay at another app while this read is in
             // flight -- dropping the result then keeps one app's waiver off another app's screen.
@@ -186,6 +207,11 @@ class BlockOverlayViewModel @Inject constructor(
         _challengeState.value = _challengeState.value.copy(isLoading = true)
         viewModelScope.launch {
             val codeBreaker = getCodeBreakerChallenge(packageName)
+            if (codeBreaker == null) {
+                // The level forbids it. Drop back to the idle wall rather than spinning forever.
+                _challengeState.value = _challengeState.value.copy(isLoading = false)
+                return@launch
+            }
             applyCodeBreaker(packageName, codeBreaker)
         }
     }
@@ -225,7 +251,7 @@ class BlockOverlayViewModel @Inject constructor(
         val state = _challengeState.value
         if (!state.waiverMatches) return
         viewModelScope.launch {
-            submitWaiver(packageName, AppUnlock.DURATION_MILLIS)
+            if (submitWaiver(packageName, AppUnlock.DURATION_MILLIS).isFailure) return@launch
             _challengeState.value = state.copy(unlocked = true, unlockedPackage = packageName)
         }
     }

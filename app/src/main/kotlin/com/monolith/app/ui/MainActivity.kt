@@ -150,6 +150,7 @@ class MainActivity : ComponentActivity() {
             MonolithDestination.Onboarding.route,
             MonolithDestination.OnboardingAppSelector.route,
             MonolithDestination.OnboardingNfcLink.route,
+            MonolithDestination.OnboardingStrictness.route,
             MonolithDestination.OnboardingComplete.route,
             MonolithDestination.Permissions.route,
         )

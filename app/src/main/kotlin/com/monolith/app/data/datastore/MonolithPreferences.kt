@@ -17,6 +17,7 @@ import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.SlotResult
+import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.TagLinkMode
 import com.monolith.app.domain.usecase.BlockHitLog
 import kotlinx.coroutines.flow.Flow
@@ -152,6 +153,7 @@ class MonolithPreferences @Inject constructor(
         val BLOCK_SCHEDULES = stringPreferencesKey("block_schedules")
         val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val STRICTNESS_LEVEL = stringPreferencesKey("strictness_level")
     }
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -172,6 +174,21 @@ class MonolithPreferences @Inject constructor(
 
     suspend fun setOnboardingCompleted() {
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
+    }
+
+    /**
+     * Which escape hatches the user left themselves. Stored by enum name so a level renamed or
+     * reordered later can't silently reinterpret an existing install's choice as a different one.
+     *
+     * Absent for every install that predates the setting, and for anyone who skipped tag linking
+     * during setup; both resolve to [StrictnessLevel.DEFAULT], which is the behaviour they have.
+     */
+    val strictnessLevel: Flow<StrictnessLevel> = context.dataStore.data.map { prefs ->
+        StrictnessLevel.fromStorage(prefs[Keys.STRICTNESS_LEVEL])
+    }
+
+    suspend fun setStrictnessLevel(level: StrictnessLevel) {
+        context.dataStore.edit { it[Keys.STRICTNESS_LEVEL] = level.name }
     }
 
     val blockState: Flow<BlockState> = context.dataStore.data.map { prefs ->

@@ -55,8 +55,8 @@ import kotlinx.coroutines.delay
 
 /**
  * The idle block screen: a slab naming the app that was reached for, what has been held so far,
- * and how many times today this same wall has been met -- over a ground carrying the two ways
- * out.
+ * and how many times today this same wall has been met -- over a ground carrying whatever ways
+ * out the chosen strictness level leaves.
  *
  * The app's own label is the headline rather than "Monolith active". A wall that names itself is
  * interchangeable with any other blocker; one that names what you just reached for is about you.
@@ -160,20 +160,27 @@ fun BlockWall(
                 modifier = Modifier
                     .fillMaxSize()
                     .reveal(revealProgress(revealDelay(7), play)),
-                // The two ways out are not peers and should not sit in one stack. The escape
-                // hatch rides directly under the slab's bottom edge -- attached to the mass, and
+                // The ways out are not peers and should not sit in one stack. The escape
+                // hatch, where the level allows one, rides directly under the slab's bottom edge -- attached to the mass, and
                 // read immediately after the streak it would destroy -- while "go home" is
                 // pinned to the bottom, where the thumb already is. Putting them adjacent gave
                 // the most reachable inch of the screen to the escape hatch, which is backwards.
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                WallAction(
-                    label = stringResource(R.string.overlay_break_code_title),
-                    suffix = stringResource(R.string.overlay_break_code_subtitle),
-                    muted = true,
-                    enabled = !isLoading,
-                    onClick = onBreakCode,
-                )
+                if (wallState.canBreakCode) {
+                    WallAction(
+                        label = stringResource(R.string.overlay_break_code_title),
+                        suffix = stringResource(R.string.overlay_break_code_subtitle),
+                        muted = true,
+                        enabled = !isLoading,
+                        onClick = onBreakCode,
+                    )
+                } else {
+                    // Nothing greyed out in its place. A disabled escape hatch is still an escape
+                    // hatch to look at, and the level the user picked was the one where there
+                    // isn't one -- SpaceBetween then drops "go home" to the bottom on its own.
+                    Spacer(Modifier.height(0.dp))
+                }
                 Column {
                     WallDivider()
                     WallAction(

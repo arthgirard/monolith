@@ -21,6 +21,12 @@ class ActivateBlockModeUseCase @Inject constructor(
         // per-app unlock the user is in the middle of.
         if (blockRepository.observeBlockState().first().isActive) return false
 
+        // No tag, no session. Turning Monolith on without one leaves nothing that can turn it
+        // off: the bypass is a 15-minute window once per cycle, and at Strict or Absolute there
+        // is not even that. This covers the scheduled path too, since a schedule firing on a
+        // phone whose tag was never linked is the same trap arriving on its own.
+        if (blockRepository.observeLinkedTag().first() == null) return false
+
         blockRepository.setBlockModeActive(true)
         // Same fresh-cycle reset a tag tap performs: a bypass allowance or app unlock left over
         // from the previous cycle must not carry into this one.

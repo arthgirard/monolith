@@ -21,6 +21,9 @@ sealed interface NfcLinkStatus {
     data object Writing : NfcLinkStatus
     data class Success(val mode: TagLinkMode) : NfcLinkStatus
     data class Error(val message: String) : NfcLinkStatus
+
+    /** Reached by tapping a tag on this screen while Monolith is active. */
+    data object Locked : NfcLinkStatus
 }
 
 @HiltViewModel
@@ -43,6 +46,7 @@ class NfcLinkViewModel @Inject constructor(
             when (val result = linkNfcTag(tag)) {
                 is NfcLinkResult.Success -> _status.value = NfcLinkStatus.Success(result.link.mode)
                 is NfcLinkResult.Failure -> _status.value = NfcLinkStatus.Error(result.reason)
+                NfcLinkResult.Locked -> _status.value = NfcLinkStatus.Locked
             }
         }.launchIn(viewModelScope)
     }

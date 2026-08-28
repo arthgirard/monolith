@@ -6,19 +6,25 @@ import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.StrictnessLevel
+import com.monolith.app.domain.model.TagLinkMode
 import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.ScheduleRepository
+import com.monolith.app.domain.repository.StrictnessRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * In-memory stand-ins for the DataStore-backed repositories. They mirror the real writes the
  * tests care about: [FakeBlockRepository.sessionStartCount] stands in for SESSION_STARTED_AT
- * being restamped, and [FakeScheduleRepository] enforces the same forward-only watermark rule as
+ * being restamped, a tag is linked by default because most callers assume a set-up install, and [FakeScheduleRepository] enforces the same forward-only watermark rule as
  * MonolithPreferences.setScheduleLastFire.
  */
-class FakeBlockRepository(initiallyActive: Boolean = false) : BlockRepository {
+class FakeBlockRepository(
+    initiallyActive: Boolean = false,
+    linkedTag: NfcTagLink? = NfcTagLink(uid = "tag", mode = TagLinkMode.FALLBACK_UID),
+) : BlockRepository {
     private val state = MutableStateFlow(BlockState(isActive = initiallyActive))
 
     /** How many times blocking went from off to on -- i.e. how many streaks were started. */
@@ -43,9 +49,13 @@ class FakeBlockRepository(initiallyActive: Boolean = false) : BlockRepository {
         state.value = state.value.copy(bypassExpiresAtMillis = null)
     }
 
-    override fun observeLinkedTag(): Flow<NfcTagLink?> = MutableStateFlow(null)
+    private val storedLink = MutableStateFlow(linkedTag)
 
-    override suspend fun saveLinkedTag(link: NfcTagLink) = Unit
+    override fun observeLinkedTag(): Flow<NfcTagLink?> = storedLink
+
+    override suspend fun saveLinkedTag(link: NfcTagLink) {
+        storedLink.value = link
+    }
 
     override fun observeBlockSessions(): Flow<List<BlockSession>> = MutableStateFlow(emptyList())
 
@@ -93,6 +103,18 @@ class FakeAppUnlockRepository : AppUnlockRepository {
         unlocks.value = emptyMap()
         codeBreakers.value = emptyMap()
     }
+}
+
+class FakeStrictnessRepository(level: StrictnessLevel = StrictnessLevel.DEFAULT) : StrictnessRepository {
+    private val stored = MutableStateFlow(level)
+
+    override fun observeStrictness(): Flow<StrictnessLevel> = stored
+
+    override suspend fun setStrictness(level: StrictnessLevel) {
+        stored.value = level
+    }
+
+    fun current(): StrictnessLevel = stored.value
 }
 
 class FakeScheduleRepository(schedules: List<BlockSchedule> = emptyList()) : ScheduleRepository {

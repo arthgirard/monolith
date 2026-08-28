@@ -16,6 +16,8 @@ import com.monolith.app.ui.nfclink.NfcLinkScreen
 import com.monolith.app.ui.onboarding.OnboardingCompleteScreen
 import com.monolith.app.ui.onboarding.OnboardingScreen
 import com.monolith.app.ui.schedule.ScheduleScreen
+import com.monolith.app.ui.settings.SettingsScreen
+import com.monolith.app.ui.strictness.StrictnessScreen
 import com.monolith.app.ui.timesaved.TimeSavedScreen
 
 private const val TRANSITION_DURATION_MILLIS = 300
@@ -45,17 +47,27 @@ fun MonolithNavHost(
             AppSelectorScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = { navController.navigate(MonolithDestination.OnboardingNfcLink.route) },
-                onboardingStep = 1 to 2,
+                onboardingStep = 1 to 3,
                 onboardingSubtitle = stringResource(R.string.onboarding_select_apps_subtitle),
             )
         }
         composable(MonolithDestination.OnboardingNfcLink.route) {
             NfcLinkScreen(
                 onBack = { navController.popBackStack() },
-                onboardingStep = 2 to 2,
+                onboardingStep = 2 to 3,
                 onboardingSubtitle = stringResource(R.string.onboarding_link_tag_subtitle),
-                onSkip = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
-                onLinked = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
+                // Skipping the tag still leads through the strictness step, which shows the
+                // levels and lets only Standard be picked until a tag exists. Skipping it
+                // entirely left people who deferred the tag never knowing the setting was there.
+                onSkip = { navController.navigate(MonolithDestination.OnboardingStrictness.route) },
+                onLinked = { navController.navigate(MonolithDestination.OnboardingStrictness.route) },
+            )
+        }
+        composable(MonolithDestination.OnboardingStrictness.route) {
+            StrictnessScreen(
+                onBack = { navController.popBackStack() },
+                onboardingStep = 3 to 3,
+                onContinue = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
             )
         }
         composable(MonolithDestination.Permissions.route) {
@@ -85,6 +97,7 @@ fun MonolithNavHost(
                 onLinkTag = { navController.navigate(MonolithDestination.NfcLink.route) },
                 onViewTimeSaved = { navController.navigate(MonolithDestination.TimeSaved.route) },
                 onManageSchedules = { navController.navigate(MonolithDestination.Schedules.route) },
+                onOpenSettings = { navController.navigate(MonolithDestination.Settings.route) },
             )
         }
         composable(MonolithDestination.AppSelector.route) {
@@ -101,6 +114,16 @@ fun MonolithNavHost(
         }
         composable(MonolithDestination.Schedules.route) {
             ScheduleScreen(onBack = { navController.popBackStack() })
+        }
+        composable(MonolithDestination.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onEditStrictness = { navController.navigate(MonolithDestination.Strictness.route) },
+                onLinkTag = { navController.navigate(MonolithDestination.NfcLink.route) },
+            )
+        }
+        composable(MonolithDestination.Strictness.route) {
+            StrictnessScreen(onBack = { navController.popBackStack() })
         }
     }
 }

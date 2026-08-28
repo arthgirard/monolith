@@ -139,6 +139,15 @@ fun NfcLinkScreen(
                             }
                         }
 
+                        NfcLinkStatus.Locked -> {
+                            Text(
+                                stringResource(R.string.nfc_link_locked),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                        }
+
                         is NfcLinkStatus.Error -> {
                             Text(
                                 stringResource(R.string.nfc_link_error),

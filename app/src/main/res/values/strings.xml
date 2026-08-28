@@ -28,7 +28,23 @@
     <string name="onboarding_configuration_title">Configuration</string>
     <string name="onboarding_step_indicator">%1$d/%2$d</string>
     <string name="onboarding_select_apps_subtitle">Select the apps you want blocked.</string>
-    <string name="onboarding_link_tag_subtitle">Last step: link your NFC tag to toggle blocking.</string>
+    <string name="onboarding_link_tag_subtitle">Link your NFC tag to toggle blocking.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_locked_banner">Tap your tag to change these</string>
+
+    <!-- Strictness -->
+    <string name="strictness_title">Strictness</string>
+    <string name="strictness_subtitle">How do you get back in when the tag isn\'t near?</string>
+    <string name="strictness_standard_title">Standard</string>
+    <string name="strictness_standard_desc">Open one blocked app for 5 minutes by solving a puzzle, then copying out a sentence by hand. It ends your streak, and you can do it as often as you\'re willing to. You also get one 15-minute unblock of everything per lock.</string>
+    <string name="strictness_strict_title">Strict</string>
+    <string name="strictness_strict_desc">One 15-minute unblock of everything, once per lock, from the home screen. No per-app escape.</string>
+    <string name="strictness_absolute_title">Absolute</string>
+    <string name="strictness_absolute_desc">Nothing lifts Monolith but the tag.</string>
+    <string name="strictness_uninstall_caveat">You can still uninstall Monolith. That\'s on purpose.</string>
+
     <string name="onboarding_complete_title">You\'re all set!</string>
     <string name="onboarding_complete_desc">Welcome to Monolith.</string>
 
@@ -38,7 +54,7 @@
     <string name="block_mode_inactive">Monolith disabled</string>
     <string name="block_mode_active_desc">Tap your Monolith tag to unlock.</string>
     <string name="block_mode_inactive_desc">Tap your Monolith tag or this box to lock in.</string>
-    <string name="no_tag_linked">No tag linked yet</string>
+    <string name="block_mode_needs_tag_desc">Link a tag to lock in.</string>
     <string name="link_tag_cta">Link an NFC tag</string>
     <string name="relink_tag_cta">Re-link tag</string>
     <string name="more_options_cta">More options</string>
@@ -62,6 +78,7 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Manage schedules</string>
+    <string name="needs_tag_value">Link a tag first</string>
     <string name="schedules_title">Schedules</string>
     <string name="schedules_subtitle">Monolith switches on by itself at these times. It never switches off on its own, that still takes your tag.</string>
     <string name="schedules_empty">No schedules yet. Add one to have Monolith come on without you.</string>
@@ -137,6 +154,7 @@
     <string name="nfc_link_writing">Writing tag…</string>
     <string name="nfc_link_success_smart">Tag successfully linked</string>
     <string name="nfc_link_success_fallback">UID successfully stored</string>
+    <string name="nfc_link_locked">Monolith is active. Tap the tag it already knows to unlock, then link a new one.</string>
     <string name="nfc_link_error">Could not read tag. Try again.</string>
     <string name="nfc_not_supported">This device has no NFC hardware.</string>
     <string name="not_now_cta">Not now</string>

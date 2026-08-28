@@ -3,22 +3,19 @@ package com.monolith.app.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monolith.app.domain.model.BlockState
-import com.monolith.app.domain.model.DownloadState
 import com.monolith.app.domain.model.earliestNextFire
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.NfcTapResult
+import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
-import com.monolith.app.domain.model.UpdateCheckResult
 import com.monolith.app.domain.usecase.ActivateBlockModeUseCase
-import com.monolith.app.domain.usecase.CanInstallPackagesUseCase
-import com.monolith.app.domain.usecase.CheckForUpdateUseCase
-import com.monolith.app.domain.usecase.DownloadUpdateUseCase
 import com.monolith.app.domain.usecase.ObserveActiveSessionStartUseCase
 import com.monolith.app.domain.usecase.ObserveBlockSchedulesUseCase
 import com.monolith.app.domain.usecase.ObserveBlockSessionsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.ObserveLinkedTagUseCase
+import com.monolith.app.domain.usecase.ObserveStrictnessUseCase
 import com.monolith.app.domain.usecase.StartBypassUseCase
 import com.monolith.app.domain.usecase.TimeSavedCalculator
 import com.monolith.app.domain.usecase.ToggleBlockModeFromTagUseCase
@@ -37,7 +34,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -51,6 +47,7 @@ data class HomeUiState(
     val nowMillis: Long = System.currentTimeMillis(),
     /** Next armed schedule, or null when none is set. Only worth showing while Monolith is off. */
     val nextScheduledFire: ZonedDateTime? = null,
+    val strictness: StrictnessLevel = StrictnessLevel.DEFAULT,
 ) {
     val bypassSecondsRemaining: Long
         get() {
@@ -73,17 +70,6 @@ sealed interface HomeEvent {
     data object BypassEnded : HomeEvent
 }
 
-sealed interface UpdateUiState {
-    data object Idle : UpdateUiState
-    data object Checking : UpdateUiState
-    data object UpToDate : UpdateUiState
-    data class Available(val versionName: String, val downloadUrl: String) : UpdateUiState
-    data class NeedsInstallPermission(val versionName: String, val downloadUrl: String) : UpdateUiState
-    data class Downloading(val fraction: Float?) : UpdateUiState
-    data class ReadyToInstall(val file: File) : UpdateUiState
-    data class Failed(val message: String) : UpdateUiState
-}
-
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     observeBlockState: ObserveBlockStateUseCase,
@@ -91,13 +77,11 @@ class HomeViewModel @Inject constructor(
     observeBlockSessions: ObserveBlockSessionsUseCase,
     observeActiveSessionStart: ObserveActiveSessionStartUseCase,
     observeBlockSchedules: ObserveBlockSchedulesUseCase,
+    observeStrictness: ObserveStrictnessUseCase,
     private val startBypass: StartBypassUseCase,
     private val activateBlockMode: ActivateBlockModeUseCase,
     private val toggleFromTag: ToggleBlockModeFromTagUseCase,
     private val nfcTagBus: NfcTagBus,
-    private val checkForUpdate: CheckForUpdateUseCase,
-    private val downloadUpdate: DownloadUpdateUseCase,
-    private val canInstallPackages: CanInstallPackagesUseCase,
 ) : ViewModel() {
 
     private val ticker = MutableStateFlow(System.currentTimeMillis())
@@ -126,17 +110,18 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         coreState,
         observeBlockSchedules(),
-    ) { state, schedules ->
+        observeStrictness(),
+    ) { state, schedules, strictness ->
         // Recomputed off the same one-second ticker that drives coreState, so the label rolls over
         // to the following occurrence the moment the current one fires.
-        state.copy(nextScheduledFire = schedules.earliestNextFire(ZonedDateTime.now(zone)))
+        state.copy(
+            nextScheduledFire = schedules.earliestNextFire(ZonedDateTime.now(zone)),
+            strictness = strictness,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
     private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<HomeEvent> = _events
-
-    private val _updateState = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
-    val updateState: StateFlow<UpdateUiState> = _updateState
 
     init {
         // Countdown ticks once a second only matter while a bypass is running; cheap either way.
@@ -167,8 +152,10 @@ class HomeViewModel @Inject constructor(
 
     fun startEmergencyBypass() {
         viewModelScope.launch {
-            startBypass()
-            _events.tryEmit(HomeEvent.BypassStarted)
+            // Silent on refusal: the only way to reach this with a strictness that forbids it is
+            // a level change racing the dialog, and there is nothing useful to tell the user
+            // about a button that should already have been gone.
+            if (startBypass().isSuccess) _events.tryEmit(HomeEvent.BypassStarted)
         }
     }
 
@@ -177,37 +164,5 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             if (activateBlockMode()) _events.tryEmit(HomeEvent.Toggled(nowActive = true))
         }
-    }
-
-    fun checkForUpdates() {
-        if (_updateState.value == UpdateUiState.Checking) return
-        _updateState.value = UpdateUiState.Checking
-        viewModelScope.launch {
-            _updateState.value = when (val result = checkForUpdate()) {
-                is UpdateCheckResult.UpdateAvailable -> UpdateUiState.Available(result.versionName, result.downloadUrl)
-                UpdateCheckResult.UpToDate -> UpdateUiState.UpToDate
-                is UpdateCheckResult.Failure -> UpdateUiState.Failed(result.reason)
-            }
-        }
-    }
-
-    fun startDownload(versionName: String, downloadUrl: String) {
-        if (!canInstallPackages()) {
-            _updateState.value = UpdateUiState.NeedsInstallPermission(versionName, downloadUrl)
-            return
-        }
-        viewModelScope.launch {
-            downloadUpdate(downloadUrl).collect { state ->
-                _updateState.value = when (state) {
-                    is DownloadState.Progress -> UpdateUiState.Downloading(state.fraction)
-                    is DownloadState.Complete -> UpdateUiState.ReadyToInstall(state.file)
-                    is DownloadState.Failed -> UpdateUiState.Failed(state.reason)
-                }
-            }
-        }
-    }
-
-    fun dismissUpdateDialog() {
-        _updateState.value = UpdateUiState.Idle
     }
 }

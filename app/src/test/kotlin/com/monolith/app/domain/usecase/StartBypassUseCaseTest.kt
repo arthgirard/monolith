@@ -1,9 +1,11 @@
 package com.monolith.app.domain.usecase
 
 import com.monolith.app.domain.model.CodeBreaker
+import com.monolith.app.domain.model.StrictnessLevel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,7 +14,8 @@ class StartBypassUseCaseTest {
 
     private val blockRepository = FakeBlockRepository(initiallyActive = true)
     private val appUnlockRepository = FakeAppUnlockRepository()
-    private val startBypass = StartBypassUseCase(blockRepository, appUnlockRepository)
+    private val strictnessRepository = FakeStrictnessRepository()
+    private val startBypass = StartBypassUseCase(blockRepository, appUnlockRepository, strictnessRepository)
 
     private val packageName = "com.example.blocked"
 
@@ -49,5 +52,31 @@ class StartBypassUseCaseTest {
         startBypass()
 
         assertNull(appUnlockRepository.observeUnlockedPackages().first()[packageName])
+    }
+
+    @Test
+    fun `strict still allows the one bypass per lock`() = runBlocking {
+        strictnessRepository.setStrictness(StrictnessLevel.STRICT)
+
+        assertTrue(startBypass().isSuccess)
+        assertTrue(blockRepository.observeBlockState().first().isBypassActive(System.currentTimeMillis()))
+    }
+
+    @Test
+    fun `absolute opens no bypass window at all`() = runBlocking {
+        strictnessRepository.setStrictness(StrictnessLevel.ABSOLUTE)
+
+        assertTrue(startBypass().isFailure)
+        assertFalse(blockRepository.observeBlockState().first().isBypassActive(System.currentTimeMillis()))
+    }
+
+    @Test
+    fun `a refused bypass leaves a solved puzzle where it was`() = runBlocking {
+        strictnessRepository.setStrictness(StrictnessLevel.ABSOLUTE)
+        appUnlockRepository.saveCodeBreaker(packageName, solvedCodeBreaker())
+
+        startBypass()
+
+        assertEquals(0, appUnlockRepository.clearUnlocksCount)
     }
 }

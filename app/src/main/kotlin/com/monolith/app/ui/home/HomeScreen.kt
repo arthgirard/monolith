@@ -1,15 +1,11 @@
 package com.monolith.app.ui.home
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,28 +18,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -60,19 +50,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
 import com.monolith.app.ui.components.MonolithSnackbarHost
+import com.monolith.app.ui.components.SettingsDivider
+import com.monolith.app.ui.components.SettingsGroup
+import com.monolith.app.ui.components.SettingsRow
 import com.monolith.app.ui.theme.MonolithButtonShape
 import com.monolith.app.ui.timesaved.TimeSavedBarChart
 import com.monolith.app.util.formatDuration
@@ -87,16 +78,15 @@ fun HomeScreen(
     onLinkTag: () -> Unit,
     onViewTimeSaved: () -> Unit,
     onManageSchedules: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val updateState by viewModel.updateState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var showBypassConfirm by remember { mutableStateOf(false) }
     var showActivateConfirm by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -114,31 +104,6 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(updateState) {
-        when (val state = updateState) {
-            UpdateUiState.UpToDate -> {
-                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.update_up_to_date)) }
-                viewModel.dismissUpdateDialog()
-            }
-            is UpdateUiState.Failed -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.update_check_failed, state.message))
-                }
-                viewModel.dismissUpdateDialog()
-            }
-            is UpdateUiState.ReadyToInstall -> {
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", state.file)
-                val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, "application/vnd.android.package-archive")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(installIntent)
-                viewModel.dismissUpdateDialog()
-            }
-            else -> Unit
-        }
-    }
-
     Scaffold(
         snackbarHost = { MonolithSnackbarHost(snackbarHostState) },
     ) { padding ->
@@ -153,13 +118,11 @@ fun HomeScreen(
             Row(
                 // Height pinned because the wordmark no longer sets it. The old asset carried
                 // ~16dp of blank artboard above and below its ink, which was quietly holding
-                // this header open; cropping the viewport took that away and collapsed the row
-                // onto the overflow button's 48dp.
+                // this header open; cropping the viewport took that away.
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Image(
                     painter = painterResource(R.drawable.ic_monolith_wordmark),
@@ -177,34 +140,14 @@ fun HomeScreen(
                         .padding(start = 16.dp)
                         .height(28.dp),
                 )
-
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        if (updateState == UpdateUiState.Checking) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_options_cta))
-                        }
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.update_check_cta)) },
-                            enabled = updateState != UpdateUiState.Checking,
-                            onClick = {
-                                showMenu = false
-                                viewModel.checkForUpdates()
-                            },
-                        )
-                        if (uiState.linkedTag != null) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.relink_tag_cta)) },
-                                onClick = {
-                                    showMenu = false
-                                    onLinkTag()
-                                },
-                            )
-                        }
-                    }
+                Spacer(Modifier.weight(1f))
+                // Same corner the overflow menu used to sit in. Its two items live in Settings
+                // now, so the corner leads there instead of opening a menu on the way.
+                IconButton(onClick = onOpenSettings) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.settings_title),
+                    )
                 }
             }
 
@@ -215,8 +158,11 @@ fun HomeScreen(
                 bypassSecondsRemaining = uiState.bypassSecondsRemaining,
                 linkedTag = uiState.linkedTag,
                 nextScheduledFire = uiState.nextScheduledFire,
-                // Only while off. There is no tap-to-deactivate counterpart: that stays tag-only.
-                onActivate = { showActivateConfirm = true }.takeIf { !uiState.blockState.isActive },
+                // Only while off, and only with a tag linked: the card's own caption already
+                // says there is none, and offering a lock with no key is offering a trap. There
+                // is no tap-to-deactivate counterpart either; that stays tag-only.
+                onActivate = { showActivateConfirm = true }
+                    .takeIf { !uiState.blockState.isActive && uiState.linkedTag != null },
             )
 
             TimeSavedTodayCard(
@@ -225,7 +171,7 @@ fun HomeScreen(
                 onClick = onViewTimeSaved,
             )
 
-            // One panel rather than three separate outlined buttons: these are places to go, not
+            // One panel rather than a stack of outlined buttons: these are places to go, not
             // actions to take, and stacking them as full-width buttons made the screen read as a
             // form. Sharing a surface with the cards above ties the whole column together.
             SettingsGroup {
@@ -252,11 +198,16 @@ fun HomeScreen(
                 SettingsRow(
                     icon = Icons.Filled.Schedule,
                     label = stringResource(R.string.schedules_cta),
+                    // A schedule is a lock that arrives on its own. Without a tag it would arrive
+                    // with nothing to open it, and activation refuses it anyway, so the row says
+                    // what is missing rather than leading to schedules that would never fire.
+                    enabled = uiState.linkedTag != null,
+                    value = stringResource(R.string.needs_tag_value).takeIf { uiState.linkedTag == null },
                     onClick = onManageSchedules,
                 )
             }
 
-            if (uiState.blockState.isActive) {
+            if (uiState.blockState.isActive && uiState.strictness.allowsEmergencyBypass) {
                 // Spent bypasses leave the button in place, disabled, with the rule underneath.
                 // It used to disappear outright, which reads as a bug rather than as a limit --
                 // the user is left wondering where the escape hatch went, at the exact moment
@@ -342,120 +293,6 @@ fun HomeScreen(
             },
         )
     }
-
-    when (val state = updateState) {
-        is UpdateUiState.Available -> {
-            AlertDialog(
-                onDismissRequest = viewModel::dismissUpdateDialog,
-                title = { Text(stringResource(R.string.update_available_title)) },
-                text = { Text(stringResource(R.string.update_available_body, state.versionName)) },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.startDownload(state.versionName, state.downloadUrl) }) {
-                        Text(stringResource(R.string.update_download_install))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = viewModel::dismissUpdateDialog) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                },
-            )
-        }
-        is UpdateUiState.NeedsInstallPermission -> {
-            AlertDialog(
-                onDismissRequest = viewModel::dismissUpdateDialog,
-                title = { Text(stringResource(R.string.update_install_permission_title)) },
-                text = { Text(stringResource(R.string.update_install_permission_body)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        context.startActivity(
-                            Intent(
-                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                Uri.parse("package:${context.packageName}"),
-                            ),
-                        )
-                        viewModel.dismissUpdateDialog()
-                    }) {
-                        Text(stringResource(R.string.update_open_settings))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = viewModel::dismissUpdateDialog) {
-                        Text(stringResource(R.string.cancel))
-                    }
-                },
-            )
-        }
-        is UpdateUiState.Downloading -> {
-            AlertDialog(
-                onDismissRequest = {},
-                title = { Text(stringResource(R.string.update_downloading)) },
-                text = {
-                    if (state.fraction != null) {
-                        LinearProgressIndicator(
-                            progress = { state.fraction },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                },
-                confirmButton = {},
-            )
-        }
-        else -> Unit
-    }
-}
-
-@Composable
-private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface),
-        content = content,
-    )
-}
-
-@Composable
-private fun SettingsRow(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(14.dp))
-        Text(label, style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.weight(1f))
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
-        )
-    }
-}
-
-/** Inset past the icon column, so the rows read as one list rather than stacked slices. */
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant,
-        modifier = Modifier.padding(start = 54.dp),
-    )
 }
 
 @Composable
@@ -496,18 +333,16 @@ private fun BlockStatusCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = if (isActive) stringResource(R.string.block_mode_active_desc) else stringResource(R.string.block_mode_inactive_desc),
+                // Without a tag the card is not tappable, so it must not keep offering the tap.
+                // It asks for the tag instead, which is the one thing standing in the way.
+                text = when {
+                    isActive -> stringResource(R.string.block_mode_active_desc)
+                    linkedTag == null -> stringResource(R.string.block_mode_needs_tag_desc)
+                    else -> stringResource(R.string.block_mode_inactive_desc)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = onBackground.copy(alpha = 0.7f),
             )
-            if (linkedTag == null) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.no_tag_linked),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onBackground.copy(alpha = 0.7f),
-                )
-            }
             // Only while Monolith is off: once it's on, the next fire is a no-op and saying so
             // would read as a promise that something changes then.
             if (!isActive && nextScheduledFire != null) {
