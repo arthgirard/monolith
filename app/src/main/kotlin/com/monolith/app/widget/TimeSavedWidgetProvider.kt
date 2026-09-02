@@ -24,6 +24,7 @@ import com.monolith.app.domain.usecase.ObserveBlockSessionsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.TimeSavedCalculator
 import com.monolith.app.ui.MainActivity
+import com.monolith.app.util.AppLocale
 import com.monolith.app.util.formatDuration
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -78,11 +79,14 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
     }
 
     private fun render(
-        context: Context,
+        base: Context,
         manager: AppWidgetManager,
         appWidgetIds: IntArray,
         showProgress: Boolean = false,
     ) {
+        // All three entry points funnel through here, and the context each of them arrives with
+        // came from the launcher, built on the system language rather than Monolith's.
+        val context = AppLocale.wrap(base)
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
@@ -287,6 +291,13 @@ class TimeSavedWidgetProvider : AppWidgetProvider() {
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_time_saved)
         views.setTextViewText(R.id.widget_total, formatDuration(totalMillis))
+
+        // The launcher inflates this layout in its own process against its own configuration, so
+        // an android:text in the XML follows the system language whatever Monolith is set to.
+        // Stating the three fixed labels here is what makes the widget speak the app's language.
+        views.setTextViewText(R.id.widget_label, context.getString(R.string.widget_time_saved_label))
+        views.setTextViewText(R.id.widget_stat_blocks_label, context.getString(R.string.widget_stat_blocks))
+        views.setTextViewText(R.id.widget_stat_held_label, context.getString(R.string.widget_stat_held))
 
         // The host reuses the inflated views when the layout id hasn't changed, applying only the
         // actions this object carries rather than starting from the XML again. So the spinner

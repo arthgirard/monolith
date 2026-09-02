@@ -1,5 +1,6 @@
 package com.monolith.app.ui.bypass
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -16,6 +17,7 @@ import com.monolith.app.nfc.NfcManager
 import com.monolith.app.nfc.NfcTagBus
 import com.monolith.app.service.BlockOverlayGuard
 import com.monolith.app.ui.theme.MonolithTheme
+import com.monolith.app.util.AppLocale
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -29,6 +31,10 @@ class BlockOverlayActivity : ComponentActivity() {
     // Same instance Compose's hiltViewModel() resolves to below, since both are scoped to this
     // Activity's ViewModelStore. Held here so handleIntent() can push package updates into it.
     private val viewModel: BlockOverlayViewModel by viewModels()
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

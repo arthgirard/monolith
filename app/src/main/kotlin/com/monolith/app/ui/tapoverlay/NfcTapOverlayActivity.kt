@@ -1,5 +1,6 @@
 package com.monolith.app.ui.tapoverlay
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -31,6 +32,7 @@ import com.monolith.app.BuildConfig
 import com.monolith.app.R
 import com.monolith.app.domain.model.NfcTapResult
 import com.monolith.app.nfc.NfcManager
+import com.monolith.app.util.AppLocale
 import com.monolith.app.util.formatDuration
 import com.monolith.app.ui.components.MIN_REPORTABLE_STREAK_MILLIS
 import com.monolith.app.ui.components.MonolithFlash
@@ -52,6 +54,10 @@ class NfcTapOverlayActivity : ComponentActivity() {
     @Inject lateinit var nfcManager: NfcManager
 
     private val viewModel: NfcTapOverlayViewModel by viewModels()
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

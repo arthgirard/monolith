@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.service.notification.NotificationListenerService
@@ -19,6 +20,7 @@ import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.ImportantPersonRepository
+import com.monolith.app.util.AppLocale
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +60,10 @@ class NotificationBlockListenerService : NotificationListenerService() {
     @Volatile private var importantPeople: List<ImportantPerson> = emptyList()
     @Volatile private var unlockedPackages: Map<String, Long> = emptyMap()
     private val heldNotifications = ConcurrentLinkedQueue<StatusBarNotification>()
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
 
     override fun onListenerConnected() {
         super.onListenerConnected()

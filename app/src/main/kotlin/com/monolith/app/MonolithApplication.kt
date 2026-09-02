@@ -1,11 +1,13 @@
 package com.monolith.app
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.nfc.NfcDispatchGate
 import com.monolith.app.service.EnforcementForegroundService
 import com.monolith.app.service.ScheduleTrigger
+import com.monolith.app.util.AppLocale
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +27,12 @@ class MonolithApplication : Application() {
     @Inject lateinit var nfcDispatchGate: NfcDispatchGate
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // Below API 33 the chosen language has to be applied to each context Monolith owns; here it
+    // covers everything holding the application context, which is every injected notifier.
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(AppLocale.wrap(base))
+    }
 
     override fun onCreate() {
         super.onCreate()

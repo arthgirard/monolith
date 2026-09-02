@@ -1,6 +1,7 @@
 package com.monolith.app.service
 
 import android.app.Notification
+import android.content.Context
 import android.graphics.Bitmap
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -22,6 +23,7 @@ import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.usecase.TimeSavedCalculator
 import com.monolith.app.ui.MainActivity
+import com.monolith.app.util.AppLocale
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +61,10 @@ class EnforcementForegroundService : Service() {
     // now and the newest held time is missing from the bitmap until something redraws it.
     // Re-armed (and any stale prior instance cancelled) on every change.
     private var renderJob: Job? = null
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
 
     override fun onCreate() {
         super.onCreate()

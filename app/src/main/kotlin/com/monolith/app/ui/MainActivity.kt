@@ -1,5 +1,6 @@
 package com.monolith.app.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -21,6 +22,7 @@ import com.monolith.app.nfc.NfcTagBus
 import com.monolith.app.ui.navigation.MonolithDestination
 import com.monolith.app.ui.navigation.MonolithNavHost
 import com.monolith.app.ui.theme.MonolithTheme
+import com.monolith.app.util.AppLocale
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -36,6 +38,10 @@ class MainActivity : ComponentActivity() {
     private val openTimeSaved = mutableStateOf(false)
     // Set by notifications to ensure tapping a notification opens Monolith's home screen.
     private val openHome = mutableStateOf(false)
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

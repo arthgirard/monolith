@@ -139,6 +139,7 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/widget_stat_blocks_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_stat_blocks"
@@ -168,6 +169,7 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/widget_stat_held_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/widget_stat_held"
