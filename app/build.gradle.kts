@@ -27,8 +27,8 @@ android {
         applicationId = "com.monolith.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 20
-        versionName = "1.5.0"
+        versionCode = 21
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -56,7 +56,25 @@ android {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
             resValue("string", "app_name", "Monolith Debug")
+            // en-XA accents every string and expands it by roughly 40%, and ar-XB mirrors
+            // the layout, which is how clipping gets caught before a translation ships
+            // rather than after.
+            isPseudoLocalesEnabled = true
         }
+    }
+
+    // Only the locales tools/i18n actually translates are packaged; anything else would
+    // ship as a stub that falls back to English at runtime. generateLocaleConfig turns this
+    // list into the per-app language picker Android 13+ shows in Settings.
+    androidResources {
+        localeFilters += listOf("en", "es", "pt-rBR", "fr", "de", "it", "nl")
+        generateLocaleConfig = true
+    }
+
+    lint {
+        // A packaged locale missing a string falls back to English mid-screen, which reads
+        // as a bug. Fail the build instead of leaving it to be noticed on a device.
+        fatal += listOf("MissingTranslation", "ExtraTranslation")
     }
 
     compileOptions {
