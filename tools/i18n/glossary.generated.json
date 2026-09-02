@@ -1,0 +1,250 @@
+{
+  "es": {
+    "Settings": [
+      "Ajustes"
+    ],
+    "App info": [
+      "Información de las aplicaciones",
+      "Información de aplicación"
+    ],
+    "Accessibility": [
+      "Accesibilidad"
+    ],
+    "Notifications": [
+      "Notificaciones"
+    ],
+    "Special app access": [
+      "Acceso especial de aplicaciones"
+    ],
+    "Display over other apps": [
+      "Mostrar sobre otras aplicaciones"
+    ],
+    "Usage access": [
+      "Acceso al uso"
+    ],
+    "Apps with usage access": [
+      "Apps con acceso de uso"
+    ],
+    "Allow restricted settings": [
+      "Permitir ajustes restringidos"
+    ],
+    "Restricted setting": [
+      "Ajuste restringido"
+    ],
+    "Allow notification access": [
+      "Permitir acceso a las notificaciones"
+    ],
+    "Notification read, reply & control": [
+      "Lectura, respuesta y control de notificaciones"
+    ],
+    "App notifications": [
+      "Notificaciones de aplicaciones"
+    ]
+  },
+  "pt-BR": {
+    "Settings": [
+      "Configurações"
+    ],
+    "App info": [
+      "Informações do app"
+    ],
+    "Accessibility": [
+      "Acessibilidade"
+    ],
+    "Notifications": [
+      "Notificações"
+    ],
+    "Special app access": [
+      "Acesso especial para apps"
+    ],
+    "Display over other apps": [
+      "Sobrepor a outros apps"
+    ],
+    "Usage access": [
+      "Acesso ao uso"
+    ],
+    "Apps with usage access": [
+      "Apps com acesso ao uso"
+    ],
+    "Allow restricted settings": [
+      "Permitir configurações restritas"
+    ],
+    "Restricted setting": [
+      "Configuração restrita"
+    ],
+    "Allow notification access": [
+      "Permitir acesso às notificações"
+    ],
+    "Notification read, reply & control": [
+      "Ler, responder e controlar notificações"
+    ],
+    "App notifications": [
+      "Notificações de apps"
+    ]
+  },
+  "fr": {
+    "Settings": [
+      "Paramètres"
+    ],
+    "App info": [
+      "Infos sur l'appli"
+    ],
+    "Accessibility": [
+      "Accessibilité"
+    ],
+    "Notifications": [
+      "Notifications"
+    ],
+    "Special app access": [
+      "Accès spéciaux des applis"
+    ],
+    "Display over other apps": [
+      "Superposition sur d'autres applis"
+    ],
+    "Usage access": [
+      "Accès aux données d'utilisation"
+    ],
+    "Apps with usage access": [
+      "Applis avec accès données conso"
+    ],
+    "Allow restricted settings": [
+      "Autoriser les paramètres restreints"
+    ],
+    "Restricted setting": [
+      "Paramètre restreint"
+    ],
+    "Allow notification access": [
+      "Autoriser l'accès aux notifications"
+    ],
+    "Notification read, reply & control": [
+      "Notifications : lecture, contrôle et réponse"
+    ],
+    "App notifications": [
+      "Notifications des applis"
+    ]
+  },
+  "de": {
+    "Settings": [
+      "Einstellungen"
+    ],
+    "App info": [
+      "App-Info"
+    ],
+    "Accessibility": [
+      "Barrierefreiheit",
+      "Bedienungshilfen"
+    ],
+    "Notifications": [
+      "Benachrichtigungen"
+    ],
+    "Special app access": [
+      "Spezieller App-Zugriff"
+    ],
+    "Display over other apps": [
+      "Über anderen Apps einblenden"
+    ],
+    "Usage access": [
+      "Zugriff auf Nutzungsdaten"
+    ],
+    "Apps with usage access": [
+      "Apps mit Nutzungsdatenzugriff"
+    ],
+    "Allow restricted settings": [
+      "Eingeschränkte Einstellungen zulassen"
+    ],
+    "Restricted setting": [
+      "Eingeschränkte Einstellung"
+    ],
+    "Allow notification access": [
+      "Benachrichtigungszugriff erlauben"
+    ],
+    "Notification read, reply & control": [
+      "Benachrichtigungen lesen, beantworten & verwalten"
+    ],
+    "App notifications": [
+      "App-Benachrichtigungen"
+    ]
+  },
+  "it": {
+    "Settings": [
+      "Impostazioni"
+    ],
+    "App info": [
+      "Informazioni app"
+    ],
+    "Accessibility": [
+      "Accessibilità"
+    ],
+    "Notifications": [
+      "Notifiche"
+    ],
+    "Special app access": [
+      "Accesso speciale per le app"
+    ],
+    "Display over other apps": [
+      "Mostra sopra altre app"
+    ],
+    "Usage access": [
+      "Accesso ai dati di utilizzo"
+    ],
+    "Apps with usage access": [
+      "App con accesso a dati utilizzo"
+    ],
+    "Allow restricted settings": [
+      "Consenti impostazioni con limitazioni"
+    ],
+    "Restricted setting": [
+      "Impostazioni con limitazioni"
+    ],
+    "Allow notification access": [
+      "Consenti l'accesso alle notifiche"
+    ],
+    "Notification read, reply & control": [
+      "Lettura, risposta e controllo notifiche"
+    ],
+    "App notifications": [
+      "Notifiche app"
+    ]
+  },
+  "nl": {
+    "Settings": [
+      "Instellingen"
+    ],
+    "App info": [
+      "App-info"
+    ],
+    "Accessibility": [
+      "Toegankelijkheid"
+    ],
+    "Notifications": [
+      "Meldingen"
+    ],
+    "Special app access": [
+      "Speciale app-toegang"
+    ],
+    "Display over other apps": [
+      "Weergeven vóór andere apps"
+    ],
+    "Usage access": [
+      "Gebruikstoegang"
+    ],
+    "Apps with usage access": [
+      "Apps met gebruikstoegang"
+    ],
+    "Allow restricted settings": [
+      "Beperkte instellingen toestaan"
+    ],
+    "Restricted setting": [
+      "Beperkte instelling"
+    ],
+    "Allow notification access": [
+      "Toegang tot meldingen toestaan"
+    ],
+    "Notification read, reply & control": [
+      "Melding lezen, beantwoorden en beheren"
+    ],
+    "App notifications": [
+      "App-meldingen"
+    ]
+  }
+}

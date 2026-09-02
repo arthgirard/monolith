@@ -1,0 +1,10 @@
+{
+  "locales": [
+    { "tag": "es",    "res": "values-es",     "aosp": "values-es",     "name": "Spanish (Spain)" },
+    { "tag": "pt-BR", "res": "values-pt-rBR", "aosp": "values-pt-rBR", "name": "Portuguese (Brazil)" },
+    { "tag": "fr",    "res": "values-fr",     "aosp": "values-fr",     "name": "French (France)" },
+    { "tag": "de",    "res": "values-de",     "aosp": "values-de",     "name": "German (Germany)" },
+    { "tag": "it",    "res": "values-it",     "aosp": "values-it",     "name": "Italian (Italy)" },
+    { "tag": "nl",    "res": "values-nl",     "aosp": "values-nl",     "name": "Dutch (Netherlands)" }
+  ]
+}

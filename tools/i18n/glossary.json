@@ -1,0 +1,36 @@
+{
+  "do_not_translate": [
+    "Monolith",
+    "NFC",
+    "NDEF",
+    "UID",
+    "Android",
+    "TalkBack",
+    "APK",
+    "GitHub",
+    "Mifare"
+  ],
+  "system_label_phrases": [
+    "Settings",
+    "App info",
+    "Accessibility",
+    "Notifications",
+    "Special app access",
+    "Display over other apps",
+    "Usage access",
+    "Apps with usage access",
+    "Allow restricted settings",
+    "Restricted setting",
+    "Allow notification access",
+    "Notification read, reply & control",
+    "App notifications"
+  ],
+  "manual_overrides": {
+    "es": {},
+    "pt-BR": {},
+    "fr": {},
+    "de": {},
+    "it": {},
+    "nl": {}
+  }
+}
