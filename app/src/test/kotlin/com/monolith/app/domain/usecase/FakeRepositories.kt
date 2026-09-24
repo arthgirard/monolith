@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class FakeBlockRepository(
     initiallyActive: Boolean = false,
     linkedTag: NfcTagLink? = NfcTagLink(uid = "tag", mode = TagLinkMode.FALLBACK_UID),
+    /** Where [endPauses] drops live unlocks, as the single DataStore edit does in the real one. */
+    private val appUnlocks: FakeAppUnlockRepository? = null,
 ) : BlockRepository {
     private val state = MutableStateFlow(BlockState(isActive = initiallyActive))
 
@@ -47,6 +49,17 @@ class FakeBlockRepository(
     override suspend fun clearBypass() {
         clearBypassCount++
         state.value = state.value.copy(bypassExpiresAtMillis = null)
+    }
+
+    var endPausesCount: Int = 0
+        private set
+
+    override suspend fun endPauses() {
+        endPausesCount++
+        val now = System.currentTimeMillis()
+        val expiresAt = state.value.bypassExpiresAtMillis
+        if (expiresAt != null && expiresAt > now) state.value = state.value.copy(bypassExpiresAtMillis = now)
+        appUnlocks?.dropLiveUnlocks(now)
     }
 
     private val storedLink = MutableStateFlow(linkedTag)
@@ -96,6 +109,10 @@ class FakeAppUnlockRepository : AppUnlockRepository {
     override suspend fun grantUnlock(packageName: String, durationMillis: Long) {
         unlocks.value = unlocks.value + (packageName to System.currentTimeMillis() + durationMillis)
         codeBreakers.value = codeBreakers.value - packageName
+    }
+
+    fun dropLiveUnlocks(now: Long) {
+        unlocks.value = unlocks.value.filterValues { it <= now }
     }
 
     override suspend fun clearUnlocks() {

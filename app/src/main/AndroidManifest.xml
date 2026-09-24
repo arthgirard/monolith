@@ -244,6 +244,11 @@
             android:name=".service.ScheduleAlarmReceiver"
             android:exported="false" />
 
+        <!-- The enforcement notification's "Resume blocking" action. Never reached from outside the app. -->
+        <receiver
+            android:name=".service.ResumeBlockingReceiver"
+            android:exported="false" />
+
         <!--
             Re-arms the schedule alarm after anything that invalidates it. All four actions are
             protected broadcasts, so exporting this doesn't let another app trigger blocking.

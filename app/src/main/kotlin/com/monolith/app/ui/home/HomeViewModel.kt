@@ -16,11 +16,15 @@ import com.monolith.app.domain.usecase.ObserveBlockSessionsUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.ObserveLinkedTagUseCase
 import com.monolith.app.domain.usecase.ObserveStrictnessUseCase
+import com.monolith.app.domain.usecase.ObserveUnlockedPackagesUseCase
+import com.monolith.app.domain.usecase.ResumeBlockingUseCase
 import com.monolith.app.domain.usecase.StartBypassUseCase
 import com.monolith.app.domain.usecase.TimeSavedCalculator
 import com.monolith.app.domain.usecase.ToggleBlockModeFromTagUseCase
 import com.monolith.app.nfc.NfcBusMode
 import com.monolith.app.nfc.NfcTagBus
+import com.monolith.app.service.EnforcementSegments
+import com.monolith.app.service.EnforcementStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -48,11 +52,19 @@ data class HomeUiState(
     /** Next armed schedule, or null when none is set. Only worth showing while Monolith is off. */
     val nextScheduledFire: ZonedDateTime? = null,
     val strictness: StrictnessLevel = StrictnessLevel.DEFAULT,
+    /** packageName -> unlock expiry millis, stale entries included. */
+    val unlockedPackages: Map<String, Long> = emptyMap(),
 ) {
-    val bypassSecondsRemaining: Long
+    /**
+     * What Monolith is letting through right now, or null while it holds (or is off). Decided by
+     * the same rule the enforcement notification uses, so the card and the shade never name
+     * different pauses: a bypass outranks any unlock, and of several unlocks the last to expire.
+     */
+    val pause: EnforcementStatus?
         get() {
-            val expiresAt = blockState.bypassExpiresAtMillis ?: return 0
-            return ((expiresAt - nowMillis) / 1000).coerceAtLeast(0)
+            if (!blockState.isActive) return null
+            return EnforcementSegments.statusFor(blockState, unlockedPackages, nowMillis)
+                .takeIf { it !is EnforcementStatus.Enforcing }
         }
 }
 
@@ -68,6 +80,9 @@ sealed interface HomeEvent {
      * where the bypass had gone.
      */
     data object BypassEnded : HomeEvent
+
+    /** The user ended the pause early. Stands in for [BypassEnded], which would say it ran out. */
+    data object Resumed : HomeEvent
 }
 
 @HiltViewModel
@@ -78,7 +93,9 @@ class HomeViewModel @Inject constructor(
     observeActiveSessionStart: ObserveActiveSessionStartUseCase,
     observeBlockSchedules: ObserveBlockSchedulesUseCase,
     observeStrictness: ObserveStrictnessUseCase,
+    observeUnlockedPackages: ObserveUnlockedPackagesUseCase,
     private val startBypass: StartBypassUseCase,
+    private val resumeBlocking: ResumeBlockingUseCase,
     private val activateBlockMode: ActivateBlockModeUseCase,
     private val toggleFromTag: ToggleBlockModeFromTagUseCase,
     private val nfcTagBus: NfcTagBus,
@@ -111,17 +128,23 @@ class HomeViewModel @Inject constructor(
         coreState,
         observeBlockSchedules(),
         observeStrictness(),
-    ) { state, schedules, strictness ->
+        observeUnlockedPackages(),
+    ) { state, schedules, strictness, unlocks ->
         // Recomputed off the same one-second ticker that drives coreState, so the label rolls over
         // to the following occurrence the moment the current one fires.
         state.copy(
             nextScheduledFire = schedules.earliestNextFire(ZonedDateTime.now(zone)),
             strictness = strictness,
+            unlockedPackages = unlocks,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
     private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<HomeEvent> = _events
+
+    // Set around a resume so the tick below doesn't also announce the bypass as having run out.
+    // Main-thread only, like the tick itself.
+    private var resuming = false
 
     init {
         // Countdown ticks once a second only matter while a bypass is running; cheap either way.
@@ -135,7 +158,7 @@ class HomeViewModel @Inject constructor(
                 val now = System.currentTimeMillis()
                 ticker.value = now
                 val bypassActive = uiState.value.blockState.isBypassActive(now)
-                if (bypassWasActive && !bypassActive) _events.tryEmit(HomeEvent.BypassEnded)
+                if (bypassWasActive && !bypassActive && !resuming) _events.tryEmit(HomeEvent.BypassEnded)
                 bypassWasActive = bypassActive
             }
         }
@@ -156,6 +179,21 @@ class HomeViewModel @Inject constructor(
             // a level change racing the dialog, and there is nothing useful to tell the user
             // about a button that should already have been gone.
             if (startBypass().isSuccess) _events.tryEmit(HomeEvent.BypassStarted)
+        }
+    }
+
+    /** Ends a bypass or app unlock early. Only ever stricter, so no confirmation stands in front. */
+    fun resumeBlocking() {
+        viewModelScope.launch {
+            resuming = true
+            try {
+                if (resumeBlocking.invoke()) _events.tryEmit(HomeEvent.Resumed)
+                // The once-a-second tick notices the bypass is gone within the next second; hold
+                // the flag past that so it reads the change as ours rather than as a run-out.
+                delay(1500)
+            } finally {
+                resuming = false
+            }
         }
     }
 

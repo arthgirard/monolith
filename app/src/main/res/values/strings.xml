@@ -68,7 +68,6 @@
     <string name="bypass_confirm_title">Start 15-minute bypass?</string>
     <string name="bypass_confirm_body">This temporarily disables Monolith for 15 minutes. You only get one bypass per lock, tap your tag to reset it. Use only if you\'ve lost your tag.</string>
     <string name="bypass_confirm_start">Start bypass</string>
-    <string name="bypass_active_prefix">Bypass ends in</string>
     <string name="cancel">Cancel</string>
     <string name="copyright_notice" translatable="false">© Arthur Girard 2026</string>
 
@@ -212,6 +211,7 @@
     <string name="snack_tag_none_linked">Link a tag first from the home screen.</string>
     <string name="snack_bypass_started">Bypass running · 15 minutes</string>
     <string name="snack_bypass_ended">Bypass ended. Monolith is enforcing again.</string>
+    <string name="snack_blocking_resumed">Blocking resumed. Monolith is enforcing again.</string>
     <string name="bypass_used_caption">One bypass per lock. Tap your tag to reset.</string>
 
     <!-- Tap overlay (background NFC tap feedback) -->
@@ -229,6 +229,10 @@
     <string name="enforcement_notification_body_paused">Paused · emergency bypass</string>
     <string name="enforcement_notification_body_paused_unlock">Paused · an app is unlocked</string>
     <string name="enforcement_notification_body_paused_unlock_app">Paused · %1$s is unlocked</string>
+    <string name="resume_blocking">Resume blocking</string>
+    <string name="resume_short">Resume</string>
+    <string name="home_pause_bypass">Bypass · %1$s</string>
+    <string name="home_pause_unlock">%1$s unlocked · %2$s</string>
     <string name="enforcement_notification_state_held">Blocking</string>
     <string name="enforcement_notification_channel_description">The ongoing, silent notification Android requires while Monolith is blocking.</string>
 

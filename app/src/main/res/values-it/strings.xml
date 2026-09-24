@@ -67,7 +67,6 @@
     <string name="bypass_confirm_title">Sbloccare 15 minuti?</string>
     <string name="bypass_confirm_body">Spegne Monolith per 15 minuti. C\'è un solo sblocco per blocco; il tag lo azzera. Da usare solo se ha perso il tag.</string>
     <string name="bypass_confirm_start">Sblocca</string>
-    <string name="bypass_active_prefix">Lo sblocco finisce tra</string>
     <string name="cancel">Annulla</string>
 
     <!-- Activation without the tag -->
@@ -208,6 +207,7 @@
     <string name="snack_tag_none_linked">Prima colleghi un tag dalla schermata iniziale.</string>
     <string name="snack_bypass_started">Sblocco attivo · 15 minuti</string>
     <string name="snack_bypass_ended">Sblocco finito. Monolith blocca di nuovo.</string>
+    <string name="snack_blocking_resumed">Blocco ripreso. Monolith blocca di nuovo.</string>
     <string name="bypass_used_caption">Uno sblocco per blocco. Avvicini il tag.</string>
 
     <!-- Tap overlay (background NFC tap feedback) -->
@@ -225,6 +225,10 @@
     <string name="enforcement_notification_body_paused">In pausa · sblocco d\'emergenza</string>
     <string name="enforcement_notification_body_paused_unlock">In pausa · un\'app è aperta</string>
     <string name="enforcement_notification_body_paused_unlock_app">In pausa · %1$s è aperta</string>
+    <string name="resume_blocking">Riprendi il blocco</string>
+    <string name="resume_short">Riprendi</string>
+    <string name="home_pause_bypass">Sblocco · %1$s</string>
+    <string name="home_pause_unlock">%1$s sbloccata · %2$s</string>
     <string name="enforcement_notification_state_held">Blocco in corso</string>
     <string name="enforcement_notification_channel_description">La notifica fissa e silenziosa che Android pretende mentre Monolith blocca.</string>
 

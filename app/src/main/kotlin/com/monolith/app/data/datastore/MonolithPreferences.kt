@@ -242,6 +242,35 @@ class MonolithPreferences @Inject constructor(
     }
 
     /**
+     * Ends a running bypass and every live app unlock now, rather than when they would have run
+     * out. The bypass expiry is moved to now instead of removed, so it still reads as used: were
+     * it refunded, bypasses could be chained back to back without ever touching the tag.
+     *
+     * Both pauses fast-forwarded the session clock past their window; it comes back to now so held
+     * time counts again from the moment blocking resumes. The bypass carve-out in
+     * [commitRunningSegment] (and TimeSavedCalculator.ongoingSessions) still works out the window
+     * as expiry minus the full duration, but with the session starting at the new expiry every
+     * clamp collapses onto that start, so nothing before it is credited twice.
+     */
+    suspend fun endPauses() {
+        context.dataStore.edit { prefs ->
+            val now = System.currentTimeMillis()
+
+            val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]
+            if (bypassExpiresAt != null && bypassExpiresAt > now) prefs[Keys.BYPASS_EXPIRES_AT] = now
+
+            val unlocks = decodeAppUnlocks(prefs[Keys.APP_UNLOCKS])
+            if (unlocks.any { it.expiresAt > now }) {
+                prefs[Keys.APP_UNLOCKS] = json.encodeToString(unlocks.filter { it.expiresAt <= now })
+            }
+
+            val isActive = prefs[Keys.BLOCK_MODE_ACTIVE] ?: false
+            val startedAt = prefs[Keys.SESSION_STARTED_AT]
+            if (isActive && startedAt != null && startedAt > now) prefs[Keys.SESSION_STARTED_AT] = now
+        }
+    }
+
+    /**
      * Drops every per-app unlock and every stored code-breaker at once. A tag tap ends the cycle
      * those belong to: an unlock window must not survive into the next time Monolith comes on
      * (the app would silently stay exempt), and a puzzle from the old cycle must not be resumable.

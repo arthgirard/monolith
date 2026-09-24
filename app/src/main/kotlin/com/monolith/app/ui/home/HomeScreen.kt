@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,10 +52,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
@@ -64,7 +69,9 @@ import com.monolith.app.ui.components.MonolithSnackbarHost
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.components.SettingsRow
+import com.monolith.app.service.EnforcementStatus
 import com.monolith.app.ui.theme.MonolithButtonShape
+import com.monolith.app.ui.theme.tabular
 import com.monolith.app.ui.timesaved.TimeSavedBarChart
 import com.monolith.app.util.formatDuration
 import com.monolith.app.util.formatNextFire
@@ -96,6 +103,7 @@ fun HomeScreen(
                     HomeEvent.NoTagLinked -> R.string.snack_tag_none_linked
                     HomeEvent.BypassStarted -> R.string.snack_bypass_started
                     HomeEvent.BypassEnded -> R.string.snack_bypass_ended
+                    HomeEvent.Resumed -> R.string.snack_blocking_resumed
                     is HomeEvent.Toggled ->
                         if (event.nowActive) R.string.snack_tag_locked else R.string.snack_tag_unlocked
                 },
@@ -155,7 +163,8 @@ fun HomeScreen(
 
             BlockStatusCard(
                 isActive = uiState.blockState.isActive,
-                bypassSecondsRemaining = uiState.bypassSecondsRemaining,
+                pause = uiState.pause,
+                nowMillis = uiState.nowMillis,
                 linkedTag = uiState.linkedTag,
                 nextScheduledFire = uiState.nextScheduledFire,
                 // Only while off, and only with a tag linked: the card's own caption already
@@ -163,6 +172,7 @@ fun HomeScreen(
                 // is no tap-to-deactivate counterpart either; that stays tag-only.
                 onActivate = { showActivateConfirm = true }
                     .takeIf { !uiState.blockState.isActive && uiState.linkedTag != null },
+                onResume = viewModel::resumeBlocking,
             )
 
             TimeSavedTodayCard(
@@ -298,10 +308,12 @@ fun HomeScreen(
 @Composable
 private fun BlockStatusCard(
     isActive: Boolean,
-    bypassSecondsRemaining: Long,
+    pause: EnforcementStatus?,
+    nowMillis: Long,
     linkedTag: NfcTagLink?,
     nextScheduledFire: ZonedDateTime?,
     onActivate: (() -> Unit)?,
+    onResume: () -> Unit,
 ) {
     val background = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     val onBackground = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -315,7 +327,10 @@ private fun BlockStatusCard(
             // Clip before clickable so the ripple follows the rounded corners rather than
             // spilling into the square bounds.
             .then(if (onActivate != null) Modifier.clickable(onClick = onActivate) else Modifier)
-            .padding(24.dp),
+            // The pause row is 48dp tall for the touch target, which leaves ~14dp under its text
+            // already; the full 24dp on top of that left the card bottom-heavy. Trimmed so the
+            // text ends 24dp from the edge, matching the title's distance from the top.
+            .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = if (pause != null) 10.dp else 24.dp),
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -353,15 +368,9 @@ private fun BlockStatusCard(
                     color = onBackground.copy(alpha = 0.7f),
                 )
             }
-            if (bypassSecondsRemaining > 0) {
-                Spacer(Modifier.height(12.dp))
-                val minutes = bypassSecondsRemaining / 60
-                val seconds = bypassSecondsRemaining % 60
-                Text(
-                    text = "${stringResource(R.string.bypass_active_prefix)} %d:%02d".format(minutes, seconds),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
+            if (pause != null) {
+                Spacer(Modifier.height(16.dp))
+                PauseRow(pause = pause, nowMillis = nowMillis, contentColor = onBackground, onResume = onResume)
             }
         }
 
@@ -385,6 +394,77 @@ private fun BlockStatusCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * The pause running now, and the way out of it, as one quiet line under the card's status. It
+ * used to be a large countdown plus a full outlined button, two loud things on a card whose job
+ * is to say one thing; now the pause is named, its time left is data, and resuming is a trailing
+ * action rather than a second call to action. The whole row is the target.
+ */
+@Composable
+private fun PauseRow(
+    pause: EnforcementStatus,
+    nowMillis: Long,
+    contentColor: Color,
+    onResume: () -> Unit,
+) {
+    val remaining = formatCountdown(((pause.expiresAtMillis ?: nowMillis) - nowMillis).coerceAtLeast(0L))
+    val label = when (pause) {
+        is EnforcementStatus.AppUnlocked ->
+            stringResource(R.string.home_pause_unlock, rememberAppLabel(pause.packageName), remaining)
+        else -> stringResource(R.string.home_pause_bypass, remaining)
+    }
+
+    Column {
+        HorizontalDivider(thickness = Dp.Hairline, color = contentColor.copy(alpha = 0.15f))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onResume),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium.tabular(),
+                color = contentColor.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = stringResource(R.string.resume_short),
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
+            )
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+/** m:ss, rounded down: the notification's chronometer reads the same second the same way. */
+private fun formatCountdown(millis: Long): String {
+    val seconds = millis / 1000
+    return "%d:%02d".format(seconds / 60, seconds % 60)
+}
+
+/** The name the user knows the app by; the package name if it's gone since it was unlocked. */
+@Composable
+private fun rememberAppLabel(packageName: String): String {
+    val packageManager = LocalContext.current.packageManager
+    return remember(packageName) {
+        runCatching {
+            packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+        }.getOrDefault(packageName)
     }
 }
 

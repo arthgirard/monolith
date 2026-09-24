@@ -218,6 +218,12 @@ class EnforcementForegroundService : Service() {
             .setShowWhen(true)
             .setUsesChronometer(true)
 
+        // Only while something is paused: a fresh builder every render means the action is gone
+        // again on the first render after the pause ends, whether it ran out or was ended here.
+        if (status !is EnforcementStatus.Enforcing) {
+            builder.addAction(0, getString(R.string.resume_blocking), resumePendingIntent())
+        }
+
         val expiresAt = status.expiresAtMillis
         if (expiresAt != null) {
             // Counting down to the moment the wall closes again, rather than freezing the elapsed
@@ -230,6 +236,13 @@ class EnforcementForegroundService : Service() {
 
         return builder.build()
     }
+
+    private fun resumePendingIntent(): PendingIntent = PendingIntent.getBroadcast(
+        this,
+        NOTIFICATION_ID,
+        Intent(this, ResumeBlockingReceiver::class.java),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     /** The one line of text, in the collapsed row and again above the segments. */
     private fun stateLine(status: EnforcementStatus): String = when (status) {

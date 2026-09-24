@@ -21,7 +21,7 @@ class BlockRepositoryImpl @Inject constructor(
 
     override fun observeBlockState(): Flow<BlockState> = preferences.blockState
 
-    // Each of these three moves today's saved total: starting or stopping blocking opens or
+    // Each of these moves today's saved total: starting or stopping blocking opens or
     // closes a session, and a bypass pauses and resumes the clock. The widget's own refresh floor
     // is 30 minutes, far too slow to look honest right after a tag tap.
     override suspend fun setBlockModeActive(active: Boolean) {
@@ -36,6 +36,11 @@ class BlockRepositoryImpl @Inject constructor(
 
     override suspend fun clearBypass() {
         preferences.clearBypass()
+        widgetRefresher.refresh()
+    }
+
+    override suspend fun endPauses() {
+        preferences.endPauses()
         widgetRefresher.refresh()
     }
 

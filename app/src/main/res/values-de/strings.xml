@@ -67,7 +67,6 @@
     <string name="bypass_confirm_title">15-Minuten-Freigabe starten?</string>
     <string name="bypass_confirm_body">Das schaltet Monolith für 15 Minuten ab. Sie bekommen nur eine Freigabe pro Sperre, der Tag setzt sie zurück. Nutzen Sie sie nur, wenn Sie Ihren Tag verloren haben.</string>
     <string name="bypass_confirm_start">Freigabe starten</string>
-    <string name="bypass_active_prefix">Freigabe endet in</string>
     <string name="cancel">Abbrechen</string>
 
     <!-- Activation without the tag -->
@@ -208,6 +207,7 @@
     <string name="snack_tag_none_linked">Erst einen Tag auf dem Startbildschirm verknüpfen.</string>
     <string name="snack_bypass_started">Freigabe läuft · 15 Minuten</string>
     <string name="snack_bypass_ended">Freigabe vorbei. Monolith blockiert wieder.</string>
+    <string name="snack_blocking_resumed">Blockieren fortgesetzt. Monolith blockiert wieder.</string>
     <string name="bypass_used_caption">Eine Freigabe pro Sperre. Tag antippen zum Zurücksetzen.</string>
 
     <!-- Tap overlay (background NFC tap feedback) -->
@@ -225,6 +225,10 @@
     <string name="enforcement_notification_body_paused">Pausiert · Notfall-Freigabe</string>
     <string name="enforcement_notification_body_paused_unlock">Pausiert · eine App ist offen</string>
     <string name="enforcement_notification_body_paused_unlock_app">Pausiert · %1$s ist offen</string>
+    <string name="resume_blocking">Blockieren fortsetzen</string>
+    <string name="resume_short">Fortsetzen</string>
+    <string name="home_pause_bypass">Freigabe · %1$s</string>
+    <string name="home_pause_unlock">%1$s entsperrt · %2$s</string>
     <string name="enforcement_notification_state_held">Blockiert</string>
     <string name="enforcement_notification_channel_description">Die dauerhafte, stumme Benachrichtigung, die Android verlangt, solange Monolith blockiert.</string>
 

@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.SystemPackages
 import com.monolith.app.domain.repository.AppRepository
@@ -18,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -58,22 +60,61 @@ class AppBlockAccessibilityService : AccessibilityService() {
                 appUnlockRepository.observeUnlockedPackages(),
             ) { state, packages, unlocks -> Triple(state, packages, unlocks) }
                 .collect { (state, packages, unlocks) ->
+                    val now = System.currentTimeMillis()
+                    val pauseCutShort = pauseCutShort(blockState, unlockedPackages, state, unlocks, now)
                     blockState = state
                     blockedPackages = packages
                     unlockedPackages = unlocks
+                    if (pauseCutShort) withContext(Dispatchers.Main) { blockAppInFront() }
                 }
         }
+    }
+
+    /**
+     * A pause was ended before it ran out (see ResumeBlockingUseCase). Natural expiry writes
+     * nothing, so it never shows up here. Monolith being switched on doesn't count either: it has
+     * to have been on both before and after, or a schedule firing would snatch the app in front.
+     */
+    private fun pauseCutShort(
+        before: BlockState,
+        unlocksBefore: Map<String, Long>,
+        after: BlockState,
+        unlocksAfter: Map<String, Long>,
+        now: Long,
+    ): Boolean {
+        if (!before.isActive || !after.isActive) return false
+        if (before.isBypassActive(now) && !after.isBypassActive(now)) return true
+        return unlocksBefore.any { (pkg, expiresAt) -> expiresAt > now && (unlocksAfter[pkg] ?: 0L) <= now }
+    }
+
+    /**
+     * Resuming from the shade changes no window, so no event arrives for the app already on
+     * screen and it would stay usable until the user left it. The shade itself is likely still
+     * open over it, which is why this looks for the topmost application window rather than the
+     * active one. Settings is left alone here: without the window's class there is no telling a
+     * transient credential prompt from the real thing.
+     */
+    private fun blockAppInFront() {
+        val foregroundPackage = runCatching {
+            windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+                ?.root?.packageName?.toString()
+        }.getOrNull() ?: return
+        if (foregroundPackage == SystemPackages.SETTINGS) return
+        blockIfNeeded(foregroundPackage, foregroundClass = null)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val foregroundPackage = event.packageName?.toString() ?: return
+        blockIfNeeded(foregroundPackage, event.className?.toString())
+    }
+
+    private fun blockIfNeeded(foregroundPackage: String, foregroundClass: String?) {
         if (foregroundPackage == packageName) return
 
         val now = System.currentTimeMillis()
         if (!blockState.isEnforcing(now)) return
 
-        val foregroundClass = event.className?.toString()
         // Some system dialogs live inside the Settings package but aren't a user navigating to
         // Settings, e.g. Android's location-accuracy resolution dialog or a biometric/PIN
         // confirmation prompt (Microsoft Authenticator's "verify it's you" step included): any

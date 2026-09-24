@@ -15,6 +15,12 @@ interface BlockRepository {
 
     suspend fun clearBypass()
 
+    /**
+     * Closes every pause still running: the emergency bypass and any per-app unlocks, in one
+     * write. The bypass stays spent for the cycle; only a tag tap gives it back.
+     */
+    suspend fun endPauses()
+
     fun observeLinkedTag(): Flow<NfcTagLink?>
 
     suspend fun saveLinkedTag(link: NfcTagLink)

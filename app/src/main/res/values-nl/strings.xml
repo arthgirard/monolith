@@ -67,7 +67,6 @@
     <string name="bypass_confirm_title">15 minuten ontgrendelen?</string>
     <string name="bypass_confirm_body">Dit zet Monolith 15 minuten uit. U krijgt één ontgrendeling per blok; uw tag zet hem terug. Alleen gebruiken als u de tag kwijt bent.</string>
     <string name="bypass_confirm_start">Ontgrendelen</string>
-    <string name="bypass_active_prefix">Ontgrendeling eindigt over</string>
     <string name="cancel">Annuleren</string>
 
     <!-- Activation without the tag -->
@@ -208,6 +207,7 @@
     <string name="snack_tag_none_linked">Koppel eerst een tag vanaf het startscherm.</string>
     <string name="snack_bypass_started">Ontgrendeling actief · 15 minuten</string>
     <string name="snack_bypass_ended">Ontgrendeling voorbij. Monolith blokkeert weer.</string>
+    <string name="snack_blocking_resumed">Blokkeren hervat. Monolith blokkeert weer.</string>
     <string name="bypass_used_caption">Eén ontgrendeling per blok. Houd uw tag ertegen.</string>
 
     <!-- Tap overlay (background NFC tap feedback) -->
@@ -225,6 +225,10 @@
     <string name="enforcement_notification_body_paused">Gepauzeerd · noodontgrendeling</string>
     <string name="enforcement_notification_body_paused_unlock">Gepauzeerd · een app is open</string>
     <string name="enforcement_notification_body_paused_unlock_app">Gepauzeerd · %1$s is open</string>
+    <string name="resume_blocking">Blokkeren hervatten</string>
+    <string name="resume_short">Hervatten</string>
+    <string name="home_pause_bypass">Ontgrendeling · %1$s</string>
+    <string name="home_pause_unlock">%1$s ontgrendeld · %2$s</string>
     <string name="enforcement_notification_state_held">Blokkeert</string>
     <string name="enforcement_notification_channel_description">De vaste, stille melding die Android eist zolang Monolith blokkeert.</string>
 
