@@ -77,16 +77,16 @@
     <string name="next_scheduled_prefix">Prochain blocage</string>
 
     <!-- Schedules -->
-    <string name="schedules_cta">Gérer les horaires</string>
+    <string name="schedules_cta">Gérer les routines</string>
     <string name="needs_tag_value">Associez un tag d\'abord</string>
-    <string name="schedules_title">Horaires</string>
+    <string name="schedules_title">Routines</string>
     <string name="schedules_subtitle">Monolith s\'active tout seul à ces heures. Il ne se coupe jamais seul, cela demande toujours votre tag.</string>
-    <string name="schedules_empty">Aucun horaire. Ajoutez-en un pour que Monolith démarre sans vous.</string>
-    <string name="schedules_add_cta">Ajouter un horaire</string>
-    <string name="schedules_edit_title">Modifier l\'horaire</string>
-    <string name="schedules_new_title">Nouvel horaire</string>
+    <string name="schedules_empty">Aucune routine. Ajoutez-en une pour que Monolith démarre sans vous.</string>
+    <string name="schedules_add_cta">Ajouter une routine</string>
+    <string name="schedules_edit_title">Modifier la routine</string>
+    <string name="schedules_new_title">Nouvelle routine</string>
     <string name="schedules_days_label">Répéter le</string>
-    <string name="schedules_delete_cta">Supprimer l\'horaire</string>
+    <string name="schedules_delete_cta">Supprimer la routine</string>
     <string name="schedules_save_cta">Enregistrer</string>
     <string name="schedules_every_day">Tous les jours</string>
     <string name="schedules_weekdays">En semaine</string>
@@ -94,8 +94,8 @@
     <string name="schedules_no_days">Choisissez au moins un jour</string>
     <string name="schedule_notification_channel">Blocages programmés</string>
     <string name="schedule_notification_title">Monolith est actif</string>
-    <string name="schedule_notification_body">Un horaire a lancé le blocage. Approchez votre tag pour ouvrir.</string>
-    <string name="schedule_notification_channel_description">Un mot discret quand un horaire déclenche le blocage.</string>
+    <string name="schedule_notification_body">Une routine a lancé le blocage. Approchez votre tag pour ouvrir.</string>
+    <string name="schedule_notification_channel_description">Une notification discrète quand une routine déclenche le blocage.</string>
 
     <!-- Updates -->
     <string name="update_check_cta">Rechercher des mises à jour</string>
@@ -162,7 +162,7 @@
     <!-- Overlay. The app's own label is the headline, so there is no title string here: the wall names what you reached for rather than naming itself -->
     <string name="overlay_body">bloquée</string>
     <string name="overlay_go_home">Aller à l\'accueil</string>
-    <string name="overlay_break_code_title">Cassez le code pour ouvrir</string>
+    <string name="overlay_break_code_title">Trouver le code pour débloquer</string>
     <string name="overlay_break_code_subtitle">· 5 min</string>
     <string name="overlay_stat_held">Tenu</string>
     <string name="overlay_stat_opened">Ouverte aujourd\'hui</string>
@@ -173,7 +173,7 @@
     <string name="overlay_a11y_wall_first">%1$s bloquée. Tenue %2$s.</string>
 
     <!-- Code-breaker challenge -->
-    <string name="codebreaker_title">Cassez le code</string>
+    <string name="codebreaker_title">Trouvez le code</string>
     <string name="codebreaker_legend_exact">Exact</string>
     <string name="codebreaker_legend_partial">Mauvaise place</string>
     <string name="codebreaker_legend_miss">Absent</string>
