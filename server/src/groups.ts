@@ -1,9 +1,9 @@
-import { optionalUser } from "./auth";
-import { newInviteCode, newToken, normalizeInviteCode, sha256Hex } from "./codes";
+import { authenticate } from "./auth";
+import { newInviteCode, normalizeInviteCode, sha256Hex } from "./codes";
 import { empty, HttpError, json, readJson } from "./http";
 import { MAX_GROUPS, MAX_MEMBERS, shareOf, type Env, type Share, type ShareColumns, type UserRow } from "./types";
 import { invariantStatements } from "./invariants";
-import { parseDisplayName, parseGroupName, parseShare } from "./validate";
+import { parseDisplayName, parseGroupName, parseShare, parseToken } from "./validate";
 
 export interface GroupInfo {
   id: string;
@@ -52,7 +52,8 @@ export async function groupInfo(db: D1Database, userId: string, groupId: string)
 }
 
 async function meBody(db: D1Database, userId: string, displayName: string) {
-  return { displayName, groups: await groupInfos(db, userId) };
+  const backup = await db.prepare("SELECT updated_at FROM backups WHERE user_id = ?1").bind(userId).first<{ updated_at: number }>();
+  return { displayName, groups: await groupInfos(db, userId), backupAt: backup?.updated_at ?? null };
 }
 
 function insertUser(db: D1Database, id: string, name: string, tokenHash: string, now: number) {
@@ -75,32 +76,57 @@ async function assertRoomForAnotherGroup(db: D1Database, userId: string) {
   if ((row?.n ?? 0) >= MAX_GROUPS) throw new HttpError(409, "too_many_groups");
 }
 
-/** The existing user, or the statements and token that create a new one from the body's display name. */
-async function resolveUser(req: Request, env: Env, body: Record<string, unknown>, now: number) {
-  const existing = await optionalUser(req, env);
-  if (existing) return { userId: existing.id, token: undefined, create: [] as D1PreparedStatement[] };
+/** A backup-only identity has no name yet; its first group needs one. */
+function nameForFirstGroup(db: D1Database, user: UserRow, body: Record<string, unknown>): D1PreparedStatement[] {
+  if (user.display_name !== "") return [];
   const name = parseDisplayName(body.displayName);
-  const userId = crypto.randomUUID();
-  const token = newToken();
-  return { userId, token, create: [insertUser(env.monolith_leaderboard, userId, name, await sha256Hex(token), now)] };
+  return [db.prepare("UPDATE users SET display_name = ?2 WHERE id = ?1").bind(user.id, name)];
+}
+
+export async function createUser(req: Request, env: Env, now: number): Promise<Response> {
+  const body = await readJson(req);
+  const token = parseToken(body.token);
+  const name = body.displayName === undefined ? "" : parseDisplayName(body.displayName);
+  try {
+    await insertUser(env.monolith_leaderboard, crypto.randomUUID(), name, await sha256Hex(token), now).run();
+  } catch (e) {
+    if (String(e).includes("UNIQUE")) throw new HttpError(409, "token_taken");
+    throw e;
+  }
+  return json({}, 201);
+}
+
+export async function rotateToken(req: Request, env: Env, user: UserRow): Promise<Response> {
+  const token = parseToken((await readJson(req)).token);
+  try {
+    await env.monolith_leaderboard
+      .prepare("UPDATE users SET token_hash = ?2 WHERE id = ?1")
+      .bind(user.id, await sha256Hex(token))
+      .run();
+  } catch (e) {
+    if (String(e).includes("UNIQUE")) throw new HttpError(409, "token_taken");
+    throw e;
+  }
+  return empty();
 }
 
 export async function createGroup(req: Request, env: Env, now: number): Promise<Response> {
   const body = await readJson(req);
   const share = parseShare(body.share);
   const db = env.monolith_leaderboard;
-  const { userId, token, create } = await resolveUser(req, env, body, now);
-  if (create.length === 0) await assertRoomForAnotherGroup(db, userId);
+  const user = await authenticate(req, env);
+  const nameUpdate = nameForFirstGroup(db, user, body);
+  await assertRoomForAnotherGroup(db, user.id);
   // An invite code collision is astronomically unlikely, but it is a UNIQUE violation, not a crash.
   for (let attempt = 0; attempt < 3; attempt++) {
     const groupId = crypto.randomUUID();
     try {
       await db.batch([
-        ...create,
+        ...nameUpdate,
         db.prepare("INSERT INTO groups (id, invite_code, created_at) VALUES (?1, ?2, ?3)").bind(groupId, newInviteCode(), now),
-        insertMembership(db, userId, groupId, share, now),
+        insertMembership(db, user.id, groupId, share, now),
       ]);
-      return json({ token, group: await groupInfo(db, userId, groupId) }, 201);
+      return json({ group: await groupInfo(db, user.id, groupId) }, 201);
     } catch (e) {
       if (!String(e).includes("UNIQUE")) throw e;
     }
@@ -109,6 +135,7 @@ export async function createGroup(req: Request, env: Env, now: number): Promise<
 }
 
 export async function joinGroup(req: Request, env: Env, now: number): Promise<Response> {
+  const user = await authenticate(req, env);
   const body = await readJson(req);
   const share = parseShare(body.share);
   if (typeof body.inviteCode !== "string") throw new HttpError(400, "invalid_body");
@@ -118,21 +145,19 @@ export async function joinGroup(req: Request, env: Env, now: number): Promise<Re
   const group = await db.prepare("SELECT id FROM groups WHERE invite_code = ?1").bind(code).first<{ id: string }>();
   if (!group) throw new HttpError(404, "invite_not_found");
 
-  const { userId, token, create } = await resolveUser(req, env, body, now);
-  if (create.length === 0) {
-    const already = await db
-      .prepare("SELECT 1 AS x FROM memberships WHERE user_id = ?1 AND group_id = ?2")
-      .bind(userId, group.id)
-      .first();
-    if (already) throw new HttpError(409, "already_member");
-  }
+  const already = await db
+    .prepare("SELECT 1 AS x FROM memberships WHERE user_id = ?1 AND group_id = ?2")
+    .bind(user.id, group.id)
+    .first();
+  if (already) throw new HttpError(409, "already_member");
   const size = await db.prepare("SELECT COUNT(*) AS n FROM memberships WHERE group_id = ?1").bind(group.id).first<{ n: number }>();
   // Count then insert: two joins racing for the last seat can make it 21. Accepted for friends.
   if ((size?.n ?? 0) >= MAX_MEMBERS) throw new HttpError(409, "group_full");
-  if (create.length === 0) await assertRoomForAnotherGroup(db, userId);
+  await assertRoomForAnotherGroup(db, user.id);
+  const nameUpdate = nameForFirstGroup(db, user, body);
 
-  await db.batch([...create, insertMembership(db, userId, group.id, share, now)]);
-  return json({ token, group: await groupInfo(db, userId, group.id) }, 201);
+  await db.batch([...nameUpdate, insertMembership(db, user.id, group.id, share, now)]);
+  return json({ group: await groupInfo(db, user.id, group.id) }, 201);
 }
 
 export async function getMe(_req: Request, env: Env, user: UserRow): Promise<Response> {

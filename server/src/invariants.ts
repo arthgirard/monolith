@@ -4,7 +4,7 @@
  *   1. A group with no members is deleted.
  *   2. A group with fewer than 3 members has no name.
  *   3. A signal none of a user's memberships share is not stored.
- *   4. A user with no memberships is deleted, with their days.
+ *   4. A user with no memberships and no backup is deleted, with their days.
  */
 export function invariantStatements(db: D1Database, userIds: string[], groupIds: string[]): D1PreparedStatement[] {
   const statements: D1PreparedStatement[] = [];
@@ -22,7 +22,13 @@ export function invariantStatements(db: D1Database, userIds: string[], groupIds:
       db.prepare(`UPDATE users SET streak_started_at = NULL WHERE id = ?1 AND ${noneShares("share_streak")}`).bind(u),
       db.prepare(`UPDATE days SET bypass_count = NULL, unlock_count = NULL WHERE user_id = ?1 AND ${noneShares("share_pauses")}`).bind(u),
       db.prepare("DELETE FROM days WHERE user_id = ?1 AND NOT EXISTS (SELECT 1 FROM memberships WHERE user_id = ?1)").bind(u),
-      db.prepare("DELETE FROM users WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM memberships WHERE user_id = ?1)").bind(u),
+      db
+        .prepare(
+          `DELETE FROM users WHERE id = ?1
+             AND NOT EXISTS (SELECT 1 FROM memberships WHERE user_id = ?1)
+             AND NOT EXISTS (SELECT 1 FROM backups WHERE user_id = ?1)`,
+        )
+        .bind(u),
     );
   }
   return statements;

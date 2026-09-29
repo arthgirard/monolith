@@ -27,11 +27,25 @@ export interface Group {
   share: Share;
 }
 
-/** New user + new group. */
+export function genToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** Registers a phone-generated identity and returns its token. */
+export async function register(displayName?: string) {
+  const token = genToken();
+  const res = await call("POST", "/users", displayName === undefined ? { token } : { token, displayName });
+  if (res.status !== 201) throw new Error(`register ${res.status} ${JSON.stringify(res.body)}`);
+  return token;
+}
+
+/** New identity + new group. */
 export async function newUser(displayName = "Ana", s: Share = share()) {
-  const res = await call("POST", "/groups", { displayName, share: s });
+  const token = await register(displayName);
+  const res = await call("POST", "/groups", { share: s }, token);
   if (res.status !== 201) throw new Error(`newUser ${res.status} ${JSON.stringify(res.body)}`);
-  return res.body as { token: string; group: Group };
+  return { token, group: res.body.group as Group };
 }
 
 /** Existing user creates another group. */
@@ -41,11 +55,12 @@ export async function anotherGroup(token: string, s: Share = share()) {
   return res.body.group as Group;
 }
 
-/** Join as a new user (no token) or as an existing one. Returns the token in use and the group. */
+/** Join as a freshly registered identity (no token) or as an existing one. Returns the token in use and the group. */
 export async function join(inviteCode: string, displayName: string, s: Share = share(), token?: string) {
-  const res = await call("POST", "/join", { inviteCode, displayName, share: s }, token);
+  const t = token ?? (await register(displayName));
+  const res = await call("POST", "/join", { inviteCode, share: s }, t);
   if (res.status !== 201) throw new Error(`join ${res.status} ${JSON.stringify(res.body)}`);
-  return { token: (res.body.token as string | undefined) ?? token!, group: res.body.group as Group };
+  return { token: t, group: res.body.group as Group };
 }
 
 export const today = (offset = 0) => addDays(utcToday(Date.now()), offset);

@@ -19,6 +19,11 @@ export function parseDisplayName(v: unknown): string {
   return name;
 }
 
+export function parseToken(v: unknown): string {
+  if (typeof v !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(v)) throw invalidBody();
+  return v;
+}
+
 /** A group name, or null to clear it ("" and null both clear). */
 export function parseGroupName(v: unknown): string | null {
   if (v === null) return null;

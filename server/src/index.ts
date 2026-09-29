@@ -1,6 +1,6 @@
 import { authenticate } from "./auth";
 import { board } from "./board";
-import { createGroup, getMe, joinGroup, leaveGroup, updateGroup, updateMe } from "./groups";
+import { createGroup, createUser, getMe, joinGroup, leaveGroup, rotateToken, updateGroup, updateMe } from "./groups";
 import { HttpError, json } from "./http";
 import { sync } from "./sync";
 import type { Env, UserRow } from "./types";
@@ -11,6 +11,7 @@ type GroupHandler = (req: Request, env: Env, user: UserRow, now: number, groupId
 export const authedRoutes: Record<string, AuthedHandler> = {
   "GET /me": getMe,
   "POST /me": updateMe,
+  "POST /me/token": rotateToken,
   "POST /sync": sync,
 };
 
@@ -26,6 +27,7 @@ const GROUP_PATH = /^\/groups\/([^/]+)(\/board)?$/;
 async function route(req: Request, env: Env, now: number): Promise<Response> {
   const path = new URL(req.url).pathname;
   const key = `${req.method} ${path}`;
+  if (key === "POST /users") return createUser(req, env, now);
   if (key === "POST /groups") return createGroup(req, env, now);
   if (key === "POST /join") return joinGroup(req, env, now);
 

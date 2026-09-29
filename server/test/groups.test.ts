@@ -1,15 +1,16 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { anotherGroup, call, join, newUser, share } from "./helpers";
+import { anotherGroup, call, genToken, join, newUser, register, share } from "./helpers";
 
 const count = async (table: string) =>
   (await env.monolith_leaderboard.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first<{ n: number }>())!.n;
 
 describe("identity and groups", () => {
-  it("creating without a token makes a user, a group and a membership", async () => {
-    const res = await call("POST", "/groups", { displayName: " Ana ", share: share(true, false, true) });
+  it("creating makes a group and a membership for a registered identity", async () => {
+    const token = await register("Ana");
+    const res = await call("POST", "/groups", { share: share(true, false, true) }, token);
     expect(res.status).toBe(201);
-    expect(res.body.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(res.body.token).toBeUndefined();
     expect(res.body.group).toMatchObject({
       name: null,
       memberCount: 1,
@@ -38,18 +39,12 @@ describe("identity and groups", () => {
     expect(me.body.groups).toHaveLength(2);
   });
 
-  it("a creation without a token needs a valid display name", async () => {
-    for (const body of [{ share: share() }, { displayName: "  ", share: share() }, { displayName: "x".repeat(25), share: share() }]) {
-      expect(await call("POST", "/groups", body)).toEqual({ status: 400, body: { error: "invalid_body" } });
-    }
-  });
-
   it("a bad token is a 401, never a new identity", async () => {
     expect((await call("POST", "/groups", { displayName: "Ana", share: share() }, "nope")).status).toBe(401);
     expect(await count("users")).toBe(0);
   });
 
-  it("joining as a new user and as an existing user", async () => {
+  it("joining as a new identity and as an existing user", async () => {
     const ana = await newUser("Ana");
     const ben = await join(ana.group.inviteCode, "Ben");
     expect(ben.group).toMatchObject({ memberCount: 2, otherMembers: ["Ana"] });
@@ -65,17 +60,18 @@ describe("identity and groups", () => {
     const ana = await newUser();
     const code = ana.group.inviteCode;
     const sloppy = `${code.slice(0, 4).toLowerCase()} - ${code.slice(4).toLowerCase()}`;
-    expect((await call("POST", "/join", { inviteCode: sloppy, displayName: "Ben", share: share() })).status).toBe(201);
+    const ben = await register("Ben");
+    expect((await call("POST", "/join", { inviteCode: sloppy, share: share() }, ben)).status).toBe(201);
   });
 
   it("join errors: unknown code, already a member, full group", async () => {
     const ana = await newUser();
-    expect(await call("POST", "/join", { inviteCode: "ZZZZZZZZ", displayName: "Ben", share: share() }))
+    expect(await call("POST", "/join", { inviteCode: "ZZZZZZZZ", share: share() }, await register("Ben")))
       .toEqual({ status: 404, body: { error: "invite_not_found" } });
     expect(await call("POST", "/join", { inviteCode: ana.group.inviteCode, share: share() }, ana.token))
       .toEqual({ status: 409, body: { error: "already_member" } });
     for (let i = 1; i < 20; i++) await join(ana.group.inviteCode, `m${i}`);
-    expect(await call("POST", "/join", { inviteCode: ana.group.inviteCode, displayName: "late", share: share() }))
+    expect(await call("POST", "/join", { inviteCode: ana.group.inviteCode, share: share() }, await register("late")))
       .toEqual({ status: 409, body: { error: "group_full" } });
   });
 
@@ -222,5 +218,51 @@ describe("updating and leaving groups", () => {
     const ana = await newUser("Ana");
     expect(await call("DELETE", "/groups/%zz", undefined, ana.token))
       .toEqual({ status: 404, body: { error: "not_found" } });
+  });
+});
+
+describe("phone-generated identity", () => {
+  it("registers a token and rejects a duplicate or malformed one", async () => {
+    const token = genToken();
+    expect((await call("POST", "/users", { token })).status).toBe(201);
+    expect(await call("POST", "/users", { token })).toEqual({ status: 409, body: { error: "token_taken" } });
+    for (const bad of ["short", "x".repeat(44), "!".repeat(43), 42]) {
+      expect((await call("POST", "/users", { token: bad })).status).toBe(400);
+    }
+  });
+
+  it("create and join need a bearer", async () => {
+    expect((await call("POST", "/groups", { displayName: "Ana", share: share() })).status).toBe(401);
+    expect((await call("POST", "/join", { inviteCode: "ABCDEFGH", displayName: "Ana", share: share() })).status).toBe(401);
+  });
+
+  it("a nameless identity must name itself when it first creates or joins", async () => {
+    const token = await register();
+    expect(await call("POST", "/groups", { share: share() }, token)).toEqual({ status: 400, body: { error: "invalid_body" } });
+    const res = await call("POST", "/groups", { displayName: "Ana", share: share() }, token);
+    expect(res.status).toBe(201);
+    expect((await call("GET", "/me", undefined, token)).body.displayName).toBe("Ana");
+  });
+
+  it("a named identity's body name is ignored", async () => {
+    const token = await register("Ana");
+    await call("POST", "/groups", { displayName: "Zed", share: share() }, token);
+    expect((await call("GET", "/me", undefined, token)).body.displayName).toBe("Ana");
+  });
+
+  it("token rotation keeps groups", async () => {
+    const ana = await newUser("Ana");
+    const next = genToken();
+    expect((await call("POST", "/me/token", { token: next }, ana.token)).status).toBe(204);
+    expect((await call("GET", "/me", undefined, ana.token)).status).toBe(401);
+    const me = await call("GET", "/me", undefined, next);
+    expect(me.body.groups.map((g: { id: string }) => g.id)).toEqual([ana.group.id]);
+    const other = await register("Ben");
+    expect(await call("POST", "/me/token", { token: other }, next)).toEqual({ status: 409, body: { error: "token_taken" } });
+  });
+
+  it("GET /me reports backupAt as null without a backup", async () => {
+    const token = await register("Ana");
+    expect((await call("GET", "/me", undefined, token)).body).toEqual({ displayName: "Ana", groups: [], backupAt: null });
   });
 });
