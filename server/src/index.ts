@@ -1,5 +1,5 @@
 import { authenticate } from "./auth";
-import { createGroup, getMe, joinGroup, updateMe } from "./groups";
+import { createGroup, getMe, joinGroup, leaveGroup, updateGroup, updateMe } from "./groups";
 import { HttpError, json } from "./http";
 import type { Env, UserRow } from "./types";
 
@@ -12,7 +12,10 @@ export const authedRoutes: Record<string, AuthedHandler> = {
 };
 
 /** Keyed by method plus "" for /groups/:id or "/board" for /groups/:id/board. */
-export const groupRoutes: Record<string, GroupHandler> = {};
+export const groupRoutes: Record<string, GroupHandler> = {
+  "POST ": updateGroup,
+  "DELETE ": leaveGroup,
+};
 
 const GROUP_PATH = /^\/groups\/([^/]+)(\/board)?$/;
 
@@ -26,7 +29,13 @@ async function route(req: Request, env: Env, now: number): Promise<Response> {
   if (groupMatch) {
     const handler = groupRoutes[`${req.method} ${groupMatch[2] ?? ""}`];
     if (!handler) throw new HttpError(404, "not_found");
-    return handler(req, env, await authenticate(req, env), now, decodeURIComponent(groupMatch[1]));
+    let groupId: string;
+    try {
+      groupId = decodeURIComponent(groupMatch[1]);
+    } catch {
+      throw new HttpError(404, "not_found");
+    }
+    return handler(req, env, await authenticate(req, env), now, groupId);
   }
 
   const handler = authedRoutes[key];

@@ -112,3 +112,115 @@ describe("identity and groups", () => {
     expect((await call("GET", "/nope")).status).toBe(404);
   });
 });
+
+describe("updating and leaving groups", () => {
+  const stored = (userName: string) =>
+    env.monolith_leaderboard
+      .prepare(
+        `SELECT u.streak_started_at, d.saved_ms, d.bypass_count, d.unlock_count
+         FROM users u JOIN days d ON d.user_id = u.id WHERE u.display_name = ?1`,
+      )
+      .bind(userName)
+      .first();
+
+  async function seed(userName: string) {
+    await env.monolith_leaderboard.batch([
+      env.monolith_leaderboard.prepare("UPDATE users SET streak_started_at = 1000 WHERE display_name = ?1").bind(userName),
+      env.monolith_leaderboard
+        .prepare("INSERT INTO days (user_id, date, saved_ms, bypass_count, unlock_count) SELECT id, '2026-09-01', 5, 1, 2 FROM users WHERE display_name = ?1")
+        .bind(userName),
+    ]);
+  }
+
+  it("share changes are per group and returned in the group", async () => {
+    const ana = await newUser("Ana");
+    const second = await anotherGroup(ana.token);
+    const res = await call("POST", `/groups/${second.id}`, { share: share(false, true, true) }, ana.token);
+    expect(res.status).toBe(200);
+    expect(res.body.group.share).toEqual({ saved: false, streak: true, pauses: true });
+    const me = await call("GET", "/me", undefined, ana.token);
+    expect(me.body.groups[0].share.saved).toBe(true);
+  });
+
+  it("hiding a signal in one group keeps the data while another group shares it", async () => {
+    const ana = await newUser("Ana");
+    const second = await anotherGroup(ana.token);
+    await seed("Ana");
+    await call("POST", `/groups/${second.id}`, { share: share(false, false, false) }, ana.token);
+    expect(await stored("Ana")).toEqual({ streak_started_at: 1000, saved_ms: 5, bypass_count: 1, unlock_count: 2 });
+  });
+
+  it("hiding a signal everywhere nulls it", async () => {
+    const ana = await newUser("Ana");
+    const second = await anotherGroup(ana.token);
+    await seed("Ana");
+    await call("POST", `/groups/${ana.group.id}`, { share: share(false, true, false) }, ana.token);
+    await call("POST", `/groups/${second.id}`, { share: share(false, false, false) }, ana.token);
+    expect(await stored("Ana")).toEqual({ streak_started_at: 1000, saved_ms: null, bypass_count: null, unlock_count: null });
+    await call("POST", `/groups/${ana.group.id}`, { share: share(false, false, false) }, ana.token);
+    expect(await stored("Ana")).toMatchObject({ streak_started_at: null });
+  });
+
+  it("names need three and vanish below three", async () => {
+    const ana = await newUser("Ana");
+    const ben = await join(ana.group.inviteCode, "Ben");
+    expect(await call("POST", `/groups/${ana.group.id}`, { name: "Flat" }, ana.token))
+      .toEqual({ status: 409, body: { error: "name_needs_three" } });
+
+    const cat = await join(ana.group.inviteCode, "Cat");
+    const named = await call("POST", `/groups/${ana.group.id}`, { name: "  Flatmates " }, ben.token);
+    expect(named.body.group.name).toBe("Flatmates");
+    expect((await call("POST", `/groups/${ana.group.id}`, { name: "x".repeat(33) }, ana.token)).status).toBe(400);
+
+    expect((await call("DELETE", `/groups/${ana.group.id}`, undefined, cat.token)).status).toBe(204);
+    const me = await call("GET", "/me", undefined, ana.token);
+    expect(me.body.groups[0]).toMatchObject({ name: null, memberCount: 2, otherMembers: ["Ben"] });
+  });
+
+  it("an empty name clears it", async () => {
+    const ana = await newUser("Ana");
+    await join(ana.group.inviteCode, "Ben");
+    await join(ana.group.inviteCode, "Cat");
+    await call("POST", `/groups/${ana.group.id}`, { name: "Flat" }, ana.token);
+    const cleared = await call("POST", `/groups/${ana.group.id}`, { name: "" }, ana.token);
+    expect(cleared.body.group.name).toBeNull();
+  });
+
+  it("leaving one group keeps the user; leaving the last deletes them and their days", async () => {
+    const ana = await newUser("Ana");
+    const second = await anotherGroup(ana.token);
+    await seed("Ana");
+    expect((await call("DELETE", `/groups/${ana.group.id}`, undefined, ana.token)).status).toBe(204);
+    expect((await call("GET", "/me", undefined, ana.token)).body.groups).toHaveLength(1);
+    expect((await call("DELETE", `/groups/${second.id}`, undefined, ana.token)).status).toBe(204);
+    expect((await call("GET", "/me", undefined, ana.token)).status).toBe(401);
+    expect(await count("users")).toBe(0);
+    expect(await count("days")).toBe(0);
+    expect(await count("groups")).toBe(0);
+  });
+
+  it("a group is deleted when its last member leaves, others remain", async () => {
+    const ana = await newUser("Ana");
+    const ben = await join(ana.group.inviteCode, "Ben");
+    await anotherGroup(ben.token);
+    await call("DELETE", `/groups/${ana.group.id}`, undefined, ana.token);
+    expect(await count("groups")).toBe(2);
+    await call("DELETE", `/groups/${ana.group.id}`, undefined, ben.token);
+    expect(await count("groups")).toBe(1);
+  });
+
+  it("updates and leaves for a group you're not in are not_member", async () => {
+    const ana = await newUser("Ana");
+    const ben = await newUser("Ben");
+    expect(await call("POST", `/groups/${ben.group.id}`, { share: share() }, ana.token))
+      .toEqual({ status: 404, body: { error: "not_member" } });
+    expect((await call("DELETE", `/groups/${ben.group.id}`, undefined, ana.token)).status).toBe(404);
+    expect((await call("DELETE", "/groups/nope", undefined, ana.token)).status).toBe(404);
+  });
+
+  it("a malformed escape in the group id is not_found", async () => {
+    const ana = await newUser("Ana");
+    expect(await call("DELETE", "/groups/%zz", undefined, ana.token))
+      .toEqual({ status: 404, body: { error: "not_found" } });
+  });
+});

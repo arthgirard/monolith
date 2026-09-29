@@ -1,8 +1,9 @@
 import { optionalUser } from "./auth";
 import { newInviteCode, newToken, normalizeInviteCode, sha256Hex } from "./codes";
-import { HttpError, json, readJson } from "./http";
+import { empty, HttpError, json, readJson } from "./http";
 import { MAX_GROUPS, MAX_MEMBERS, shareOf, type Env, type Share, type ShareColumns, type UserRow } from "./types";
-import { parseDisplayName, parseShare } from "./validate";
+import { invariantStatements } from "./invariants";
+import { parseDisplayName, parseGroupName, parseShare } from "./validate";
 
 export interface GroupInfo {
   id: string;
@@ -144,4 +145,47 @@ export async function updateMe(req: Request, env: Env, user: UserRow): Promise<R
   const db = env.monolith_leaderboard;
   await db.prepare("UPDATE users SET display_name = ?2 WHERE id = ?1").bind(user.id, name).run();
   return json(await meBody(db, user.id, name));
+}
+
+async function assertMember(db: D1Database, userId: string, groupId: string) {
+  const row = await db
+    .prepare("SELECT 1 AS x FROM memberships WHERE user_id = ?1 AND group_id = ?2")
+    .bind(userId, groupId)
+    .first();
+  if (!row) throw new HttpError(404, "not_member");
+}
+
+export async function updateGroup(req: Request, env: Env, user: UserRow, _now: number, groupId: string): Promise<Response> {
+  const db = env.monolith_leaderboard;
+  await assertMember(db, user.id, groupId);
+  const body = await readJson(req);
+  const statements: D1PreparedStatement[] = [];
+  if (body.share !== undefined) {
+    const share = parseShare(body.share);
+    statements.push(
+      db
+        .prepare("UPDATE memberships SET share_saved = ?3, share_streak = ?4, share_pauses = ?5 WHERE user_id = ?1 AND group_id = ?2")
+        .bind(user.id, groupId, +share.saved, +share.streak, +share.pauses),
+    );
+  }
+  if (body.name !== undefined) {
+    const name = parseGroupName(body.name);
+    if (name !== null) {
+      const size = await db.prepare("SELECT COUNT(*) AS n FROM memberships WHERE group_id = ?1").bind(groupId).first<{ n: number }>();
+      if ((size?.n ?? 0) < 3) throw new HttpError(409, "name_needs_three");
+    }
+    statements.push(db.prepare("UPDATE groups SET name = ?2 WHERE id = ?1").bind(groupId, name));
+  }
+  if (statements.length > 0) await db.batch([...statements, ...invariantStatements(db, [user.id], [groupId])]);
+  return json({ group: await groupInfo(db, user.id, groupId) });
+}
+
+export async function leaveGroup(_req: Request, env: Env, user: UserRow, _now: number, groupId: string): Promise<Response> {
+  const db = env.monolith_leaderboard;
+  await assertMember(db, user.id, groupId);
+  await db.batch([
+    db.prepare("DELETE FROM memberships WHERE user_id = ?1 AND group_id = ?2").bind(user.id, groupId),
+    ...invariantStatements(db, [user.id], [groupId]),
+  ]);
+  return empty();
 }
