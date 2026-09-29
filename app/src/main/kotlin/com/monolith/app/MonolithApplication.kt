@@ -6,6 +6,7 @@ import android.content.Intent
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.nfc.NfcDispatchGate
 import com.monolith.app.service.EnforcementForegroundService
+import com.monolith.app.service.LeaderboardSyncer
 import com.monolith.app.service.ScheduleTrigger
 import com.monolith.app.util.AppLocale
 import dagger.hilt.android.HiltAndroidApp
@@ -25,6 +26,7 @@ class MonolithApplication : Application() {
     @Inject lateinit var blockRepository: BlockRepository
     @Inject lateinit var scheduleTrigger: ScheduleTrigger
     @Inject lateinit var nfcDispatchGate: NfcDispatchGate
+    @Inject lateinit var leaderboardSyncer: LeaderboardSyncer
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -72,5 +74,8 @@ class MonolithApplication : Application() {
         // never received one at all. Both calls are idempotent -- the last-handled watermark stops
         // a fire being replayed, and re-arming replaces the pending alarm rather than stacking.
         appScope.launch { scheduleTrigger.reconcile() }
+
+        // Idle until a group is joined; opt-in means no network calls before that.
+        leaderboardSyncer.start(appScope)
     }
 }
