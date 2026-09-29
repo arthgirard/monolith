@@ -100,14 +100,14 @@ All bodies are JSON. Every endpoint except `POST /groups` and `POST /join` requi
 | POST | `/groups` | `{displayName, share}` | `{token, inviteCode}`; creates group and first member |
 | POST | `/join` | `{inviteCode, displayName, share}` | `{token, inviteCode}` |
 | GET | `/me` | | `{displayName, share, inviteCode}`; also validates a recovery code |
-| PATCH | `/me` | `{displayName?, share?}` | same shape as `GET /me` |
+| POST | `/me` | `{displayName?, share?}` | same shape as `GET /me` |
 | POST | `/sync` | `{days: [{date, savedMs?, bypassCount?, unlockCount?}], streakStartedAt?}` | 204 |
 | GET | `/board?window=day\|week\|month&date=YYYY-MM-DD` | | `{rows: [...]}` |
 | DELETE | `/me` | | 204; leaves and deletes the member's data |
 
 `share` is `{saved: bool, streak: bool, pauses: bool}`.
 
-Board row: `{name, isMe, rank?, savedMs?, streakStartedAt?, bypassCount?, unlockCount?,
+Board row: `{name, isMe, rank?, savedMs?, streak?: {startedAt}, bypassCount?, unlockCount?,
 lastSyncAt}`. A field is omitted when either the row's member or the requester hides that signal.
 `rank` is omitted for members hiding time saved.
 
@@ -151,7 +151,7 @@ All errors are `{"error": "<code>"}`.
 | 401 | `unauthorized` | clear local group state; show "You're no longer in a group" |
 | 404 | `invite_not_found` | inline error on the join form |
 | 409 | `group_full` | inline error on the join form |
-| 422 | `hidden_signal` | re-send share flags via `PATCH /me`, retry once |
+| 422 | `hidden_signal` | re-send share flags via `POST /me`, retry once |
 
 ### Layout
 
@@ -237,3 +237,13 @@ Manual deploys, no CI.
 
 Rate limiting, invite code rotation, admin roles, multiple groups, notifications, block attempt
 sharing, history beyond 35 days, custom domain, CI deploys.
+
+## Planning amendments
+
+- `POST /me` replaces `PATCH /me`: `HttpURLConnection` cannot send `PATCH`.
+- A board row carries `streak: {startedAt}` when the streak is visible (`startedAt` null when not
+  enforcing) and omits it when hidden.
+- A viewer hiding time gained sees no ranks; rows are ordered by name.
+- Sync accepts dates from UTC today minus 36 days, and the pause log keeps 36 days, so zones
+  behind UTC can send all 35 local days.
+- Numbers use the app's tabular Inter style; the app ships no mono font.
