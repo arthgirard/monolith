@@ -1,6 +1,7 @@
 import { authenticate } from "./auth";
 import { createGroup, getMe, joinGroup, leave, updateMe } from "./groups";
 import { HttpError, json } from "./http";
+import { sync } from "./sync";
 import type { Env, MemberRow } from "./types";
 
 type AuthedHandler = (req: Request, env: Env, member: MemberRow, now: number) => Promise<Response>;
@@ -9,6 +10,7 @@ export const authedRoutes: Record<string, AuthedHandler> = {
   "GET /me": getMe,
   "POST /me": updateMe,
   "DELETE /me": leave,
+  "POST /sync": sync,
 };
 
 async function route(req: Request, env: Env, now: number): Promise<Response> {
