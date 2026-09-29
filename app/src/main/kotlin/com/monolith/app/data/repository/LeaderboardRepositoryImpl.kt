@@ -102,6 +102,9 @@ class LeaderboardRepositoryImpl @Inject constructor(
                 }
             }
             .alsoDropIfNotMember()
+            // Already out of it (left on another phone, or removed): the refresh dropped it, which
+            // is all leaving would have done.
+            .let { if (it is LeaderboardResult.Err && it.error == LeaderboardError.NOT_MEMBER) LeaderboardResult.Ok(Unit) else it }
     }
 
     override suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?): LeaderboardResult<Unit> = authed { identity ->
@@ -131,6 +134,10 @@ class LeaderboardRepositoryImpl @Inject constructor(
     /**
      * Creating and joining work with or without an identity. With one, the token goes along and
      * the name stays as it is; without, the response carries the new identity's token.
+     *
+     * An identity with no cached group may be a dead one (the last leave's refresh was offline,
+     * or a token from the single-group build): on a 401 it is cleared quietly and the call is
+     * retried once as a new member, with the name the join form supplied.
      */
     private suspend fun enterGroup(
         displayName: String?,
@@ -138,7 +145,12 @@ class LeaderboardRepositoryImpl @Inject constructor(
     ): LeaderboardResult<Unit> {
         val identity = store.identity.first()
         val name = displayName?.trim()
-        val result = if (identity == null) call(null, name) else guarded(identity.token) { call(identity.token, null) }
+        val result = if (identity == null) call(null, name) else guarded(identity) { call(identity.token, null) }
+        if (identity != null && identity.groups.isEmpty() && result is LeaderboardResult.Err &&
+            result.error == LeaderboardError.UNAUTHORIZED && store.identity.first() == null
+        ) {
+            return enterGroup(displayName, call)
+        }
         return result.andThen { response ->
             val group = response.group.toDomain()
             val token = response.token
@@ -174,16 +186,18 @@ class LeaderboardRepositoryImpl @Inject constructor(
 
     private suspend fun <T> authed(block: suspend (Identity) -> LeaderboardResult<T>): LeaderboardResult<T> {
         val identity = store.identity.first() ?: return LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
-        return guarded(identity.token) { block(identity) }
+        return guarded(identity) { block(identity) }
     }
 
-    private suspend fun <T> guarded(token: String, block: suspend () -> LeaderboardResult<T>): LeaderboardResult<T> {
+    private suspend fun <T> guarded(identity: Identity, block: suspend () -> LeaderboardResult<T>): LeaderboardResult<T> {
         val result = block()
         // Only if this token is still the stored one: a late 401 must not clear a newer identity.
         if (result is LeaderboardResult.Err && result.error == LeaderboardError.UNAUTHORIZED &&
-            store.identity.first()?.token == token
+            store.identity.first()?.token == identity.token
         ) {
-            store.clear(removed = true)
+            // Without a cached group the member wasn't in anything to be removed from: the last
+            // leave's refresh was offline, or the token predates the multi-group server.
+            store.clear(removed = identity.groups.isNotEmpty())
         }
         return result
     }

@@ -56,6 +56,8 @@ private class FakeLeaderboardApi : LeaderboardApi {
     var leaveResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
     var updateGroupResult: LeaderboardResult<GroupResponse>? = null
     var duringBoard: suspend () -> Unit = {}
+    /** Tokens the server no longer knows (deleted user, or pre-migration): every call is a 401. */
+    val deadTokens = mutableSetOf<String>()
     val syncResults = ArrayDeque<LeaderboardResult<Unit>>()
     val syncRequests = mutableListOf<SyncRequest>()
     val createCalls = mutableListOf<Pair<String?, CreateGroupRequest>>()
@@ -65,6 +67,7 @@ private class FakeLeaderboardApi : LeaderboardApi {
 
     override suspend fun createGroup(token: String?, request: CreateGroupRequest): LeaderboardResult<GroupResponse> {
         createCalls += token to request
+        if (token in deadTokens) return LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
         return createResult ?: LeaderboardResult.Ok(GroupResponse(token = if (token == null) "tok" else null, group = g1))
     }
     override suspend fun join(token: String?, request: JoinRequest): LeaderboardResult<GroupResponse> =
@@ -329,5 +332,54 @@ class LeaderboardRepositoryImplTest {
         LeaderboardRepositoryImpl(api, store).createGroup("Ana", share)
 
         assertFalse(store.removedNotice.value)
+    }
+
+    @Test
+    fun `offline last leave, then a 401 on refresh shows no notice`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Err(LeaderboardError.NETWORK) }
+        val store = FakeIdentityStore(ana(g1), selected = "g1")
+        val repo = LeaderboardRepositoryImpl(api, store)
+
+        repo.leaveGroup("g1")
+        assertEquals(ana(), store.identity.value)
+        api.meResult = LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
+        repo.refreshGroups()
+
+        assertNull(store.identity.value)
+        assertFalse(store.removedNotice.value)
+    }
+
+    @Test
+    fun `create with a dead token and no cached groups retries as a new user and succeeds, no notice`() = runBlocking {
+        // The single-group build's token is dead after the server migration and caches no groups.
+        val api = FakeLeaderboardApi().apply {
+            deadTokens += "old"
+            meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1)))
+        }
+        val store = FakeIdentityStore(ana(token = "old"))
+
+        val result = LeaderboardRepositoryImpl(api, store).createGroup(" Ana ", share)
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
+        assertEquals(listOf("old", null), api.createCalls.map { it.first })
+        assertEquals("Ana", api.createCalls[1].second.displayName)
+        assertEquals(Identity("tok", "Ana", listOf(g1.toDomain())), store.identity.value)
+        assertEquals("g1", store.selectedGroupId.value)
+        assertFalse(store.removedNotice.value)
+    }
+
+    @Test
+    fun `leaving a group you are already out of succeeds and drops it`() = runBlocking {
+        val api = FakeLeaderboardApi().apply {
+            leaveResult = LeaderboardResult.Err(LeaderboardError.NOT_MEMBER)
+            meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g2)))
+        }
+        val store = FakeIdentityStore(ana(g1, g2), selected = "g1")
+
+        val result = LeaderboardRepositoryImpl(api, store).leaveGroup("g1")
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
+        assertEquals(ana(g2), store.identity.value)
+        assertEquals("g2", store.selectedGroupId.value)
     }
 }
