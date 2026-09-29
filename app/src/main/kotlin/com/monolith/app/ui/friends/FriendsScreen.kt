@@ -3,12 +3,14 @@ package com.monolith.app.ui.friends
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +22,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -48,9 +53,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
@@ -269,6 +279,8 @@ private fun BoardContent(uiState: FriendsUiState, viewModel: FriendsViewModel) {
                 selected = uiState.window == window,
                 onClick = { viewModel.selectWindow(window) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = windows.size),
+                // The border already marks the selection; a checkmark on top is decoration.
+                icon = {},
                 colors = SegmentedButtonDefaults.colors(
                     activeContainerColor = MaterialTheme.colorScheme.surface,
                     activeContentColor = MaterialTheme.colorScheme.secondary,
@@ -286,26 +298,32 @@ private fun BoardContent(uiState: FriendsUiState, viewModel: FriendsViewModel) {
         }
         else -> Unit
     }
+    val leaderMillis = uiState.rows.mapNotNull { it.savedMillis }.maxOrNull()
     SettingsGroup {
         uiState.rows.forEachIndexed { index, row ->
             if (index > 0) SettingsDivider(startInset = 20.dp)
-            BoardRowItem(row, uiState.nowMillis)
+            BoardRowItem(row, leaderMillis, uiState.nowMillis)
         }
     }
 }
 
 private val RankWidth = 28.dp
+private val SlabEdgeWidth = 3.dp
 
 @Composable
-private fun BoardRowItem(row: BoardRow, nowMillis: Long) {
+private fun BoardRowItem(row: BoardRow, leaderMillis: Long?, nowMillis: Long) {
     val hidden = stringResource(R.string.friends_hidden)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    // The viewer's own row is tinted rather than suffixed, so the name stays just the name.
-    val tint = if (row.isMe) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f) else Color.Transparent
+    // The viewer's own row carries a slab edge rather than a suffix, so the name stays just the name.
+    val edge = if (row.isMe) MaterialTheme.colorScheme.onSurface else Color.Transparent
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(tint)
+            .drawBehind {
+                val width = SlabEdgeWidth.toPx()
+                val x = if (layoutDirection == LayoutDirection.Rtl) size.width - width else 0f
+                drawRect(edge, topLeft = Offset(x, 0f), size = Size(width, size.height))
+            }
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -338,6 +356,17 @@ private fun BoardRowItem(row: BoardRow, nowMillis: Long) {
                 style = MaterialTheme.typography.titleLarge.mono(),
             )
         }
+        // Time saved as a share of the leader's, so the gaps read at a glance.
+        val saved = row.savedMillis
+        if (saved != null && leaderMillis != null && leaderMillis > 0 && saved > 0) {
+            Box(
+                modifier = Modifier
+                    .padding(start = RankWidth)
+                    .fillMaxWidth(saved.toFloat() / leaderMillis)
+                    .height(2.dp)
+                    .background(if (row.isMe) MaterialTheme.colorScheme.onSurface else muted.copy(alpha = 0.4f)),
+            )
+        }
         if (row.streakVisible || row.bypassCount != null || row.unlockCount != null) {
             Row(
                 modifier = Modifier.padding(start = RankWidth),
@@ -346,21 +375,23 @@ private fun BoardRowItem(row: BoardRow, nowMillis: Long) {
                 if (row.streakVisible) {
                     val started = row.streakStartedAt
                     MiniReadout(
+                        Icons.Outlined.Timelapse,
                         stringResource(R.string.friends_row_streak_label),
                         if (started != null) formatDuration((nowMillis - started).coerceAtLeast(0)) else hidden,
                     )
                 }
-                row.bypassCount?.let { MiniReadout(stringResource(R.string.friends_row_bypasses_label), it.toString()) }
-                row.unlockCount?.let { MiniReadout(stringResource(R.string.friends_row_unlocks_label), it.toString()) }
+                row.bypassCount?.let { MiniReadout(Icons.Outlined.LockOpen, stringResource(R.string.friends_row_bypasses_label), it.toString()) }
+                row.unlockCount?.let { MiniReadout(Icons.Outlined.PhoneAndroid, stringResource(R.string.friends_row_unlocks_label), it.toString()) }
             }
         }
     }
 }
 
+/** A small muted glyph names the readout; the caption is still what a screen reader says. */
 @Composable
-private fun MiniReadout(caption: String, value: String) {
-    Column {
+private fun MiniReadout(icon: ImageVector, caption: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(icon, contentDescription = caption, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         Text(value, style = MaterialTheme.typography.bodyMedium.mono())
-        Text(caption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
