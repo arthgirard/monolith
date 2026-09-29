@@ -1,6 +1,7 @@
 package com.monolith.app.data.repository
 
 import com.monolith.app.data.backup.BackupCrypto
+import com.monolith.app.data.leaderboard.DisplayNameStore
 import com.monolith.app.data.leaderboard.IdentityStore
 import com.monolith.app.data.leaderboard.LeaderboardApi
 import com.monolith.app.data.leaderboard.RegisterRequest
@@ -23,6 +24,7 @@ import javax.inject.Singleton
 class IdentityManager @Inject constructor(
     private val api: LeaderboardApi,
     private val store: IdentityStore,
+    private val names: DisplayNameStore,
 ) {
     // A create and turning backup on at once must not register two identities.
     private val mutex = Mutex()
@@ -31,12 +33,13 @@ class IdentityManager @Inject constructor(
      * Makes sure an identity with a master is stored: registers one when there is none, and
      * migrates one from before backups (its server-issued token) to a phone-generated token.
      * A failed migration leaves that identity as it was, unless the answer was a 401: the token
-     * is dead, and it goes like any other.
+     * is dead, and it goes like any other. A new one takes [displayName], or else the name given
+     * during setup.
      */
     suspend fun ensureIdentity(displayName: String?): LeaderboardResult<Unit> = mutex.withLock {
         val identity = store.identity.first()
         when {
-            identity == null -> register(displayName?.trim()?.takeIf { it.isNotEmpty() })
+            identity == null -> register((displayName ?: names.displayName.first()).trim().takeIf { it.isNotEmpty() })
             identity.master == null -> migrate(identity)
             else -> LeaderboardResult.Ok(Unit)
         }

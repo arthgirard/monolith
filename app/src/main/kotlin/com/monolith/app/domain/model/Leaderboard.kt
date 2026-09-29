@@ -28,6 +28,11 @@ data class Identity(
     val backupAt: Long? = null,
 )
 
+/** The server takes 1 to 24 characters, trimmed. */
+const val DISPLAY_NAME_MAX_LENGTH = 24
+
+fun isValidDisplayName(name: String): Boolean = name.trim().length in 1..DISPLAY_NAME_MAX_LENGTH
+
 /** What a group is called on screen; [isCode] while it is still just its invite code. */
 data class GroupLabel(val text: String, val isCode: Boolean)
 

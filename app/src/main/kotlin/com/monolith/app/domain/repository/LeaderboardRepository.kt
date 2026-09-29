@@ -22,11 +22,16 @@ interface LeaderboardRepository {
     fun observeRemovedNotice(): Flow<Boolean>
     suspend fun dismissRemovedNotice()
 
-    /** [displayName] is used only when there is no identity yet. */
-    suspend fun createGroup(displayName: String?, share: ShareSettings): LeaderboardResult<Unit>
-    suspend fun joinGroup(inviteCode: String, displayName: String?, share: ShareSettings): LeaderboardResult<Unit>
+    /** The name friends see: the one given during setup. Empty until one is set. */
+    fun observeDisplayName(): Flow<String>
+
+    /** Stored on the phone, and on the server too once there is an identity; a failure there changes nothing. */
+    suspend fun setDisplayName(displayName: String): LeaderboardResult<Unit>
+
+    /** Both go by the name from [observeDisplayName]. */
+    suspend fun createGroup(share: ShareSettings): LeaderboardResult<Unit>
+    suspend fun joinGroup(inviteCode: String, share: ShareSettings): LeaderboardResult<Unit>
     suspend fun restore(recoveryCode: String): LeaderboardResult<Unit>
-    suspend fun rename(displayName: String): LeaderboardResult<Unit>
     suspend fun refreshGroups(): LeaderboardResult<Unit>
 
     /** Null leaves a field alone; an empty [name] clears it. */

@@ -26,13 +26,18 @@ class FakeLeaderboardRepository(identity: Identity? = null) : LeaderboardReposit
     override suspend fun selectGroup(groupId: String) { selectedGroupId.value = groupId }
     override fun observeRemovedNotice(): Flow<Boolean> = removedNotice
     override suspend fun dismissRemovedNotice() { removedNotice.value = false }
-    override suspend fun createGroup(displayName: String?, share: ShareSettings) = LeaderboardResult.Ok(Unit)
-    override suspend fun joinGroup(inviteCode: String, displayName: String?, share: ShareSettings) = LeaderboardResult.Ok(Unit)
+    val displayName = MutableStateFlow("")
+    override fun observeDisplayName(): Flow<String> = displayName
+    override suspend fun setDisplayName(displayName: String): LeaderboardResult<Unit> {
+        this.displayName.value = displayName.trim()
+        return LeaderboardResult.Ok(Unit)
+    }
+    override suspend fun createGroup(share: ShareSettings) = LeaderboardResult.Ok(Unit)
+    override suspend fun joinGroup(inviteCode: String, share: ShareSettings) = LeaderboardResult.Ok(Unit)
     override suspend fun restore(recoveryCode: String): LeaderboardResult<Unit> {
         restoreCalls += recoveryCode
         return restoreResult
     }
-    override suspend fun rename(displayName: String) = LeaderboardResult.Ok(Unit)
     override suspend fun refreshGroups() = LeaderboardResult.Ok(Unit)
     override suspend fun updateGroup(groupId: String, share: ShareSettings?, name: String?) = LeaderboardResult.Ok(Unit)
     override suspend fun leaveGroup(groupId: String) = LeaderboardResult.Ok(Unit)

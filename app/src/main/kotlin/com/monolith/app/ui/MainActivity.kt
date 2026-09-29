@@ -160,6 +160,7 @@ class MainActivity : ComponentActivity() {
         /** Screens that already handle missing permissions themselves. */
         private val SETUP_ROUTES = setOf(
             MonolithDestination.Onboarding.route,
+            MonolithDestination.OnboardingName.route,
             MonolithDestination.OnboardingAppSelector.route,
             MonolithDestination.OnboardingNfcLink.route,
             MonolithDestination.OnboardingStrictness.route,

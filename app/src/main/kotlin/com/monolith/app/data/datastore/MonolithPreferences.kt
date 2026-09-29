@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.monolith.app.data.backup.BackupSnapshot
+import com.monolith.app.data.leaderboard.DisplayNameStore
 import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSchedule
 import com.monolith.app.domain.model.BlockSession
@@ -164,12 +165,13 @@ private object Keys {
     val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
     val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     val STRICTNESS_LEVEL = stringPreferencesKey("strictness_level")
+    val DISPLAY_NAME = stringPreferencesKey("display_name")
 }
 
 @Singleton
 class MonolithPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : DisplayNameStore {
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
@@ -188,6 +190,12 @@ class MonolithPreferences @Inject constructor(
 
     suspend fun setOnboardingCompleted() {
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
+    }
+
+    override val displayName: Flow<String> = context.dataStore.data.map { it[Keys.DISPLAY_NAME].orEmpty() }
+
+    override suspend fun setDisplayName(name: String) {
+        context.dataStore.edit { it[Keys.DISPLAY_NAME] = name.trim() }
     }
 
     /**

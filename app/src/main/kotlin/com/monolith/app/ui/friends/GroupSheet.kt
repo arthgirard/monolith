@@ -38,7 +38,7 @@ import com.monolith.app.domain.model.ShareSettings
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.theme.mono
 
-/** Settings for the selected [group], then for the member across all their groups. */
+/** Settings for the selected [group]. The member's own name lives in the app settings. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupSheet(
@@ -49,7 +49,6 @@ fun GroupSheet(
     onRenameGroup: (String) -> Unit,
     onShareChange: (ShareSettings) -> Unit,
     onLeave: () -> Unit,
-    onRename: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     // Leaving the last group deletes the member on the server, so it gets the stronger wording.
@@ -71,9 +70,6 @@ fun GroupSheet(
             SectionHeader(stringResource(R.string.friends_section_group))
             InviteCodeCard(group.inviteCode)
             GroupNameField(group, busy, onRenameGroup)
-
-            SectionHeader(stringResource(R.string.friends_section_you))
-            DisplayNameField(identity.displayName, busy, onRename)
 
             SectionHeader(stringResource(R.string.friends_share_heading_group))
             ShareToggles(group.share, enabled = !busy, onChange = onShareChange)
@@ -144,14 +140,7 @@ private fun InviteCodeCard(inviteCode: String) {
 /** Only groups of three or more have a name; smaller ones go by who's in them. */
 @Composable
 private fun GroupNameField(group: GroupInfo, busy: Boolean, onSave: (String) -> Unit) {
-    if (group.memberCount < 3) {
-        Text(
-            stringResource(R.string.friends_group_name_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        return
-    }
+    if (group.memberCount < 3) return
     var name by rememberSaveable(group.id) { mutableStateOf(group.name.orEmpty()) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
@@ -165,24 +154,6 @@ private fun GroupNameField(group: GroupInfo, busy: Boolean, onSave: (String) -> 
         OutlinedButton(
             onClick = { onSave(name) },
             enabled = !busy && name.trim() != group.name.orEmpty(),
-        ) { Text(stringResource(R.string.friends_rename)) }
-    }
-}
-
-@Composable
-private fun DisplayNameField(displayName: String, busy: Boolean, onSave: (String) -> Unit) {
-    var name by rememberSaveable { mutableStateOf(displayName) }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it.take(24) },
-            label = { Text(stringResource(R.string.friends_name_label)) },
-            singleLine = true,
-            modifier = Modifier.weight(1f),
-        )
-        OutlinedButton(
-            onClick = { onSave(name) },
-            enabled = !busy && name.trim().length in 1..24 && name.trim() != displayName,
         ) { Text(stringResource(R.string.friends_rename)) }
     }
 }

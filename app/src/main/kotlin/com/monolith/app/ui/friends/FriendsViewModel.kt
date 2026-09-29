@@ -61,6 +61,8 @@ enum class FriendsSheet { SETTINGS, ADD }
 data class FriendsUiState(
     val loaded: Boolean = false,
     val identity: Identity? = null,
+    /** The name from setup; empty only on installs set up before it was asked. */
+    val displayName: String = "",
     /** Always one of [identity]'s groups, or null when there are none. */
     val selectedGroupId: String? = null,
     val sheet: FriendsSheet? = null,
@@ -121,6 +123,9 @@ class FriendsViewModel @Inject constructor(
                 if (appeared) syncer.requestSync(immediate = true)
                 if (switched && selected != null) refresh()
             }
+        }
+        viewModelScope.launch {
+            repository.observeDisplayName().collect { name -> state.update { it.copy(displayName = name) } }
         }
         viewModelScope.launch {
             // Names and member counts change as friends join; without an identity this is a no-op.
@@ -190,14 +195,23 @@ class FriendsViewModel @Inject constructor(
 
     fun closeSheet() = state.update { it.copy(sheet = null) }
 
-    /** [displayName] matters only without an identity; the repository ignores it otherwise. */
-    fun create(displayName: String?, share: ShareSettings) =
-        submit(onOk = ::enteredGroup) { repository.createGroup(displayName, share) }
+    /** [displayName] only from an install that has none yet; it is saved as theirs first. */
+    fun create(share: ShareSettings, displayName: String? = null) =
+        submit(onOk = ::enteredGroup) { named(displayName) { repository.createGroup(share) } }
 
-    fun join(inviteCode: String, displayName: String?, share: ShareSettings) =
-        submit(onOk = ::enteredGroup) { repository.joinGroup(inviteCode, displayName, share) }
+    fun join(inviteCode: String, share: ShareSettings, displayName: String? = null) =
+        submit(onOk = ::enteredGroup) { named(displayName) { repository.joinGroup(inviteCode, share) } }
 
-    fun rename(displayName: String) = submit { repository.rename(displayName) }
+    private suspend fun named(
+        displayName: String?,
+        action: suspend () -> LeaderboardResult<Unit>,
+    ): LeaderboardResult<Unit> {
+        if (displayName != null) {
+            val saved = repository.setDisplayName(displayName)
+            if (saved is LeaderboardResult.Err) return saved
+        }
+        return action()
+    }
 
     /** An empty [name] clears it. */
     fun renameGroup(name: String) = submit {

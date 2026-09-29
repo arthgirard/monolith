@@ -13,6 +13,7 @@ import com.monolith.app.ui.appselector.AppSelectorScreen
 import com.monolith.app.ui.home.HomeScreen
 import com.monolith.app.ui.importantpeople.ImportantPeopleScreen
 import com.monolith.app.ui.nfclink.NfcLinkScreen
+import com.monolith.app.ui.onboarding.NameScreen
 import com.monolith.app.ui.onboarding.OnboardingCompleteScreen
 import com.monolith.app.ui.onboarding.OnboardingScreen
 import com.monolith.app.ui.schedule.ScheduleScreen
@@ -22,6 +23,9 @@ import com.monolith.app.ui.friends.FriendsScreen
 import com.monolith.app.ui.timesaved.TimeSavedScreen
 
 private const val TRANSITION_DURATION_MILLIS = 300
+
+/** Name, apps, tag, strictness. The permission step before them is not counted. */
+private const val ONBOARDING_STEPS = 4
 
 @Composable
 fun MonolithNavHost(
@@ -40,22 +44,29 @@ fun MonolithNavHost(
         composable(MonolithDestination.Onboarding.route) {
             OnboardingScreen(
                 onFinished = {
-                    navController.navigate(MonolithDestination.OnboardingAppSelector.route)
+                    navController.navigate(MonolithDestination.OnboardingName.route)
                 },
+            )
+        }
+        composable(MonolithDestination.OnboardingName.route) {
+            NameScreen(
+                onBack = { navController.popBackStack() },
+                onContinue = { navController.navigate(MonolithDestination.OnboardingAppSelector.route) },
+                onboardingStep = 1 to ONBOARDING_STEPS,
             )
         }
         composable(MonolithDestination.OnboardingAppSelector.route) {
             AppSelectorScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = { navController.navigate(MonolithDestination.OnboardingNfcLink.route) },
-                onboardingStep = 1 to 3,
+                onboardingStep = 2 to ONBOARDING_STEPS,
                 onboardingSubtitle = stringResource(R.string.onboarding_select_apps_subtitle),
             )
         }
         composable(MonolithDestination.OnboardingNfcLink.route) {
             NfcLinkScreen(
                 onBack = { navController.popBackStack() },
-                onboardingStep = 2 to 3,
+                onboardingStep = 3 to ONBOARDING_STEPS,
                 onboardingSubtitle = stringResource(R.string.onboarding_link_tag_subtitle),
                 // Skipping the tag still leads through the strictness step, which shows the
                 // levels and lets only Standard be picked until a tag exists. Skipping it
@@ -67,7 +78,7 @@ fun MonolithNavHost(
         composable(MonolithDestination.OnboardingStrictness.route) {
             StrictnessScreen(
                 onBack = { navController.popBackStack() },
-                onboardingStep = 3 to 3,
+                onboardingStep = 4 to ONBOARDING_STEPS,
                 onContinue = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
             )
         }

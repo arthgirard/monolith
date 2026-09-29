@@ -15,6 +15,7 @@ import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,14 +30,17 @@ class LeaderboardRepositoryImplTest {
     private val day = DayAggregate(LocalDate.of(2026, 9, 28), 1000, 1, 0)
     private val today = LocalDate.of(2026, 9, 28)
     private fun ana(vararg groups: GroupDto, token: String = "tok") = Identity(token, "Ana", groups.map { it.toDomain() }, master = "m")
-    private fun repo(api: FakeLeaderboardApi, store: FakeIdentityStore) = LeaderboardRepositoryImpl(api, store, IdentityManager(api, store))
+    private fun repo(api: FakeLeaderboardApi, store: FakeIdentityStore, names: FakeDisplayNameStore = FakeDisplayNameStore()) =
+        LeaderboardRepositoryImpl(api, store, IdentityManager(api, store, names), names)
+
+    private fun repo(api: FakeLeaderboardApi, store: FakeIdentityStore, name: String) = repo(api, store, FakeDisplayNameStore(name))
 
     @Test
     fun `create without identity registers a phone-generated one and selects the new group`() = runBlocking {
         val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1))) }
         val store = FakeIdentityStore()
 
-        val result = repo(api, store).createGroup(" Ana ", share)
+        val result = repo(api, store, " Ana ").createGroup(share)
 
         assertEquals(LeaderboardResult.Ok(Unit), result)
         val identity = store.identity.value!!
@@ -53,14 +57,14 @@ class LeaderboardRepositoryImplTest {
         val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1))) }
         val store = FakeIdentityStore(Identity("tok", "", emptyList(), master = "m"))
 
-        val result = repo(api, store).createGroup(" Ana ", share)
+        val result = repo(api, store, " Ana ").createGroup(share)
 
         assertEquals(LeaderboardResult.Ok(Unit), result)
         assertEquals("tok" to CreateGroupRequest("Ana", ShareDto(true, true, true)), api.createCalls.single())
         assertTrue(api.registerRequests.isEmpty())
         assertEquals(Identity("tok", "Ana", listOf(g1.toDomain()), "m"), store.identity.value)
 
-        repo(api, store).joinGroup("JKLMNPQR", "Ignored", share)
+        repo(api, store, "Ignored").joinGroup("JKLMNPQR", share)
 
         val (token, request) = api.joinCalls.single()
         assertEquals("tok", token)
@@ -75,7 +79,7 @@ class LeaderboardRepositoryImplTest {
         }
         val store = FakeIdentityStore(ana(g1), selected = "g1")
 
-        repo(api, store).createGroup("Ignored", share)
+        repo(api, store, "Ignored").createGroup(share)
 
         val (token, request) = api.createCalls.single()
         assertEquals("tok", token)
@@ -89,7 +93,7 @@ class LeaderboardRepositoryImplTest {
         val api = FakeLeaderboardApi().apply { registerResult = LeaderboardResult.Err(LeaderboardError.NETWORK) }
         val store = FakeIdentityStore()
 
-        val result = repo(api, store).createGroup("Ana", share)
+        val result = repo(api, store, "Ana").createGroup(share)
 
         assertEquals(LeaderboardResult.Err(LeaderboardError.NETWORK), result)
         assertNull(store.identity.value)
@@ -146,14 +150,14 @@ class LeaderboardRepositoryImplTest {
     }
 
     @Test
-    fun `the retry after a dead token keeps the old name when the form gave none`() = runBlocking {
+    fun `the retry after a dead token keeps the old name when setup gave none`() = runBlocking {
         val api = FakeLeaderboardApi().apply {
             deadTokens += "old"
             meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1)))
         }
         val store = FakeIdentityStore(ana(token = "old"))
 
-        val result = repo(api, store).createGroup(null, share)
+        val result = repo(api, store).createGroup(share)
 
         assertEquals(LeaderboardResult.Ok(Unit), result)
         assertEquals("Ana", api.registerRequests.single().displayName)
@@ -264,7 +268,7 @@ class LeaderboardRepositoryImplTest {
         }
         val store = FakeIdentityStore(ana(g1), selected = "g1")
 
-        repo(api, store).createGroup(null, share)
+        repo(api, store).createGroup(share)
 
         assertNull(store.identity.value)
         assertNull(store.selectedGroupId.value)
@@ -339,7 +343,7 @@ class LeaderboardRepositoryImplTest {
         val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1))) }
         val store = FakeIdentityStore().apply { removedNotice.value = true }
 
-        repo(api, store).createGroup("Ana", share)
+        repo(api, store, "Ana").createGroup(share)
 
         assertFalse(store.removedNotice.value)
     }
@@ -368,7 +372,7 @@ class LeaderboardRepositoryImplTest {
         }
         val store = FakeIdentityStore(ana(token = "old"))
 
-        val result = repo(api, store).createGroup(" Ana ", share)
+        val result = repo(api, store, " Ana ").createGroup(share)
 
         assertEquals(LeaderboardResult.Ok(Unit), result)
         val identity = store.identity.value!!
@@ -388,7 +392,7 @@ class LeaderboardRepositoryImplTest {
         }
         val store = FakeIdentityStore(Identity("old", "Ana", emptyList()))
 
-        val result = repo(api, store).createGroup(" Ana ", share)
+        val result = repo(api, store, " Ana ").createGroup(share)
 
         assertEquals(LeaderboardResult.Ok(Unit), result)
         assertEquals("old", api.rotateCalls.single().first)
@@ -399,13 +403,58 @@ class LeaderboardRepositoryImplTest {
     }
 
     @Test
-    fun `rename keeps the master`() = runBlocking {
+    fun `a new name keeps the master and is stored on the phone too`() = runBlocking {
         val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1))) }
         val store = FakeIdentityStore(ana(g1))
+        val names = FakeDisplayNameStore("Ana")
 
-        repo(api, store).rename(" Bea ")
+        repo(api, store, names).setDisplayName(" Bea ")
 
         assertEquals(Identity("tok", "Bea", listOf(g1.toDomain()), "m"), store.identity.value)
+        assertEquals("Bea", names.displayName.value)
+    }
+
+    @Test
+    fun `a new name the server didn't take changes nothing`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { updateMeResult = LeaderboardResult.Err(LeaderboardError.NETWORK) }
+        val store = FakeIdentityStore(ana(g1))
+        val names = FakeDisplayNameStore("Ana")
+
+        val result = repo(api, store, names).setDisplayName("Bea")
+
+        assertEquals(LeaderboardResult.Err(LeaderboardError.NETWORK), result)
+        assertEquals(ana(g1), store.identity.value)
+        assertEquals("Ana", names.displayName.value)
+    }
+
+    @Test
+    fun `a name set without an identity stays on the phone`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { updateMeResult = LeaderboardResult.Err(LeaderboardError.NETWORK) }
+        val store = FakeIdentityStore()
+        val names = FakeDisplayNameStore()
+
+        val result = repo(api, store, names).setDisplayName(" Ana ")
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
+        assertEquals("Ana", names.displayName.value)
+        assertNull(store.identity.value)
+    }
+
+    @Test
+    fun `an install without a setup name shows its identity's`() = runBlocking {
+        val repo = repo(FakeLeaderboardApi(), FakeIdentityStore(ana(g1)))
+
+        assertEquals("Ana", repo.observeDisplayName().first())
+    }
+
+    @Test
+    fun `restore brings the identity's name back as the setup name`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Bea", listOf(g1))) }
+        val names = FakeDisplayNameStore("Ana")
+
+        repo(api, FakeIdentityStore(), names).restore(BackupCrypto.encodeCode(BackupCrypto.newMaster()))
+
+        assertEquals("Bea", names.displayName.value)
     }
 
     @Test

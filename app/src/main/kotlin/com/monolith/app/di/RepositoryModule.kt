@@ -1,6 +1,8 @@
 package com.monolith.app.di
 
+import com.monolith.app.data.datastore.MonolithPreferences
 import com.monolith.app.data.leaderboard.DataStoreIdentityStore
+import com.monolith.app.data.leaderboard.DisplayNameStore
 import com.monolith.app.data.leaderboard.HttpLeaderboardApi
 import com.monolith.app.data.leaderboard.IdentityStore
 import com.monolith.app.data.leaderboard.LeaderboardApi
@@ -59,6 +61,9 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindLeaderboardApi(impl: HttpLeaderboardApi): LeaderboardApi
+
+    @Binds
+    abstract fun bindDisplayNameStore(impl: MonolithPreferences): DisplayNameStore
 
     @Binds
     abstract fun bindIdentityStore(impl: DataStoreIdentityStore): IdentityStore

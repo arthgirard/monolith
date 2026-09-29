@@ -57,7 +57,9 @@ import com.monolith.app.R
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
 import com.monolith.app.domain.model.GroupInfo
+import com.monolith.app.domain.model.DISPLAY_NAME_MAX_LENGTH
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.domain.model.isValidDisplayName
 import com.monolith.app.domain.usecase.groupLabels
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
@@ -117,7 +119,7 @@ fun FriendsScreen(
                 }
                 when {
                     !uiState.loaded -> Unit
-                    group == null -> JoinContent(uiState.busy, identity?.displayName.orEmpty(), viewModel)
+                    group == null -> JoinContent(uiState.busy, uiState.displayName, viewModel)
                     else -> BoardContent(uiState, viewModel)
                 }
             }
@@ -134,15 +136,14 @@ fun FriendsScreen(
                 onRenameGroup = viewModel::renameGroup,
                 onShareChange = viewModel::updateShare,
                 onLeave = viewModel::leaveSelectedGroup,
-                onRename = viewModel::rename,
                 onDismiss = viewModel::closeSheet,
             )
         }
         FriendsSheet.ADD -> AddGroupSheet(
             busy = uiState.busy,
             message = uiState.message,
-            onCreate = { viewModel.create(null, ShareAll) },
-            onJoin = { code -> viewModel.join(code, null, ShareAll) },
+            onCreate = { viewModel.create(ShareAll) },
+            onJoin = { code -> viewModel.join(code, ShareAll) },
             onDismiss = viewModel::closeSheet,
         )
         null -> Unit
@@ -197,20 +198,24 @@ internal val ShareAll = ShareSettings(saved = true, streak = true, pauses = true
 
 @Composable
 private fun JoinContent(busy: Boolean, knownName: String, viewModel: FriendsViewModel) {
-    // An identity kept for its backup already has a name (or an empty one, for backup only).
-    var name by rememberSaveable { mutableStateOf(knownName) }
+    // Setup asks for the name. Only an install set up before it did has none, and asks here.
+    val askName = knownName.isEmpty()
+    var name by rememberSaveable { mutableStateOf("") }
     var inviteCode by rememberSaveable { mutableStateOf("") }
     var showRestore by rememberSaveable { mutableStateOf(false) }
-    val nameValid = name.trim().length in 1..24
+    val nameValid = !askName || isValidDisplayName(name)
+    val newName = name.takeIf { askName }
 
     Text(stringResource(R.string.friends_intro), style = MaterialTheme.typography.bodyLarge)
-    OutlinedTextField(
-        value = name,
-        onValueChange = { name = it.take(24) },
-        label = { Text(stringResource(R.string.friends_name_label)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    if (askName) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it.take(DISPLAY_NAME_MAX_LENGTH) },
+            label = { Text(stringResource(R.string.friends_name_label)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = inviteCode,
@@ -219,12 +224,12 @@ private fun JoinContent(busy: Boolean, knownName: String, viewModel: FriendsView
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
-        OutlinedButton(onClick = { viewModel.join(inviteCode, name, ShareAll) }, enabled = nameValid && inviteCode.isNotBlank() && !busy) {
+        OutlinedButton(onClick = { viewModel.join(inviteCode, ShareAll, newName) }, enabled = nameValid && inviteCode.isNotBlank() && !busy) {
             Text(stringResource(R.string.friends_join))
         }
     }
     HorizontalDivider()
-    Button(onClick = { viewModel.create(name, ShareAll) }, enabled = nameValid && !busy, modifier = Modifier.fillMaxWidth()) {
+    Button(onClick = { viewModel.create(ShareAll, newName) }, enabled = nameValid && !busy, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.friends_create))
     }
     // The same restore as Settings: a code with a backup brings back history and setup too.

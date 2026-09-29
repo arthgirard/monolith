@@ -14,11 +14,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.ui.theme.MonolithTheme
 import kotlinx.coroutines.delay
@@ -26,7 +29,11 @@ import kotlinx.coroutines.delay
 private const val AUTO_ADVANCE_DELAY_MILLIS = 1800L
 
 @Composable
-fun OnboardingCompleteScreen(onFinished: () -> Unit) {
+fun OnboardingCompleteScreen(
+    onFinished: () -> Unit,
+    viewModel: NameViewModel = hiltViewModel(),
+) {
+    val name by viewModel.displayName.collectAsState()
     LaunchedEffect(Unit) {
         delay(AUTO_ADVANCE_DELAY_MILLIS)
         onFinished()
@@ -52,7 +59,12 @@ fun OnboardingCompleteScreen(onFinished: () -> Unit) {
                 )
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    stringResource(R.string.onboarding_complete_title),
+                    when (val current = name) {
+                        // Blank for the moment the name takes to read, not the plain title flashing first.
+                        null -> ""
+                        "" -> stringResource(R.string.onboarding_complete_title)
+                        else -> stringResource(R.string.onboarding_complete_title_named, current)
+                    },
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,

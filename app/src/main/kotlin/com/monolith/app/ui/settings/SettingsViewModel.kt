@@ -9,6 +9,7 @@ import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.UpdateCheckResult
 import com.monolith.app.domain.repository.BackupRepository
+import com.monolith.app.domain.repository.LeaderboardRepository
 import com.monolith.app.domain.usecase.CanInstallPackagesUseCase
 import com.monolith.app.domain.usecase.CheckForUpdateUseCase
 import com.monolith.app.domain.usecase.DownloadUpdateUseCase
@@ -66,7 +67,30 @@ class SettingsViewModel @Inject constructor(
     private val downloadUpdate: DownloadUpdateUseCase,
     private val canInstallPackages: CanInstallPackagesUseCase,
     private val backupRepository: BackupRepository,
+    private val leaderboardRepository: LeaderboardRepository,
 ) : ViewModel() {
+
+    val displayName: StateFlow<String> = leaderboardRepository.observeDisplayName()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    private val _nameBusy = MutableStateFlow(false)
+    val nameBusy: StateFlow<Boolean> = _nameBusy
+
+    /** Friends see the new name once the server has it; offline, nothing changes. */
+    fun setDisplayName(name: String, onSaved: () -> Unit) {
+        if (_nameBusy.value) return
+        _nameBusy.value = true
+        viewModelScope.launch {
+            try {
+                when (val result = leaderboardRepository.setDisplayName(name)) {
+                    is LeaderboardResult.Ok -> onSaved()
+                    is LeaderboardResult.Err -> _errors.tryEmit(result.error)
+                }
+            } finally {
+                _nameBusy.value = false
+            }
+        }
+    }
 
     private val backupBusy = MutableStateFlow(false)
 
@@ -79,10 +103,13 @@ class SettingsViewModel @Inject constructor(
         BackupUiState(enabled = enabled, lastBackupAt = lastBackupAt, recoveryCode = code, busy = busy)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackupUiState())
 
-    private val _backupErrors = MutableSharedFlow<LeaderboardError>(extraBufferCapacity = 1)
+    private val _errors = MutableSharedFlow<LeaderboardError>(extraBufferCapacity = 1)
 
-    /** A toggle that didn't go through (turning on needs the server to register the identity). */
-    val backupErrors: SharedFlow<LeaderboardError> = _backupErrors
+    /**
+     * A backup toggle or a rename that didn't go through: turning backup on needs the server to
+     * register the identity, and a rename needs it to take the new name.
+     */
+    val errors: SharedFlow<LeaderboardError> = _errors
 
     fun setBackupEnabled(enabled: Boolean) {
         if (backupBusy.value) return
@@ -90,7 +117,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val result = backupRepository.setBackupEnabled(enabled)
-                if (result is LeaderboardResult.Err) _backupErrors.tryEmit(result.error)
+                if (result is LeaderboardResult.Err) _errors.tryEmit(result.error)
             } finally {
                 backupBusy.value = false
             }

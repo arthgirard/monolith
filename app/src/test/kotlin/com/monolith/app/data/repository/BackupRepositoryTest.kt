@@ -31,7 +31,8 @@ class BackupRepositoryTest {
         strictness = null,
     )
 
-    private fun repo(api: FakeLeaderboardApi, store: FakeIdentityStore) = BackupRepositoryImpl(api, store, IdentityManager(api, store))
+    private fun repo(api: FakeLeaderboardApi, store: FakeIdentityStore, name: String = "") =
+        BackupRepositoryImpl(api, store, IdentityManager(api, store, FakeDisplayNameStore(name)))
 
     private fun masterOf(identity: Identity?) = BackupCrypto.decodeCode(identity!!.master!!)!!
 
@@ -50,7 +51,18 @@ class BackupRepositoryTest {
     }
 
     @Test
-    fun `ensureIdentity without a name registers a nameless one`() = runBlocking {
+    fun `ensureIdentity without a name takes the one from setup`() = runBlocking {
+        val api = FakeLeaderboardApi()
+        val store = FakeIdentityStore()
+
+        repo(api, store, name = "Ana").ensureIdentity(null)
+
+        assertEquals("Ana", api.registerRequests.single().displayName)
+        assertEquals("Ana", store.identity.value?.displayName)
+    }
+
+    @Test
+    fun `ensureIdentity without any name registers a nameless one`() = runBlocking {
         val api = FakeLeaderboardApi()
         val store = FakeIdentityStore()
 

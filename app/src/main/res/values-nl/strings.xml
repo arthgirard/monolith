@@ -30,12 +30,16 @@
     <string name="onboarding_configuration_title">Instellen</string>
     <string name="onboarding_select_apps_subtitle">Kies de apps die u wilt blokkeren.</string>
     <string name="onboarding_link_tag_subtitle">Koppel uw NFC-tag om het blok om te zetten.</string>
+    <string name="onboarding_name_subtitle">Hoe moeten we u noemen?</string>
+    <string name="name_caption">Alleen mensen in uw groepen zien het.</string>
 
     <!-- Settings -->
     <string name="settings_title">Instellingen</string>
     <string name="settings_locked_banner">Houd uw tag ertegen om te wijzigen</string>
     <string name="settings_language">Taal</string>
     <string name="settings_language_system">Systeemstandaard</string>
+    <string name="settings_name">Naam</string>
+    <string name="settings_name_unset">Niet ingesteld</string>
 
     <!-- Strictness -->
     <string name="strictness_title">Strengheid</string>
@@ -48,6 +52,7 @@
     <string name="strictness_absolute_desc">Niets tilt Monolith op, behalve de tag.</string>
     <string name="strictness_uninstall_caveat">U kunt Monolith nog steeds verwijderen. Dat is met opzet.</string>
     <string name="onboarding_complete_title">Klaar!</string>
+    <string name="onboarding_complete_title_named">Klaar, %1$s!</string>
     <string name="onboarding_complete_desc">Welkom bij Monolith.</string>
 
     <!-- Home -->
@@ -68,6 +73,7 @@
     <string name="bypass_confirm_body">Dit zet Monolith 15 minuten uit. U krijgt één ontgrendeling per blok; uw tag zet hem terug. Alleen gebruiken als u de tag kwijt bent.</string>
     <string name="bypass_confirm_start">Ontgrendelen</string>
     <string name="cancel">Annuleren</string>
+    <string name="save">Opslaan</string>
 
     <!-- Activation without the tag -->
     <string name="activate_confirm_title">Monolith aanzetten?</string>
@@ -296,9 +302,7 @@
     <string name="friends_add_group">Groep toevoegen</string>
     <string name="friends_add_join_heading">Deelnemen met een code</string>
     <string name="friends_section_group">Deze groep</string>
-    <string name="friends_section_you">U, in elke groep</string>
     <string name="friends_group_name_label">Groepsnaam</string>
-    <string name="friends_group_name_hint">Een groep van twee heet naar de andere persoon.</string>
     <string name="friends_leave_group">Deze groep verlaten</string>
     <string name="friends_leave_group_confirm_title">Deze groep verlaten?</string>
     <string name="friends_leave_group_confirm_body">U ziet deze ranglijst dan niet meer. U kunt weer deelnemen met de uitnodigingscode.</string>

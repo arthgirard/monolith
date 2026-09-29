@@ -30,12 +30,16 @@
     <string name="onboarding_configuration_title">Einrichtung</string>
     <string name="onboarding_select_apps_subtitle">Wählen Sie die Apps, die blockiert werden.</string>
     <string name="onboarding_link_tag_subtitle">Verknüpfen Sie Ihren NFC-Tag zum Umschalten.</string>
+    <string name="onboarding_name_subtitle">Wie sollen wir Sie nennen?</string>
+    <string name="name_caption">Nur Personen in Ihren Gruppen sehen ihn.</string>
 
     <!-- Settings -->
     <string name="settings_title">Einstellungen</string>
     <string name="settings_locked_banner">Tag antippen, um das zu ändern</string>
     <string name="settings_language">Sprache</string>
     <string name="settings_language_system">Systemstandard</string>
+    <string name="settings_name">Name</string>
+    <string name="settings_name_unset">Nicht festgelegt</string>
 
     <!-- Strictness -->
     <string name="strictness_title">Strenge</string>
@@ -48,6 +52,7 @@
     <string name="strictness_absolute_desc">Nur der Tag hebt Monolith auf.</string>
     <string name="strictness_uninstall_caveat">Sie können Monolith weiterhin deinstallieren. Das ist Absicht.</string>
     <string name="onboarding_complete_title">Alles bereit!</string>
+    <string name="onboarding_complete_title_named">Alles bereit, %1$s!</string>
     <string name="onboarding_complete_desc">Willkommen bei Monolith.</string>
 
     <!-- Home -->
@@ -68,6 +73,7 @@
     <string name="bypass_confirm_body">Das schaltet Monolith für 15 Minuten ab. Sie bekommen nur eine Freigabe pro Sperre, der Tag setzt sie zurück. Nutzen Sie sie nur, wenn Sie Ihren Tag verloren haben.</string>
     <string name="bypass_confirm_start">Freigabe starten</string>
     <string name="cancel">Abbrechen</string>
+    <string name="save">Speichern</string>
 
     <!-- Activation without the tag -->
     <string name="activate_confirm_title">Monolith einschalten?</string>
@@ -296,9 +302,7 @@
     <string name="friends_add_group">Gruppe hinzufügen</string>
     <string name="friends_add_join_heading">Mit Code beitreten</string>
     <string name="friends_section_group">Diese Gruppe</string>
-    <string name="friends_section_you">Sie, in allen Gruppen</string>
     <string name="friends_group_name_label">Gruppenname</string>
-    <string name="friends_group_name_hint">Eine Zweiergruppe trägt den Namen der anderen Person.</string>
     <string name="friends_leave_group">Diese Gruppe verlassen</string>
     <string name="friends_leave_group_confirm_title">Diese Gruppe verlassen?</string>
     <string name="friends_leave_group_confirm_body">Sie sehen diese Rangliste dann nicht mehr. Mit dem Einladungscode können Sie wieder beitreten.</string>

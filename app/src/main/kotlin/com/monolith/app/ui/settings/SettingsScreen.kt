@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
@@ -34,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -57,6 +59,8 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.AppLanguage
+import com.monolith.app.domain.model.DISPLAY_NAME_MAX_LENGTH
+import com.monolith.app.domain.model.isValidDisplayName
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.ui.components.MonolithSnackbarHost
 import com.monolith.app.ui.components.SettingsDivider
@@ -82,6 +86,9 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     val backupState by viewModel.backupState.collectAsState()
+    val displayName by viewModel.displayName.collectAsState()
+    val nameBusy by viewModel.nameBusy.collectAsState()
+    var showNameDialog by rememberSaveable { mutableStateOf(false) }
     var showRestore by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -93,7 +100,7 @@ fun SettingsScreen(
     val language = remember(context) { AppLocale.selected(context) }
 
     LaunchedEffect(Unit) {
-        viewModel.backupErrors.collect { error ->
+        viewModel.errors.collect { error ->
             val text = if (error == LeaderboardError.NETWORK) R.string.friends_error_network else R.string.friends_error_generic
             snackbarHostState.showSnackbar(context.getString(text))
         }
@@ -161,6 +168,14 @@ fun SettingsScreen(
                     .padding(24.dp),
             ) {
                 SettingsGroup {
+                    // Not behind the tag: it only changes what friends see.
+                    SettingsRow(
+                        icon = Icons.Filled.Person,
+                        label = stringResource(R.string.settings_name),
+                        value = displayName.ifEmpty { stringResource(R.string.settings_name_unset) },
+                        onClick = { showNameDialog = true },
+                    )
+                    SettingsDivider()
                     SettingsRow(
                         icon = Icons.Filled.Lock,
                         label = stringResource(R.string.strictness_title),
@@ -204,6 +219,15 @@ fun SettingsScreen(
 
     if (showRestore) {
         RestoreDialog(onDismiss = { showRestore = false })
+    }
+
+    if (showNameDialog) {
+        NameDialog(
+            current = displayName,
+            busy = nameBusy,
+            onSave = { name -> viewModel.setDisplayName(name, onSaved = { showNameDialog = false }) },
+            onDismiss = { showNameDialog = false },
+        )
     }
 
     if (showLanguagePicker) {
@@ -292,6 +316,49 @@ fun SettingsScreen(
         }
         else -> Unit
     }
+}
+
+@Composable
+private fun NameDialog(
+    current: String,
+    busy: Boolean,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_name)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    stringResource(R.string.name_caption),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(DISPLAY_NAME_MAX_LENGTH) },
+                    label = { Text(stringResource(R.string.friends_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(name) },
+                enabled = !busy && isValidDisplayName(name) && name.trim() != current,
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 /**

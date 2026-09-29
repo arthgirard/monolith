@@ -2,6 +2,7 @@ package com.monolith.app.data.repository
 
 import com.monolith.app.data.leaderboard.BoardResponse
 import com.monolith.app.data.leaderboard.CreateGroupRequest
+import com.monolith.app.data.leaderboard.DisplayNameStore
 import com.monolith.app.data.leaderboard.GroupDto
 import com.monolith.app.data.leaderboard.GroupResponse
 import com.monolith.app.data.leaderboard.IdentityStore
@@ -52,12 +53,18 @@ internal class FakeIdentityStore(initial: Identity? = null, selected: String? = 
     override suspend fun dismissRemovedNotice() { removedNotice.value = false }
 }
 
+internal class FakeDisplayNameStore(initial: String = "") : DisplayNameStore {
+    override val displayName = MutableStateFlow(initial)
+    override suspend fun setDisplayName(name: String) { displayName.value = name.trim() }
+}
+
 internal class FakeLeaderboardApi : LeaderboardApi {
     var createResult: LeaderboardResult<GroupResponse>? = null
     var meResult: LeaderboardResult<MeResponse> = LeaderboardResult.Ok(MeResponse("Ana", emptyList()))
     var boardResult: LeaderboardResult<BoardResponse> = LeaderboardResult.Ok(BoardResponse(emptyList()))
     var leaveResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
     var updateGroupResult: LeaderboardResult<GroupResponse>? = null
+    var updateMeResult: LeaderboardResult<MeResponse>? = null
     var registerResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
     var rotateResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
     var putBackupResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
@@ -107,7 +114,7 @@ internal class FakeLeaderboardApi : LeaderboardApi {
         return meResult
     }
     override suspend fun updateMe(token: String, request: UpdateMeRequest): LeaderboardResult<MeResponse> =
-        LeaderboardResult.Ok(MeResponse(request.displayName, (meResult as LeaderboardResult.Ok).value.groups))
+        updateMeResult ?: LeaderboardResult.Ok(MeResponse(request.displayName, (meResult as LeaderboardResult.Ok).value.groups))
     override suspend fun updateGroup(token: String, groupId: String, request: UpdateGroupRequest): LeaderboardResult<GroupResponse> {
         updateGroupRequests += request
         return updateGroupResult ?: LeaderboardResult.Err(LeaderboardError.SERVER)

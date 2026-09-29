@@ -30,12 +30,16 @@
     <string name="onboarding_configuration_title">Configuración</string>
     <string name="onboarding_select_apps_subtitle">Elija las apps que quiere bloquear.</string>
     <string name="onboarding_link_tag_subtitle">Vincule su etiqueta NFC para cambiar el bloqueo.</string>
+    <string name="onboarding_name_subtitle">¿Cómo debemos llamarle?</string>
+    <string name="name_caption">Solo lo ven las personas de sus grupos.</string>
 
     <!-- Settings -->
     <string name="settings_title">Ajustes</string>
     <string name="settings_locked_banner">Toque su etiqueta para cambiarlo</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_language_system">Predeterminado del sistema</string>
+    <string name="settings_name">Nombre</string>
+    <string name="settings_name_unset">Sin definir</string>
 
     <!-- Strictness -->
     <string name="strictness_title">Rigor</string>
@@ -48,6 +52,7 @@
     <string name="strictness_absolute_desc">Nada levanta Monolith salvo la etiqueta.</string>
     <string name="strictness_uninstall_caveat">Aún puede desinstalar Monolith. Es a propósito.</string>
     <string name="onboarding_complete_title">¡Todo listo!</string>
+    <string name="onboarding_complete_title_named">¡Todo listo, %1$s!</string>
     <string name="onboarding_complete_desc">Monolith le da la bienvenida.</string>
 
     <!-- Home -->
@@ -68,6 +73,7 @@
     <string name="bypass_confirm_body">Esto apaga Monolith durante 15 minutos. Solo tiene un desbloqueo por bloqueo; toque su etiqueta para reiniciarlo. Úselo solo si ha perdido la etiqueta.</string>
     <string name="bypass_confirm_start">Desbloquear</string>
     <string name="cancel">Cancelar</string>
+    <string name="save">Guardar</string>
 
     <!-- Activation without the tag -->
     <string name="activate_confirm_title">¿Activar Monolith?</string>
@@ -296,9 +302,7 @@
     <string name="friends_add_group">Añadir un grupo</string>
     <string name="friends_add_join_heading">Unirse con un código</string>
     <string name="friends_section_group">Este grupo</string>
-    <string name="friends_section_you">Usted, en todos los grupos</string>
     <string name="friends_group_name_label">Nombre del grupo</string>
-    <string name="friends_group_name_hint">Un grupo de dos lleva el nombre de la otra persona.</string>
     <string name="friends_leave_group">Salir de este grupo</string>
     <string name="friends_leave_group_confirm_title">¿Salir de este grupo?</string>
     <string name="friends_leave_group_confirm_body">Dejará de ver esta clasificación. Puede volver con el código de invitación.</string>

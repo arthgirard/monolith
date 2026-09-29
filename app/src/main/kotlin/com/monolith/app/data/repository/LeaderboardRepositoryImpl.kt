@@ -3,6 +3,7 @@ package com.monolith.app.data.repository
 import com.monolith.app.data.backup.BackupCrypto
 import com.monolith.app.data.leaderboard.BoardRowDto
 import com.monolith.app.data.leaderboard.CreateGroupRequest
+import com.monolith.app.data.leaderboard.DisplayNameStore
 import com.monolith.app.data.leaderboard.GroupDto
 import com.monolith.app.data.leaderboard.GroupResponse
 import com.monolith.app.data.leaderboard.IdentityStore
@@ -26,6 +27,8 @@ import com.monolith.app.domain.model.map
 import com.monolith.app.domain.repository.LeaderboardRepository
 import com.monolith.app.domain.usecase.shareUnion
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
@@ -36,6 +39,7 @@ class LeaderboardRepositoryImpl @Inject constructor(
     private val api: LeaderboardApi,
     private val store: IdentityStore,
     private val identities: IdentityManager,
+    private val names: DisplayNameStore,
 ) : LeaderboardRepository {
 
     override fun observeIdentity(): Flow<Identity?> = store.identity
@@ -48,11 +52,35 @@ class LeaderboardRepositoryImpl @Inject constructor(
 
     override suspend fun dismissRemovedNotice() = store.dismissRemovedNotice()
 
-    override suspend fun createGroup(displayName: String?, share: ShareSettings): LeaderboardResult<Unit> =
-        enterGroup(displayName) { token, name -> api.createGroup(token, CreateGroupRequest(name, share.toDto())) }
+    // Installs set up before the name was asked have only their identity's.
+    override fun observeDisplayName(): Flow<String> =
+        combine(names.displayName, store.identity) { local, identity -> local.ifEmpty { identity?.displayName.orEmpty() } }
+            .distinctUntilChanged()
 
-    override suspend fun joinGroup(inviteCode: String, displayName: String?, share: ShareSettings): LeaderboardResult<Unit> =
-        enterGroup(displayName) { token, name -> api.join(token, JoinRequest(inviteCode.trim(), name, share.toDto())) }
+    override suspend fun setDisplayName(displayName: String): LeaderboardResult<Unit> {
+        val name = displayName.trim()
+        val identity = store.identity.first()
+        if (identity == null || identity.displayName == name) {
+            names.setDisplayName(name)
+            return LeaderboardResult.Ok(Unit)
+        }
+        return guarded(identity) { api.updateMe(identity.token, UpdateMeRequest(name)) }
+            .andThen { me ->
+                names.setDisplayName(me.displayName)
+                val current = store.identity.first()
+                if (current?.token == identity.token) {
+                    store.save(current.copy(displayName = me.displayName, groups = me.groups.map(GroupDto::toDomain)))
+                }
+            }
+    }
+
+    override suspend fun createGroup(share: ShareSettings): LeaderboardResult<Unit> =
+        enterGroup(profileName()) { token, name -> api.createGroup(token, CreateGroupRequest(name, share.toDto())) }
+
+    override suspend fun joinGroup(inviteCode: String, share: ShareSettings): LeaderboardResult<Unit> =
+        enterGroup(profileName()) { token, name -> api.join(token, JoinRequest(inviteCode.trim(), name, share.toDto())) }
+
+    private suspend fun profileName(): String? = observeDisplayName().first().takeIf { it.isNotEmpty() }
 
     override suspend fun restore(recoveryCode: String): LeaderboardResult<Unit> {
         val master = BackupCrypto.decodeCode(recoveryCode) ?: return LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
@@ -67,17 +95,9 @@ class LeaderboardRepositoryImpl @Inject constructor(
             }
             store.save(Identity(token, me.displayName, groups, BackupCrypto.encodeCode(master), me.backupAt))
             store.select(groups.firstOrNull()?.id)
+            // The restored identity's name is the one friends know; a backup-only one has none.
+            if (me.displayName.isNotEmpty()) names.setDisplayName(me.displayName)
         }
-    }
-
-    override suspend fun rename(displayName: String): LeaderboardResult<Unit> = authed { identity ->
-        api.updateMe(identity.token, UpdateMeRequest(displayName.trim()))
-            .andThen { me ->
-                val current = store.identity.first()
-                if (current?.token == identity.token) {
-                    store.save(current.copy(displayName = me.displayName, groups = me.groups.map(GroupDto::toDomain)))
-                }
-            }
     }
 
     override suspend fun refreshGroups(): LeaderboardResult<Unit> = authed { identity ->
@@ -143,8 +163,8 @@ class LeaderboardRepositoryImpl @Inject constructor(
 
     /**
      * Creating and joining first make sure there is an identity (registering a new one, or
-     * migrating one from before backups), then always send its token. [displayName] goes along
-     * only while the stored name is empty: a named identity keeps its name.
+     * migrating one from before backups), then always send its token. [displayName], the one from
+     * setup, goes along only while the identity's name is empty: a named identity keeps its name.
      *
      * An identity with no cached group may be a dead one (the last leave's refresh was offline,
      * or a token from the single-group build): on a 401 it is cleared quietly and the call is
@@ -169,7 +189,7 @@ class LeaderboardRepositoryImpl @Inject constructor(
         if (!retried && tried != null && tried.groups.isEmpty() && result is LeaderboardResult.Err &&
             result.error == LeaderboardError.UNAUTHORIZED && store.identity.first() == null
         ) {
-            // The form may not have asked for a name (there was an identity): keep the old one.
+            // An install set up before the name was asked may have only the old identity's.
             return enterGroup(name ?: tried.displayName.takeIf { it.isNotEmpty() }, retried = true, call)
         }
         if (identity == null) return result.andThen { }

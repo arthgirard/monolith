@@ -2,6 +2,7 @@ package com.monolith.app.ui.navigation
 
 sealed class MonolithDestination(val route: String) {
     data object Onboarding : MonolithDestination("onboarding")
+    data object OnboardingName : MonolithDestination("onboarding_name")
     data object OnboardingAppSelector : MonolithDestination("onboarding_app_selector")
     data object OnboardingNfcLink : MonolithDestination("onboarding_nfc_link")
     data object OnboardingStrictness : MonolithDestination("onboarding_strictness")
