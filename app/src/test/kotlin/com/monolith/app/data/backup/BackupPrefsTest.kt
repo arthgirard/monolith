@@ -45,6 +45,33 @@ class BackupPrefsTest {
     }
 
     @Test
+    fun `a running session is backed up as ending at the backup`() {
+        val active = booleanPreferencesKey("block_mode_active")
+        val started = longPreferencesKey("session_started_at")
+        val prefs = mutablePreferencesOf(active to true, started to 100L)
+        applySnapshot(prefs, snapshot)
+        val read = readSnapshot(prefs, now = 500)
+        assertEquals(snapshot.sessions + BackupSnapshot.SessionEntry(100, 500), read.sessions)
+    }
+
+    @Test
+    fun `a running session leaves out its bypass, and one not started yet adds nothing`() {
+        val active = booleanPreferencesKey("block_mode_active")
+        val started = longPreferencesKey("session_started_at")
+        val bypass = longPreferencesKey("bypass_expires_at")
+        val bypassLength = com.monolith.app.domain.model.BlockState.BYPASS_DURATION_MILLIS
+        val prefs = mutablePreferencesOf(active to true, started to 0L, bypass to bypassLength + 1_000)
+        val read = readSnapshot(prefs, now = bypassLength + 5_000)
+        assertEquals(
+            listOf(BackupSnapshot.SessionEntry(0, 1_000), BackupSnapshot.SessionEntry(bypassLength + 1_000, bypassLength + 5_000)),
+            read.sessions,
+        )
+        // An app unlock pushes the session start past now: nothing has accrued.
+        val unlocked = mutablePreferencesOf(active to true, started to 900L)
+        assertEquals(emptyList<BackupSnapshot.SessionEntry>(), readSnapshot(unlocked, now = 500).sessions)
+    }
+
+    @Test
     fun `restore replaces rather than merges sessions and apps`() {
         val prefs = mutablePreferencesOf()
         applySnapshot(prefs, snapshot)

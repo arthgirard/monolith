@@ -304,25 +304,9 @@ class MonolithPreferences @Inject constructor(
      * it just doesn't turn Monolith off to do it.
      */
     private fun commitRunningSegment(prefs: MutablePreferences, startedAt: Long, now: Long) {
-        // [startedAt] can sit in the future: [grantAppUnlock] fast-forwards the session clock past
-        // an app's unlock window. Nothing has accrued yet in that case -- committing anyway would
-        // write a negative-length segment, and hand the clamps below an inverted range that throws.
-        if (now <= startedAt) return
+        val newSegments = runningSegments(prefs, startedAt, now)
+        if (newSegments.isEmpty()) return
         val cutoff = now - SESSION_RETENTION_MILLIS
-        // Bypass (emergency mode) minutes don't count toward time gained: carve the bypass
-        // window out of this session instead of crediting the full span.
-        val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]?.takeIf { it > 0 }
-        val newSegments = if (bypassExpiresAt != null) {
-            val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
-            val beforeBypassEnd = bypassStartedAt.coerceIn(startedAt, now)
-            val afterBypassStart = bypassExpiresAt.coerceIn(startedAt, now)
-            listOfNotNull(
-                BlockSessionDto(startedAt, beforeBypassEnd).takeIf { beforeBypassEnd > startedAt },
-                BlockSessionDto(afterBypassStart, now).takeIf { now > afterBypassStart },
-            )
-        } else {
-            listOf(BlockSessionDto(startedAt, now))
-        }
         val updated = decodeBlockSessions(prefs[Keys.BLOCK_SESSIONS]).filter { it.end >= cutoff } + newSegments
         prefs[Keys.BLOCK_SESSIONS] = json.encodeToString(updated)
     }
@@ -581,7 +565,9 @@ private inline fun <reified T> decodeList(raw: String?): List<T> {
 
 internal fun readSnapshot(prefs: Preferences, now: Long): BackupSnapshot = BackupSnapshot(
     createdAt = now,
-    sessions = decodeList<BlockSessionDto>(prefs[Keys.BLOCK_SESSIONS])
+    // A running session is only written to history when it ends; back it up as ending now, so a
+    // restore carries today's time gained without turning Monolith on for the other phone.
+    sessions = (decodeList<BlockSessionDto>(prefs[Keys.BLOCK_SESSIONS]) + activeSegments(prefs, now))
         .map { BackupSnapshot.SessionEntry(it.start, it.end) },
     blockedPackages = prefs[Keys.BLOCKED_PACKAGES].orEmpty().toList(),
     importantPeople = decodeList<ImportantPersonDto>(prefs[Keys.IMPORTANT_PEOPLE])
@@ -590,6 +576,31 @@ internal fun readSnapshot(prefs: Preferences, now: Long): BackupSnapshot = Backu
         .map { BackupSnapshot.ScheduleEntry(it.id, it.enabled, it.days, it.startMinuteOfDay) },
     strictness = prefs[Keys.STRICTNESS_LEVEL],
 )
+
+private fun activeSegments(prefs: Preferences, now: Long): List<BlockSessionDto> {
+    if (prefs[Keys.BLOCK_MODE_ACTIVE] != true) return emptyList()
+    val startedAt = prefs[Keys.SESSION_STARTED_AT] ?: return emptyList()
+    return runningSegments(prefs, startedAt, now)
+}
+
+/**
+ * What the session running since [startedAt] adds to history if it ends at [now]. [startedAt] can
+ * sit in the future: [MonolithPreferences.grantAppUnlock] fast-forwards the session clock past an
+ * app's unlock window, and nothing has accrued yet in that case. Bypass (emergency mode) minutes
+ * don't count toward time gained, so the bypass window is carved out rather than credited.
+ */
+private fun runningSegments(prefs: Preferences, startedAt: Long, now: Long): List<BlockSessionDto> {
+    if (now <= startedAt) return emptyList()
+    val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]?.takeIf { it > 0 }
+        ?: return listOf(BlockSessionDto(startedAt, now))
+    val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
+    val beforeBypassEnd = bypassStartedAt.coerceIn(startedAt, now)
+    val afterBypassStart = bypassExpiresAt.coerceIn(startedAt, now)
+    return listOfNotNull(
+        BlockSessionDto(startedAt, beforeBypassEnd).takeIf { beforeBypassEnd > startedAt },
+        BlockSessionDto(afterBypassStart, now).takeIf { now > afterBypassStart },
+    )
+}
 
 /** Replaces exactly the five backed-up keys; everything device-bound is left alone. */
 internal fun applySnapshot(prefs: MutablePreferences, snapshot: BackupSnapshot) {
