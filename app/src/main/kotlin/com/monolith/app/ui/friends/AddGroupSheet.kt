@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -24,25 +25,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.monolith.app.R
-import com.monolith.app.domain.model.ShareSettings
 
 /** Another group for a member who already has one: their name comes along, so none is asked. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGroupSheet(
-    defaultShare: ShareSettings,
     busy: Boolean,
     message: FriendsMessage?,
-    onCreate: (ShareSettings) -> Unit,
-    onJoin: (inviteCode: String, share: ShareSettings) -> Unit,
+    onCreate: () -> Unit,
+    onJoin: (inviteCode: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var inviteCode by rememberSaveable { mutableStateOf("") }
-    // Saveable one by one: a rotation must not quietly turn back on a signal the member hid.
-    var shareSaved by rememberSaveable { mutableStateOf(defaultShare.saved) }
-    var shareStreak by rememberSaveable { mutableStateOf(defaultShare.streak) }
-    var sharePauses by rememberSaveable { mutableStateOf(defaultShare.pauses) }
-    val share = ShareSettings(saved = shareSaved, streak = shareStreak, pauses = sharePauses)
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -55,14 +49,6 @@ fun AddGroupSheet(
             message?.let {
                 Text(stringResource(it.text), color = MaterialTheme.colorScheme.error)
             }
-            ShareToggles(share, enabled = !busy, onChange = {
-                shareSaved = it.saved
-                shareStreak = it.streak
-                sharePauses = it.pauses
-            })
-            Button(onClick = { onCreate(share) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.friends_create))
-            }
             SectionHeader(stringResource(R.string.friends_add_join_heading))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -72,9 +58,13 @@ fun AddGroupSheet(
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedButton(onClick = { onJoin(inviteCode, share) }, enabled = inviteCode.isNotBlank() && !busy) {
+                OutlinedButton(onClick = { onJoin(inviteCode) }, enabled = inviteCode.isNotBlank() && !busy) {
                     Text(stringResource(R.string.friends_join))
                 }
+            }
+            HorizontalDivider()
+            Button(onClick = onCreate, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.friends_create))
             }
         }
     }

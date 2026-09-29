@@ -81,7 +81,14 @@ fun GroupSheet(
             SectionHeader(stringResource(R.string.friends_section_group))
             InviteCodeCard(group.inviteCode)
             GroupNameField(group, busy, onRenameGroup)
+
+            SectionHeader(stringResource(R.string.friends_section_you))
+            DisplayNameField(identity.displayName, busy, onRename)
+            RecoveryCard(identity.token)
+
+            SectionHeader(stringResource(R.string.friends_share_heading_group))
             ShareToggles(group.share, enabled = !busy, onChange = onShareChange)
+
             TextButton(
                 onClick = { confirmLeave = true },
                 enabled = !busy,
@@ -90,10 +97,6 @@ fun GroupSheet(
             ) {
                 Text(stringResource(if (lastGroup) R.string.friends_leave else R.string.friends_leave_group))
             }
-
-            SectionHeader(stringResource(R.string.friends_section_you))
-            DisplayNameField(identity.displayName, busy, onRename)
-            RecoveryCard(identity.token)
         }
     }
 

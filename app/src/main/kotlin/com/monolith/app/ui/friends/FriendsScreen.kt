@@ -140,11 +140,10 @@ fun FriendsScreen(
             )
         }
         FriendsSheet.ADD -> AddGroupSheet(
-            defaultShare = group?.share ?: ShareSettings(saved = true, streak = true, pauses = true),
             busy = uiState.busy,
             message = uiState.message,
-            onCreate = { share -> viewModel.create(null, share) },
-            onJoin = { code, share -> viewModel.join(code, null, share) },
+            onCreate = { viewModel.create(null, ShareAll) },
+            onJoin = { code -> viewModel.join(code, null, ShareAll) },
             onDismiss = viewModel::closeSheet,
         )
         null -> Unit
@@ -194,17 +193,15 @@ private fun GroupSwitcher(
     }
 }
 
+/** Creating or joining shares everything; what a group sees is adjusted afterwards in its settings. */
+internal val ShareAll = ShareSettings(saved = true, streak = true, pauses = true)
+
 @Composable
 private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
     var name by rememberSaveable { mutableStateOf("") }
     var inviteCode by rememberSaveable { mutableStateOf("") }
     var recoveryCode by rememberSaveable { mutableStateOf("") }
     var showRestore by rememberSaveable { mutableStateOf(false) }
-    // Saveable one by one: a rotation must not quietly turn back on a signal the member hid.
-    var shareSaved by rememberSaveable { mutableStateOf(true) }
-    var shareStreak by rememberSaveable { mutableStateOf(true) }
-    var sharePauses by rememberSaveable { mutableStateOf(true) }
-    val share = ShareSettings(saved = shareSaved, streak = shareStreak, pauses = sharePauses)
     val nameValid = name.trim().length in 1..24
 
     Text(stringResource(R.string.friends_intro), style = MaterialTheme.typography.bodyLarge)
@@ -215,23 +212,6 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    ShareToggles(share, enabled = !busy, onChange = {
-        shareSaved = it.saved
-        shareStreak = it.streak
-        sharePauses = it.pauses
-    })
-    Button(onClick = { viewModel.create(name, share) }, enabled = nameValid && !busy, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.friends_create))
-    }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        HorizontalDivider(modifier = Modifier.weight(1f))
-        Text(
-            stringResource(R.string.friends_join_divider),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        HorizontalDivider(modifier = Modifier.weight(1f))
-    }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = inviteCode,
@@ -240,9 +220,13 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
-        OutlinedButton(onClick = { viewModel.join(inviteCode, name, share) }, enabled = nameValid && inviteCode.isNotBlank() && !busy) {
+        OutlinedButton(onClick = { viewModel.join(inviteCode, name, ShareAll) }, enabled = nameValid && inviteCode.isNotBlank() && !busy) {
             Text(stringResource(R.string.friends_join))
         }
+    }
+    HorizontalDivider()
+    Button(onClick = { viewModel.create(name, ShareAll) }, enabled = nameValid && !busy, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.friends_create))
     }
     if (!showRestore) {
         TextButton(onClick = { showRestore = true }) { Text(stringResource(R.string.friends_restore)) }
@@ -266,11 +250,6 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
 @Composable
 internal fun ShareToggles(share: ShareSettings, enabled: Boolean, onChange: (ShareSettings) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            stringResource(R.string.friends_share_heading),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         SettingsGroup {
             SettingsToggleRow(stringResource(R.string.friends_share_saved), share.saved, { onChange(share.copy(saved = it)) }, enabled)
             SettingsDivider(startInset = 20.dp)
