@@ -296,4 +296,16 @@
     <string name="friends_leave_confirm_title">Quitter le groupe ?</string>
     <string name="friends_leave_confirm_body">Vos statistiques sont supprimées du serveur. Vous pourrez revenir avec le code d\'invitation, mais votre historique ne reviendra pas.</string>
     <string name="friends_leave_confirm">Quitter</string>
+    <string name="friends_add_group">Ajouter un groupe</string>
+    <string name="friends_add_join_heading">Rejoindre avec un code</string>
+    <string name="friends_section_group">Ce groupe</string>
+    <string name="friends_section_you">Vous, dans tous les groupes</string>
+    <string name="friends_group_name_label">Nom du groupe</string>
+    <string name="friends_group_name_hint">Un groupe de deux porte le nom de l\'autre personne.</string>
+    <string name="friends_leave_group">Quitter ce groupe</string>
+    <string name="friends_leave_group_confirm_title">Quitter ce groupe ?</string>
+    <string name="friends_leave_group_confirm_body">Vous ne verrez plus ce classement. Vous pourrez revenir avec le code d\'invitation.</string>
+    <string name="friends_error_too_many">Vous êtes déjà dans 10 groupes.</string>
+    <string name="friends_error_already_member">Vous êtes déjà dans ce groupe.</string>
+    <string name="friends_error_name_needs_three">Seuls les groupes de trois ou plus peuvent avoir un nom.</string>
 </resources>

@@ -296,4 +296,16 @@
     <string name="friends_leave_confirm_title">Gruppe verlassen?</string>
     <string name="friends_leave_confirm_body">Ihre Statistiken werden vom Server gelöscht. Mit dem Einladungscode können Sie wieder beitreten, aber Ihr Verlauf kommt nicht zurück.</string>
     <string name="friends_leave_confirm">Verlassen</string>
+    <string name="friends_add_group">Gruppe hinzufügen</string>
+    <string name="friends_add_join_heading">Mit Code beitreten</string>
+    <string name="friends_section_group">Diese Gruppe</string>
+    <string name="friends_section_you">Sie, in allen Gruppen</string>
+    <string name="friends_group_name_label">Gruppenname</string>
+    <string name="friends_group_name_hint">Eine Zweiergruppe trägt den Namen der anderen Person.</string>
+    <string name="friends_leave_group">Gruppe verlassen</string>
+    <string name="friends_leave_group_confirm_title">Diese Gruppe verlassen?</string>
+    <string name="friends_leave_group_confirm_body">Sie sehen diese Rangliste dann nicht mehr. Mit dem Einladungscode können Sie wieder beitreten.</string>
+    <string name="friends_error_too_many">Sie sind bereits in 10 Gruppen.</string>
+    <string name="friends_error_already_member">Sie sind bereits in dieser Gruppe.</string>
+    <string name="friends_error_name_needs_three">Nur Gruppen ab drei Personen können einen Namen haben.</string>
 </resources>

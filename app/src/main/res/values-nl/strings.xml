@@ -296,4 +296,16 @@
     <string name="friends_leave_confirm_title">Groep verlaten?</string>
     <string name="friends_leave_confirm_body">Uw statistieken worden van de server verwijderd. U kunt weer deelnemen met de uitnodigingscode, maar uw geschiedenis komt niet terug.</string>
     <string name="friends_leave_confirm">Verlaten</string>
+    <string name="friends_add_group">Groep toevoegen</string>
+    <string name="friends_add_join_heading">Deelnemen met een code</string>
+    <string name="friends_section_group">Deze groep</string>
+    <string name="friends_section_you">U, in elke groep</string>
+    <string name="friends_group_name_label">Groepsnaam</string>
+    <string name="friends_group_name_hint">Een groep van twee heet naar de andere persoon.</string>
+    <string name="friends_leave_group">Deze groep verlaten</string>
+    <string name="friends_leave_group_confirm_title">Deze groep verlaten?</string>
+    <string name="friends_leave_group_confirm_body">U ziet deze ranglijst dan niet meer. U kunt weer deelnemen met de uitnodigingscode.</string>
+    <string name="friends_error_too_many">U zit al in 10 groepen.</string>
+    <string name="friends_error_already_member">U zit al in die groep.</string>
+    <string name="friends_error_name_needs_three">Alleen groepen van drie of meer kunnen een naam hebben.</string>
 </resources>

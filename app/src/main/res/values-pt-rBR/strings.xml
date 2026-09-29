@@ -296,4 +296,16 @@
     <string name="friends_leave_confirm_title">Sair do grupo?</string>
     <string name="friends_leave_confirm_body">Suas estatísticas são apagadas do servidor. Você pode voltar com o código de convite, mas seu histórico não volta.</string>
     <string name="friends_leave_confirm">Sair</string>
+    <string name="friends_add_group">Adicionar um grupo</string>
+    <string name="friends_add_join_heading">Entrar com um código</string>
+    <string name="friends_section_group">Este grupo</string>
+    <string name="friends_section_you">Você, em todos os grupos</string>
+    <string name="friends_group_name_label">Nome do grupo</string>
+    <string name="friends_group_name_hint">Um grupo de duas pessoas leva o nome da outra pessoa.</string>
+    <string name="friends_leave_group">Sair deste grupo</string>
+    <string name="friends_leave_group_confirm_title">Sair deste grupo?</string>
+    <string name="friends_leave_group_confirm_body">Você deixa de ver esta classificação. Pode voltar com o código de convite.</string>
+    <string name="friends_error_too_many">Você já está em 10 grupos.</string>
+    <string name="friends_error_already_member">Você já está nesse grupo.</string>
+    <string name="friends_error_name_needs_three">Só grupos de três ou mais podem ter nome.</string>
 </resources>
