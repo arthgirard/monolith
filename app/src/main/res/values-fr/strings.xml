@@ -271,7 +271,6 @@
     <string name="friends_restore">Restaurer avec un code de récupération</string>
     <string name="friends_recovery_label">Code de récupération</string>
     <string name="friends_restore_confirm">Restaurer</string>
-    <string name="friends_restore_warning">À utiliser sur un seul téléphone.</string>
     <string name="friends_removed">Vous ne faites plus partie d\'un groupe.</string>
     <string name="friends_error_network">Serveur injoignable. Vérifiez votre connexion.</string>
     <string name="friends_error_invite">Aucun groupe n\'a ce code d\'invitation.</string>
@@ -290,7 +289,6 @@
     <string name="friends_copy">Copier</string>
     <string name="friends_rename">Enregistrer le nom</string>
     <string name="friends_recovery_hint">Gardez-le en lieu sûr. C\'est le seul moyen de passer à un nouveau téléphone.</string>
-    <string name="friends_recovery_show">Afficher le code de récupération</string>
     <string name="friends_leave">Quitter le groupe</string>
     <string name="friends_leave_confirm_title">Quitter le groupe ?</string>
     <string name="friends_leave_confirm_body">Vos statistiques sont supprimées du serveur. Vous pourrez revenir avec le code d\'invitation, mais votre historique ne reviendra pas.</string>
@@ -307,4 +305,18 @@
     <string name="friends_error_too_many">Vous êtes déjà dans 10 groupes.</string>
     <string name="friends_error_already_member">Vous êtes déjà dans ce groupe.</string>
     <string name="friends_error_name_needs_three">Seuls les groupes de trois ou plus peuvent avoir un nom.</string>
+    <string name="backup_section">Sauvegarde</string>
+    <string name="backup_auto">Sauvegarder automatiquement</string>
+    <string name="backup_last">Dernière sauvegarde %1$s</string>
+    <string name="backup_never">Pas encore sauvegardé</string>
+    <string name="backup_show_code">Afficher le code de récupération</string>
+    <string name="backup_restore">Restaurer une sauvegarde</string>
+    <string name="backup_code_warning">Toute personne ayant ce code peut restaurer vos données. Gardez-le privé.</string>
+    <string name="backup_restore_title">Restaurer une sauvegarde</string>
+    <string name="backup_restore_confirm_body">Remplacer l\'historique et la configuration de ce téléphone par la sauvegarde du %1$s ?</string>
+    <string name="backup_restore_confirm">Remplacer</string>
+    <string name="backup_restore_refused">Désactivez d\'abord Monolith avec votre tag.</string>
+    <string name="backup_restore_unreadable">Cette sauvegarde est illisible.</string>
+    <string name="backup_restore_none">Aucune sauvegarde trouvée. Vos groupes d\'amis sont de retour.</string>
+    <string name="backup_restore_done">Restauré.</string>
 </resources>

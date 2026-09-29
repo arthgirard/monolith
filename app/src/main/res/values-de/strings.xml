@@ -271,7 +271,6 @@
     <string name="friends_restore">Mit Wiederherstellungscode wiederherstellen</string>
     <string name="friends_recovery_label">Wiederherstellungscode</string>
     <string name="friends_restore_confirm">Wiederherstellen</string>
-    <string name="friends_restore_warning">Nur auf einem Telefon verwenden.</string>
     <string name="friends_removed">Sie sind in keiner Gruppe mehr.</string>
     <string name="friends_error_network">Server nicht erreichbar. Prüfen Sie Ihre Verbindung.</string>
     <string name="friends_error_invite">Keine Gruppe hat diesen Einladungscode.</string>
@@ -290,7 +289,6 @@
     <string name="friends_copy">Kopieren</string>
     <string name="friends_rename">Namen speichern</string>
     <string name="friends_recovery_hint">Bewahren Sie ihn sicher auf. Nur damit wechseln Sie auf ein neues Telefon.</string>
-    <string name="friends_recovery_show">Wiederherstellungscode anzeigen</string>
     <string name="friends_leave">Gruppe verlassen</string>
     <string name="friends_leave_confirm_title">Gruppe verlassen?</string>
     <string name="friends_leave_confirm_body">Ihre Statistiken werden vom Server gelöscht. Mit dem Einladungscode können Sie wieder beitreten, aber Ihr Verlauf kommt nicht zurück.</string>
@@ -307,4 +305,18 @@
     <string name="friends_error_too_many">Sie sind bereits in 10 Gruppen.</string>
     <string name="friends_error_already_member">Sie sind bereits in dieser Gruppe.</string>
     <string name="friends_error_name_needs_three">Nur Gruppen ab drei Personen können einen Namen haben.</string>
+    <string name="backup_section">Sicherung</string>
+    <string name="backup_auto">Automatisch sichern</string>
+    <string name="backup_last">Zuletzt gesichert %1$s</string>
+    <string name="backup_never">Noch nicht gesichert</string>
+    <string name="backup_show_code">Wiederherstellungscode anzeigen</string>
+    <string name="backup_restore">Aus einer Sicherung wiederherstellen</string>
+    <string name="backup_code_warning">Wer diesen Code hat, kann Ihre Daten wiederherstellen. Halten Sie ihn geheim.</string>
+    <string name="backup_restore_title">Aus einer Sicherung wiederherstellen</string>
+    <string name="backup_restore_confirm_body">Verlauf und Einrichtung dieses Telefons durch die Sicherung vom %1$s ersetzen?</string>
+    <string name="backup_restore_confirm">Ersetzen</string>
+    <string name="backup_restore_refused">Schalten Sie Monolith zuerst mit Ihrem Tag aus.</string>
+    <string name="backup_restore_unreadable">Diese Sicherung kann nicht gelesen werden.</string>
+    <string name="backup_restore_none">Keine Sicherung gefunden. Ihre Freundesgruppen sind zurück.</string>
+    <string name="backup_restore_done">Wiederhergestellt.</string>
 </resources>

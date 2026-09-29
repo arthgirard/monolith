@@ -271,7 +271,6 @@
     <string name="friends_restore">Ripristina con un codice di recupero</string>
     <string name="friends_recovery_label">Codice di recupero</string>
     <string name="friends_restore_confirm">Ripristina</string>
-    <string name="friends_restore_warning">Da usare su un solo telefono.</string>
     <string name="friends_removed">Non fa più parte di un gruppo.</string>
     <string name="friends_error_network">Server non raggiungibile. Controlli la connessione.</string>
     <string name="friends_error_invite">Nessun gruppo ha questo codice d\'invito.</string>
@@ -290,7 +289,6 @@
     <string name="friends_copy">Copia</string>
     <string name="friends_rename">Salva nome</string>
     <string name="friends_recovery_hint">Lo conservi in un posto sicuro. È l\'unico modo per passare a un nuovo telefono.</string>
-    <string name="friends_recovery_show">Mostra codice di recupero</string>
     <string name="friends_leave">Esci dal gruppo</string>
     <string name="friends_leave_confirm_title">Uscire dal gruppo?</string>
     <string name="friends_leave_confirm_body">Le sue statistiche vengono eliminate dal server. Potrà rientrare con il codice d\'invito, ma la cronologia non tornerà.</string>
@@ -307,4 +305,18 @@
     <string name="friends_error_too_many">È già in 10 gruppi.</string>
     <string name="friends_error_already_member">È già in questo gruppo.</string>
     <string name="friends_error_name_needs_three">Solo i gruppi di tre o più possono avere un nome.</string>
+    <string name="backup_section">Backup</string>
+    <string name="backup_auto">Backup automatico</string>
+    <string name="backup_last">Ultimo backup %1$s</string>
+    <string name="backup_never">Nessun backup ancora</string>
+    <string name="backup_show_code">Mostra codice di recupero</string>
+    <string name="backup_restore">Ripristina da un backup</string>
+    <string name="backup_code_warning">Chiunque abbia questo codice può ripristinare i suoi dati. Lo tenga privato.</string>
+    <string name="backup_restore_title">Ripristina da un backup</string>
+    <string name="backup_restore_confirm_body">Sostituire la cronologia e la configurazione di questo telefono con il backup del %1$s?</string>
+    <string name="backup_restore_confirm">Sostituisci</string>
+    <string name="backup_restore_refused">Prima disattivi Monolith con il tag.</string>
+    <string name="backup_restore_unreadable">Impossibile leggere questo backup.</string>
+    <string name="backup_restore_none">Nessun backup trovato. I suoi gruppi di amici sono tornati.</string>
+    <string name="backup_restore_done">Ripristinato.</string>
 </resources>

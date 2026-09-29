@@ -271,7 +271,6 @@
     <string name="friends_restore">Restaurar com um código de recuperação</string>
     <string name="friends_recovery_label">Código de recuperação</string>
     <string name="friends_restore_confirm">Restaurar</string>
-    <string name="friends_restore_warning">Use isto em apenas um celular.</string>
     <string name="friends_removed">Você não está mais em um grupo.</string>
     <string name="friends_error_network">Não foi possível acessar o servidor. Verifique sua conexão.</string>
     <string name="friends_error_invite">Nenhum grupo tem esse código de convite.</string>
@@ -290,7 +289,6 @@
     <string name="friends_copy">Copiar</string>
     <string name="friends_rename">Salvar nome</string>
     <string name="friends_recovery_hint">Guarde em um lugar seguro. É a única forma de passar para um celular novo.</string>
-    <string name="friends_recovery_show">Mostrar código de recuperação</string>
     <string name="friends_leave">Sair do grupo</string>
     <string name="friends_leave_confirm_title">Sair do grupo?</string>
     <string name="friends_leave_confirm_body">Suas estatísticas são apagadas do servidor. Você pode voltar com o código de convite, mas seu histórico não volta.</string>
@@ -307,4 +305,18 @@
     <string name="friends_error_too_many">Você já está em 10 grupos.</string>
     <string name="friends_error_already_member">Você já está nesse grupo.</string>
     <string name="friends_error_name_needs_three">Só grupos de três ou mais podem ter nome.</string>
+    <string name="backup_section">Backup</string>
+    <string name="backup_auto">Fazer backup automaticamente</string>
+    <string name="backup_last">Último backup %1$s</string>
+    <string name="backup_never">Ainda sem backup</string>
+    <string name="backup_show_code">Mostrar código de recuperação</string>
+    <string name="backup_restore">Restaurar de um backup</string>
+    <string name="backup_code_warning">Qualquer pessoa com este código pode restaurar seus dados. Mantenha-o em sigilo.</string>
+    <string name="backup_restore_title">Restaurar de um backup</string>
+    <string name="backup_restore_confirm_body">Substituir o histórico e a configuração deste celular pelo backup de %1$s?</string>
+    <string name="backup_restore_confirm">Substituir</string>
+    <string name="backup_restore_refused">Primeiro desative o Monolith com sua tag.</string>
+    <string name="backup_restore_unreadable">Não é possível ler este backup.</string>
+    <string name="backup_restore_none">Nenhum backup encontrado. Seus grupos de amigos estão de volta.</string>
+    <string name="backup_restore_done">Restaurado.</string>
 </resources>
