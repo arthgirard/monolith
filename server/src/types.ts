@@ -8,19 +8,22 @@ export interface Share {
   pauses: boolean;
 }
 
-export interface MemberRow {
+export interface UserRow {
   id: string;
-  group_id: string;
   display_name: string;
+}
+
+export interface ShareColumns {
   share_saved: number;
   share_streak: number;
   share_pauses: number;
-  invite_code: string;
 }
 
-export function shareOf(m: MemberRow): Share {
-  return { saved: m.share_saved === 1, streak: m.share_streak === 1, pauses: m.share_pauses === 1 };
+export function shareOf(c: ShareColumns): Share {
+  return { saved: c.share_saved === 1, streak: c.share_streak === 1, pauses: c.share_pauses === 1 };
 }
+
+export const MAX_GROUPS = 10;
 
 export const MAX_MEMBERS = 20;
 export const RETENTION_DAYS = 35;

@@ -1,24 +1,34 @@
 import { authenticate } from "./auth";
-import { board } from "./board";
-import { createGroup, getMe, joinGroup, leave, updateMe } from "./groups";
+import { createGroup, getMe, joinGroup, updateMe } from "./groups";
 import { HttpError, json } from "./http";
-import { sync } from "./sync";
-import type { Env, MemberRow } from "./types";
+import type { Env, UserRow } from "./types";
 
-type AuthedHandler = (req: Request, env: Env, member: MemberRow, now: number) => Promise<Response>;
+type AuthedHandler = (req: Request, env: Env, user: UserRow, now: number) => Promise<Response>;
+type GroupHandler = (req: Request, env: Env, user: UserRow, now: number, groupId: string) => Promise<Response>;
 
 export const authedRoutes: Record<string, AuthedHandler> = {
   "GET /me": getMe,
   "POST /me": updateMe,
-  "DELETE /me": leave,
-  "POST /sync": sync,
-  "GET /board": board,
 };
 
+/** Keyed by method plus "" for /groups/:id or "/board" for /groups/:id/board. */
+export const groupRoutes: Record<string, GroupHandler> = {};
+
+const GROUP_PATH = /^\/groups\/([^/]+)(\/board)?$/;
+
 async function route(req: Request, env: Env, now: number): Promise<Response> {
-  const key = `${req.method} ${new URL(req.url).pathname}`;
+  const path = new URL(req.url).pathname;
+  const key = `${req.method} ${path}`;
   if (key === "POST /groups") return createGroup(req, env, now);
   if (key === "POST /join") return joinGroup(req, env, now);
+
+  const groupMatch = path.match(GROUP_PATH);
+  if (groupMatch) {
+    const handler = groupRoutes[`${req.method} ${groupMatch[2] ?? ""}`];
+    if (!handler) throw new HttpError(404, "not_found");
+    return handler(req, env, await authenticate(req, env), now, decodeURIComponent(groupMatch[1]));
+  }
+
   const handler = authedRoutes[key];
   if (!handler) throw new HttpError(404, "not_found");
   return handler(req, env, await authenticate(req, env), now);

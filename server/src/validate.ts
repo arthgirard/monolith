@@ -19,6 +19,16 @@ export function parseDisplayName(v: unknown): string {
   return name;
 }
 
+/** A group name, or null to clear it ("" and null both clear). */
+export function parseGroupName(v: unknown): string | null {
+  if (v === null) return null;
+  if (typeof v !== "string") throw invalidBody();
+  const name = v.trim();
+  if (name === "") return null;
+  if ([...name].length > 32) throw invalidBody();
+  return name;
+}
+
 export interface SyncDay {
   date: string;
   savedMs: number | null;

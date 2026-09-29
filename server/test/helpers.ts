@@ -18,14 +18,34 @@ export async function call(method: string, path: string, body?: unknown, token?:
   return { status: res.status, body: (text ? JSON.parse(text) : null) as any };
 }
 
-export async function createGroup(displayName = "Ana", s: Share = share()) {
-  const res = await call("POST", "/groups", { displayName, share: s });
-  return res.body as { token: string; inviteCode: string };
+export interface Group {
+  id: string;
+  inviteCode: string;
+  name: string | null;
+  memberCount: number;
+  otherMembers: string[];
+  share: Share;
 }
 
-export async function join(inviteCode: string, displayName: string, s: Share = share()) {
-  const res = await call("POST", "/join", { inviteCode, displayName, share: s });
-  return res.body as { token: string; inviteCode: string };
+/** New user + new group. */
+export async function newUser(displayName = "Ana", s: Share = share()) {
+  const res = await call("POST", "/groups", { displayName, share: s });
+  if (res.status !== 201) throw new Error(`newUser ${res.status} ${JSON.stringify(res.body)}`);
+  return res.body as { token: string; group: Group };
+}
+
+/** Existing user creates another group. */
+export async function anotherGroup(token: string, s: Share = share()) {
+  const res = await call("POST", "/groups", { share: s }, token);
+  if (res.status !== 201) throw new Error(`anotherGroup ${res.status} ${JSON.stringify(res.body)}`);
+  return res.body.group as Group;
+}
+
+/** Join as a new user (no token) or as an existing one. Returns the token in use and the group. */
+export async function join(inviteCode: string, displayName: string, s: Share = share(), token?: string) {
+  const res = await call("POST", "/join", { inviteCode, displayName, share: s }, token);
+  if (res.status !== 201) throw new Error(`join ${res.status} ${JSON.stringify(res.body)}`);
+  return { token: (res.body.token as string | undefined) ?? token!, group: res.body.group as Group };
 }
 
 export const today = (offset = 0) => addDays(utcToday(Date.now()), offset);

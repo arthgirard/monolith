@@ -1,10 +1,10 @@
 import { addDays, utcToday } from "./dates";
 import { empty, readJson } from "./http";
-import { RETENTION_DAYS, shareOf, type Env, type MemberRow } from "./types";
+import { RETENTION_DAYS, shareOf, type Env, type UserRow } from "./types";
 import { parseSync } from "./validate";
 
-export async function sync(req: Request, env: Env, member: MemberRow, now: number): Promise<Response> {
-  const body = parseSync(await readJson(req), shareOf(member), now);
+export async function sync(req: Request, env: Env, member: UserRow, now: number): Promise<Response> {
+  const body = parseSync(await readJson(req), shareOf(member as never), now);
   const db = env.monolith_leaderboard;
   const statements = body.days.map((d) =>
     db

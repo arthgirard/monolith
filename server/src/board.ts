@@ -1,6 +1,6 @@
 import { isIsoDate, windowRange, type BoardWindow } from "./dates";
 import { HttpError, json } from "./http";
-import { DAY_MS, INACTIVE_DAYS, shareOf, type Env, type MemberRow, type Share } from "./types";
+import { DAY_MS, INACTIVE_DAYS, shareOf, type Env, type UserRow, type Share } from "./types";
 
 export interface BoardQueryRow {
   id: string;
@@ -51,7 +51,7 @@ export function rankRows(rows: BoardQueryRow[], meId: string, viewer: Share): Bo
   return [...ranked, ...unranked];
 }
 
-export async function board(req: Request, env: Env, member: MemberRow, now: number): Promise<Response> {
+export async function board(req: Request, env: Env, member: UserRow, now: number): Promise<Response> {
   const params = new URL(req.url).searchParams;
   const window = params.get("window");
   const date = params.get("date");
@@ -66,8 +66,8 @@ export async function board(req: Request, env: Env, member: MemberRow, now: numb
   // The viewer is excluded; they are clearly not inactive.
   const stale = "SELECT id FROM members WHERE group_id = ?1 AND id != ?2 AND COALESCE(last_sync_at, created_at) < ?3";
   await db.batch([
-    db.prepare(`DELETE FROM days WHERE member_id IN (${stale})`).bind(member.group_id, member.id, staleBefore),
-    db.prepare(`DELETE FROM members WHERE id IN (${stale})`).bind(member.group_id, member.id, staleBefore),
+    db.prepare(`DELETE FROM days WHERE member_id IN (${stale})`).bind((member as never as { group_id: string }).group_id, member.id, staleBefore),
+    db.prepare(`DELETE FROM members WHERE id IN (${stale})`).bind((member as never as { group_id: string }).group_id, member.id, staleBefore),
   ]);
 
   const { results } = await db
@@ -79,8 +79,8 @@ export async function board(req: Request, env: Env, member: MemberRow, now: numb
        WHERE m.group_id = ?1
        GROUP BY m.id`,
     )
-    .bind(member.group_id, from, to)
+    .bind((member as never as { group_id: string }).group_id, from, to)
     .all<BoardQueryRow>();
 
-  return json({ rows: rankRows(results, member.id, shareOf(member)) });
+  return json({ rows: rankRows(results, member.id, shareOf(member as never)) });
 }
