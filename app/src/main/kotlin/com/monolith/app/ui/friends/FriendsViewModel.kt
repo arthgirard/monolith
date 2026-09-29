@@ -13,10 +13,15 @@ import com.monolith.app.domain.model.ShareSettings
 import com.monolith.app.domain.repository.LeaderboardRepository
 import com.monolith.app.service.LeaderboardSyncer
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -67,6 +72,8 @@ class FriendsViewModel @Inject constructor(
     private val state = MutableStateFlow(FriendsUiState())
     val uiState: StateFlow<FriendsUiState> = state.asStateFlow()
 
+    private var boardJob: Job? = null
+
     init {
         viewModelScope.launch {
             var token: String? = null
@@ -75,10 +82,37 @@ class FriendsViewModel @Inject constructor(
                 // membership (join, restore, leave, removal) resets the board.
                 val switched = membership?.token != token
                 token = membership?.token
+                val answersRemoval = switched && membership != null
                 state.update {
-                    it.copy(loaded = true, membership = membership, rows = if (switched) emptyList() else it.rows)
+                    it.copy(
+                        loaded = true,
+                        membership = membership,
+                        rows = if (switched) emptyList() else it.rows,
+                        message = if (answersRemoval && it.message == FriendsMessage.REMOVED) null else it.message,
+                    )
                 }
-                if (switched && membership != null) refresh()
+                if (switched && membership != null) {
+                    // The board shows this member's own row: upload it now instead of after the
+                    // debounce. The board fetches again once that lands (lastSyncedAt below).
+                    syncer.requestSync(immediate = true)
+                    refresh()
+                }
+            }
+        }
+        viewModelScope.launch {
+            // The background sync usually meets the 401 first, so a removal arrives as a notice.
+            // Shown once: the message stays up until the member acts, then the notice is spent.
+            repository.observeRemovedNotice().distinctUntilChanged().collect { removed ->
+                if (removed) {
+                    state.update { it.copy(message = FriendsMessage.REMOVED) }
+                    repository.dismissRemovedNotice()
+                }
+            }
+        }
+        viewModelScope.launch {
+            // The current value predates this screen; the first refresh() already covers it.
+            syncer.lastSyncedAt.drop(1).filterNotNull().collect {
+                if (state.value.membership != null) refresh()
             }
         }
         viewModelScope.launch {
@@ -96,13 +130,21 @@ class FriendsViewModel @Inject constructor(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        // Only the latest request may land: a slow day board must not fill the week tab.
+        boardJob?.cancel()
+        boardJob = viewModelScope.launch {
             state.update { it.copy(boardStatus = if (it.rows.isEmpty()) BoardStatus.LOADING else it.boardStatus) }
-            when (val result = repository.board(state.value.window, LocalDate.now())) {
+            val window = state.value.window
+            val token = state.value.membership?.token
+            val result = repository.board(window, LocalDate.now())
+            // The blocking HTTP call can't be cancelled, so check what it was asked for as well.
+            if (state.value.window != window || state.value.membership?.token != token) return@launch
+            when (result) {
                 is LeaderboardResult.Ok -> state.update { it.copy(rows = result.value, boardStatus = BoardStatus.READY) }
                 is LeaderboardResult.Err -> state.update {
                     when {
-                        result.error == LeaderboardError.UNAUTHORIZED -> it.copy(message = FriendsMessage.REMOVED)
+                        // The repository cleared the membership and left the removal notice.
+                        result.error == LeaderboardError.UNAUTHORIZED -> it
                         it.rows.isNotEmpty() -> it.copy(boardStatus = BoardStatus.OFFLINE)
                         else -> it.copy(boardStatus = BoardStatus.FAILED)
                     }
@@ -122,9 +164,10 @@ class FriendsViewModel @Inject constructor(
 
     fun updateShare(share: ShareSettings) = submit {
         repository.updateProfile(null, share).also {
-            // Turning a signal back on needs an upload; the server nulled it when it was hidden.
             if (it is LeaderboardResult.Ok) {
-                syncer.requestSync()
+                // Turning a signal back on needs an upload (the server nulled it when it was
+                // hidden); the board fetches again when it lands. A hidden one shows right away.
+                syncer.requestSync(immediate = true)
                 refresh()
             }
         }
@@ -141,9 +184,16 @@ class FriendsViewModel @Inject constructor(
         if (state.value.busy) return
         viewModelScope.launch {
             state.update { it.copy(busy = true, message = null) }
-            val result = action()
-            state.update {
-                it.copy(busy = false, message = (result as? LeaderboardResult.Err)?.let { err -> toMessage(err.error) })
+            var message: FriendsMessage? = null
+            try {
+                message = (action() as? LeaderboardResult.Err)?.let { err -> toMessage(err.error) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                message = FriendsMessage.GENERIC
+            } finally {
+                // Always, so a throwing action can't leave every button disabled.
+                state.update { it.copy(busy = false, message = message) }
             }
         }
     }
