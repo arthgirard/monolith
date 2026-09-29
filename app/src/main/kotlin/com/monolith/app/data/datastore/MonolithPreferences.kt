@@ -2,6 +2,7 @@ package com.monolith.app.data.datastore
 
 import android.content.Context
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -9,6 +10,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.monolith.app.data.backup.BackupSnapshot
+import com.monolith.app.data.leaderboard.DisplayNameStore
 import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSchedule
 import com.monolith.app.domain.model.BlockSession
@@ -16,13 +19,18 @@ import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.Pause
+import com.monolith.app.domain.model.PauseType
 import com.monolith.app.domain.model.SlotResult
 import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.TagLinkMode
 import com.monolith.app.domain.usecase.BlockHitLog
+import com.monolith.app.domain.usecase.PauseLog
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.DayOfWeek
@@ -49,6 +57,12 @@ private data class BlockSessionDto(
 private data class BlockHitDto(
     val packageName: String,
     val atMillis: Long,
+)
+
+@Serializable
+private data class PauseDto(
+    val type: String,
+    val at: Long,
 )
 
 @Serializable
@@ -124,38 +138,40 @@ private data class CodeBreakerDto(
 private const val SESSION_RETENTION_MILLIS: Long = 400L * 24 * 60 * 60 * 1000
 
 
+private object Keys {
+    val BLOCK_MODE_ACTIVE = booleanPreferencesKey("block_mode_active")
+    val BYPASS_EXPIRES_AT = longPreferencesKey("bypass_expires_at")
+    val BLOCKED_PACKAGES = stringSetPreferencesKey("blocked_packages")
+    val TAG_UID = stringPreferencesKey("tag_uid")
+    val TAG_NDEF_URI = stringPreferencesKey("tag_ndef_uri")
+    val TAG_MODE = stringPreferencesKey("tag_mode")
+    val TAG_LINKED_AT = longPreferencesKey("tag_linked_at")
+    val TAG_DISPATCH_TECH = stringPreferencesKey("tag_dispatch_tech")
+    val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
+    val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
+
+    /**
+     * When Monolith was last turned on. Distinct from [SESSION_STARTED_AT], which an app
+     * unlock fast-forwards past its window: the streak restarts there, but the cycle does
+     * not, and the notification draws the whole cycle including the holes in it.
+     */
+    val CYCLE_STARTED_AT = longPreferencesKey("cycle_started_at")
+    val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
+    val BLOCK_HITS = stringPreferencesKey("block_hits")
+    val APP_UNLOCKS = stringPreferencesKey("app_unlocks")
+    val PAUSE_LOG = stringPreferencesKey("pause_log")
+    val APP_CODE_BREAKERS = stringPreferencesKey("app_code_breakers")
+    val BLOCK_SCHEDULES = stringPreferencesKey("block_schedules")
+    val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
+    val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+    val STRICTNESS_LEVEL = stringPreferencesKey("strictness_level")
+    val DISPLAY_NAME = stringPreferencesKey("display_name")
+}
+
 @Singleton
 class MonolithPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
-    private object Keys {
-        val BLOCK_MODE_ACTIVE = booleanPreferencesKey("block_mode_active")
-        val BYPASS_EXPIRES_AT = longPreferencesKey("bypass_expires_at")
-        val BLOCKED_PACKAGES = stringSetPreferencesKey("blocked_packages")
-        val TAG_UID = stringPreferencesKey("tag_uid")
-        val TAG_NDEF_URI = stringPreferencesKey("tag_ndef_uri")
-        val TAG_MODE = stringPreferencesKey("tag_mode")
-        val TAG_LINKED_AT = longPreferencesKey("tag_linked_at")
-        val TAG_DISPATCH_TECH = stringPreferencesKey("tag_dispatch_tech")
-        val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
-        val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
-
-        /**
-         * When Monolith was last turned on. Distinct from [SESSION_STARTED_AT], which an app
-         * unlock fast-forwards past its window: the streak restarts there, but the cycle does
-         * not, and the notification draws the whole cycle including the holes in it.
-         */
-        val CYCLE_STARTED_AT = longPreferencesKey("cycle_started_at")
-        val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
-        val BLOCK_HITS = stringPreferencesKey("block_hits")
-        val APP_UNLOCKS = stringPreferencesKey("app_unlocks")
-        val APP_CODE_BREAKERS = stringPreferencesKey("app_code_breakers")
-        val BLOCK_SCHEDULES = stringPreferencesKey("block_schedules")
-        val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
-        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
-        val STRICTNESS_LEVEL = stringPreferencesKey("strictness_level")
-    }
-
+) : DisplayNameStore {
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
@@ -174,6 +190,12 @@ class MonolithPreferences @Inject constructor(
 
     suspend fun setOnboardingCompleted() {
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
+    }
+
+    override val displayName: Flow<String> = context.dataStore.data.map { it[Keys.DISPLAY_NAME].orEmpty() }
+
+    override suspend fun setDisplayName(name: String) {
+        context.dataStore.edit { it[Keys.DISPLAY_NAME] = name.trim() }
     }
 
     /**
@@ -227,6 +249,7 @@ class MonolithPreferences @Inject constructor(
         context.dataStore.edit { prefs ->
             val now = System.currentTimeMillis()
             prefs[Keys.BYPASS_EXPIRES_AT] = now + durationMillis
+            appendPause(prefs, PauseType.BYPASS, now)
 
             val isActive = prefs[Keys.BLOCK_MODE_ACTIVE] ?: false
             val startedAt = prefs[Keys.SESSION_STARTED_AT]
@@ -289,25 +312,9 @@ class MonolithPreferences @Inject constructor(
      * it just doesn't turn Monolith off to do it.
      */
     private fun commitRunningSegment(prefs: MutablePreferences, startedAt: Long, now: Long) {
-        // [startedAt] can sit in the future: [grantAppUnlock] fast-forwards the session clock past
-        // an app's unlock window. Nothing has accrued yet in that case -- committing anyway would
-        // write a negative-length segment, and hand the clamps below an inverted range that throws.
-        if (now <= startedAt) return
+        val newSegments = runningSegments(prefs, startedAt, now)
+        if (newSegments.isEmpty()) return
         val cutoff = now - SESSION_RETENTION_MILLIS
-        // Bypass (emergency mode) minutes don't count toward time gained: carve the bypass
-        // window out of this session instead of crediting the full span.
-        val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]?.takeIf { it > 0 }
-        val newSegments = if (bypassExpiresAt != null) {
-            val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
-            val beforeBypassEnd = bypassStartedAt.coerceIn(startedAt, now)
-            val afterBypassStart = bypassExpiresAt.coerceIn(startedAt, now)
-            listOfNotNull(
-                BlockSessionDto(startedAt, beforeBypassEnd).takeIf { beforeBypassEnd > startedAt },
-                BlockSessionDto(afterBypassStart, now).takeIf { now > afterBypassStart },
-            )
-        } else {
-            listOf(BlockSessionDto(startedAt, now))
-        }
         val updated = decodeBlockSessions(prefs[Keys.BLOCK_SESSIONS]).filter { it.end >= cutoff } + newSegments
         prefs[Keys.BLOCK_SESSIONS] = json.encodeToString(updated)
     }
@@ -333,6 +340,7 @@ class MonolithPreferences @Inject constructor(
                 it.expiresAt > now && it.packageName != packageName
             } + AppUnlockDto(packageName, now + durationMillis)
             prefs[Keys.APP_UNLOCKS] = json.encodeToString(unlocks)
+            appendPause(prefs, PauseType.UNLOCK, now)
 
             val codeBreakers = decodeCodeBreakers(prefs[Keys.APP_CODE_BREAKERS]).filterNot { it.packageName == packageName }
             prefs[Keys.APP_CODE_BREAKERS] = json.encodeToString(codeBreakers)
@@ -364,6 +372,21 @@ class MonolithPreferences @Inject constructor(
 
     val blockHits: Flow<List<BlockHit>> = context.dataStore.data.map { prefs ->
         decodeBlockHits(prefs[Keys.BLOCK_HITS]).map { BlockHit(it.packageName, it.atMillis) }
+    }
+
+    /** Every bypass and app unlock of the last [PauseLog.RETENTION_MILLIS], for the leaderboard's daily counts. */
+    val pauses: Flow<List<Pause>> = context.dataStore.data.map { prefs -> decodePauses(prefs[Keys.PAUSE_LOG]) }
+
+    private fun appendPause(prefs: MutablePreferences, type: PauseType, now: Long) {
+        val updated = PauseLog.record(decodePauses(prefs[Keys.PAUSE_LOG]), type, now)
+        prefs[Keys.PAUSE_LOG] = json.encodeToString(updated.map { PauseDto(it.type.name, it.atMillis) })
+    }
+
+    private fun decodePauses(raw: String?): List<Pause> {
+        if (raw == null) return emptyList()
+        return runCatching { json.decodeFromString<List<PauseDto>>(raw) }
+            .getOrDefault(emptyList())
+            .mapNotNull { dto -> runCatching { PauseType.valueOf(dto.type) }.getOrNull()?.let { Pause(it, dto.at) } }
     }
 
     private fun decodeBlockHits(raw: String?): List<BlockHitDto> {
@@ -532,4 +555,73 @@ class MonolithPreferences @Inject constructor(
         if (raw == null) return emptyList()
         return runCatching { json.decodeFromString<List<BlockSessionDto>>(raw) }.getOrDefault(emptyList())
     }
+
+    suspend fun exportSnapshot(): BackupSnapshot =
+        readSnapshot(context.dataStore.data.first(), System.currentTimeMillis())
+
+    suspend fun restoreSnapshot(snapshot: BackupSnapshot) {
+        context.dataStore.edit { applySnapshot(it, snapshot) }
+    }
+}
+
+private val snapshotJson = Json { ignoreUnknownKeys = true }
+
+private inline fun <reified T> decodeList(raw: String?): List<T> {
+    if (raw == null) return emptyList()
+    return runCatching { snapshotJson.decodeFromString<List<T>>(raw) }.getOrDefault(emptyList())
+}
+
+internal fun readSnapshot(prefs: Preferences, now: Long): BackupSnapshot = BackupSnapshot(
+    createdAt = now,
+    // A running session is only written to history when it ends; back it up as ending now, so a
+    // restore carries today's time gained without turning Monolith on for the other phone.
+    sessions = (decodeList<BlockSessionDto>(prefs[Keys.BLOCK_SESSIONS]) + activeSegments(prefs, now))
+        .map { BackupSnapshot.SessionEntry(it.start, it.end) },
+    blockedPackages = prefs[Keys.BLOCKED_PACKAGES].orEmpty().toList(),
+    importantPeople = decodeList<ImportantPersonDto>(prefs[Keys.IMPORTANT_PEOPLE])
+        .map { BackupSnapshot.PersonEntry(it.packageName, it.name, it.handle) },
+    schedules = decodeList<BlockScheduleDto>(prefs[Keys.BLOCK_SCHEDULES])
+        .map { BackupSnapshot.ScheduleEntry(it.id, it.enabled, it.days, it.startMinuteOfDay) },
+    strictness = prefs[Keys.STRICTNESS_LEVEL],
+)
+
+private fun activeSegments(prefs: Preferences, now: Long): List<BlockSessionDto> {
+    if (prefs[Keys.BLOCK_MODE_ACTIVE] != true) return emptyList()
+    val startedAt = prefs[Keys.SESSION_STARTED_AT] ?: return emptyList()
+    return runningSegments(prefs, startedAt, now)
+}
+
+/**
+ * What the session running since [startedAt] adds to history if it ends at [now]. [startedAt] can
+ * sit in the future: [MonolithPreferences.grantAppUnlock] fast-forwards the session clock past an
+ * app's unlock window, and nothing has accrued yet in that case. Bypass (emergency mode) minutes
+ * don't count toward time gained, so the bypass window is carved out rather than credited.
+ */
+private fun runningSegments(prefs: Preferences, startedAt: Long, now: Long): List<BlockSessionDto> {
+    if (now <= startedAt) return emptyList()
+    val bypassExpiresAt = prefs[Keys.BYPASS_EXPIRES_AT]?.takeIf { it > 0 }
+        ?: return listOf(BlockSessionDto(startedAt, now))
+    val bypassStartedAt = bypassExpiresAt - BlockState.BYPASS_DURATION_MILLIS
+    val beforeBypassEnd = bypassStartedAt.coerceIn(startedAt, now)
+    val afterBypassStart = bypassExpiresAt.coerceIn(startedAt, now)
+    return listOfNotNull(
+        BlockSessionDto(startedAt, beforeBypassEnd).takeIf { beforeBypassEnd > startedAt },
+        BlockSessionDto(afterBypassStart, now).takeIf { now > afterBypassStart },
+    )
+}
+
+/** Replaces exactly the five backed-up keys; everything device-bound is left alone. */
+internal fun applySnapshot(prefs: MutablePreferences, snapshot: BackupSnapshot) {
+    prefs[Keys.BLOCK_SESSIONS] = snapshotJson.encodeToString(
+        snapshot.sessions.map { BlockSessionDto(it.start, it.end) },
+    )
+    prefs[Keys.BLOCKED_PACKAGES] = snapshot.blockedPackages.toSet()
+    prefs[Keys.IMPORTANT_PEOPLE] = snapshotJson.encodeToString(
+        snapshot.importantPeople.map { ImportantPersonDto(it.packageName, it.name, it.handle) },
+    )
+    prefs[Keys.BLOCK_SCHEDULES] = snapshotJson.encodeToString(
+        snapshot.schedules.map { BlockScheduleDto(it.id, it.enabled, it.days, it.startMinuteOfDay) },
+    )
+    val strictness = snapshot.strictness
+    if (strictness == null) prefs.remove(Keys.STRICTNESS_LEVEL) else prefs[Keys.STRICTNESS_LEVEL] = strictness
 }

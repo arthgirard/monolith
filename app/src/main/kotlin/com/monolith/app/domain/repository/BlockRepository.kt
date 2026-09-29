@@ -4,6 +4,7 @@ import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.Pause
 import kotlinx.coroutines.flow.Flow
 
 interface BlockRepository {
@@ -39,4 +40,7 @@ interface BlockRepository {
     suspend fun recordBlockHit(packageName: String)
 
     fun observeBlockHits(): Flow<List<BlockHit>>
+
+    /** Bypasses and app unlocks, newest last, for the leaderboard's per-day counts. */
+    fun observePauses(): Flow<List<Pause>>
 }

@@ -44,6 +44,10 @@ import javax.inject.Inject
  * off, an emergency bypass starting, or that one app individually being unlocked — so nothing is
  * silently lost. The held queue is memory-only: a process death mid-block drops it, same as the
  * notifications themselves would have been dropped by the block.
+ *
+ * A stand-in can't be dismissed by its source app the way the original could (the app cancels
+ * an original that's already gone), so [clearRestored] does it instead once the user has been
+ * in that app, see AppBlockAccessibilityService.
  */
 @AndroidEntryPoint
 class NotificationBlockListenerService : NotificationListenerService() {
@@ -165,6 +169,10 @@ class NotificationBlockListenerService : NotificationListenerService() {
 
         ensureMissedChannel()
         val notificationManager = getSystemService(NotificationManager::class.java)
+        // Posting is asynchronous, so the shade is read before this batch goes in. The summary
+        // covers both: an earlier catch-up may still be sitting there. A notification restored
+        // twice (updated while held) replaces its own stand-in, hence the set.
+        val inShade = restoredInShade(notificationManager).map { it.tag to it.id }.toSet()
         val pm = packageManager
 
         toRestore.forEach { sbn ->
@@ -207,28 +215,12 @@ class NotificationBlockListenerService : NotificationListenerService() {
                 .setGroup(MISSED_GROUP_KEY)
                 .build()
 
-            notificationManager.notify(sbn.key.hashCode(), restored)
+            // Tagged with the source package so clearRestored can find this app's stand-ins.
+            notificationManager.notify(sbn.packageName, sbn.key.hashCode(), restored)
         }
 
-        postMissedSummary(notificationManager, toRestore.size)
-    }
-
-    /**
-     * The group summary. Without one, unlocking after a long block drops the whole held backlog
-     * into the shade as N loose notifications -- the individual entries already carry
-     * MISSED_GROUP_KEY, but a group with no summary is not reliably collapsed. One line saying
-     * how many there are keeps a catch-up from reading as an explosion.
-     */
-    private fun postMissedSummary(notificationManager: NotificationManager, count: Int) {
-        val summary = NotificationCompat.Builder(this, MISSED_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_monolith_mark)
-            .setColor(ContextCompat.getColor(this, R.color.monolith_amber))
-            .setContentTitle(getString(R.string.missed_notification_summary, count))
-            .setGroup(MISSED_GROUP_KEY)
-            .setGroupSummary(true)
-            .setAutoCancel(true)
-            .build()
-        notificationManager.notify(MISSED_SUMMARY_ID, summary)
+        val justPosted = toRestore.map { it.packageName to it.key.hashCode() }
+        postMissedSummary(this, notificationManager, (inShade + justPosted).size)
     }
 
     private fun ensureMissedChannel() {
@@ -255,5 +247,45 @@ class NotificationBlockListenerService : NotificationListenerService() {
         // In the 2xxx status range, clear of EnforcementForegroundService's 1001 and of the
         // restored notifications, which key off the original notification's own hash.
         private const val MISSED_SUMMARY_ID = 2003
+
+        private fun restoredInShade(notificationManager: NotificationManager) =
+            runCatching { notificationManager.activeNotifications }.getOrDefault(emptyArray())
+                .filter { it.notification.group == MISSED_GROUP_KEY && it.tag != null }
+
+        /**
+         * Dismisses every stand-in restored from [sourcePackage], then shrinks the summary to
+         * what's left, or drops it with the last one.
+         */
+        fun clearRestored(context: Context, sourcePackage: String) {
+            val notificationManager = context.getSystemService(NotificationManager::class.java)
+            val inShade = restoredInShade(notificationManager)
+            val stale = inShade.filter { it.tag == sourcePackage }
+            if (stale.isEmpty()) return
+            stale.forEach { notificationManager.cancel(it.tag, it.id) }
+            postMissedSummary(context, notificationManager, inShade.size - stale.size)
+        }
+
+        /**
+         * The group summary. Without one, unlocking after a long block drops the whole held backlog
+         * into the shade as N loose notifications -- the individual entries already carry
+         * MISSED_GROUP_KEY, but a group with no summary is not reliably collapsed. One line saying
+         * how many there are keeps a catch-up from reading as an explosion.
+         */
+        private fun postMissedSummary(context: Context, notificationManager: NotificationManager, count: Int) {
+            if (count == 0) {
+                notificationManager.cancel(MISSED_SUMMARY_ID)
+                return
+            }
+            val summary = NotificationCompat.Builder(context, MISSED_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_monolith_mark)
+                .setColor(ContextCompat.getColor(context, R.color.monolith_amber))
+                .setContentTitle(context.getString(R.string.missed_notification_summary, count))
+                .setGroup(MISSED_GROUP_KEY)
+                .setGroupSummary(true)
+                .setAutoCancel(true)
+                .setOnlyAlertOnce(true)
+                .build()
+            notificationManager.notify(MISSED_SUMMARY_ID, summary)
+        }
     }
 }

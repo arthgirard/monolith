@@ -29,12 +29,16 @@
     <string name="onboarding_step_indicator" translatable="false">%1$d/%2$d</string>
     <string name="onboarding_select_apps_subtitle">Select the apps you want blocked.</string>
     <string name="onboarding_link_tag_subtitle">Link your NFC tag to toggle blocking.</string>
+    <string name="onboarding_name_subtitle">What should we call you?</string>
+    <string name="name_caption">Only people in your groups see it.</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_locked_banner">Tap your tag to change these</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_system">System default</string>
+    <string name="settings_name">Name</string>
+    <string name="settings_name_unset">Not set</string>
 
     <!-- Strictness -->
     <string name="strictness_title">Strictness</string>
@@ -48,6 +52,7 @@
     <string name="strictness_uninstall_caveat">You can still uninstall Monolith. That\'s on purpose.</string>
 
     <string name="onboarding_complete_title">You\'re all set!</string>
+    <string name="onboarding_complete_title_named">You\'re all set, %1$s!</string>
     <string name="onboarding_complete_desc">Welcome to Monolith.</string>
 
     <!-- Home -->
@@ -69,6 +74,7 @@
     <string name="bypass_confirm_body">This temporarily disables Monolith for 15 minutes. You only get one bypass per lock, tap your tag to reset it. Use only if you\'ve lost your tag.</string>
     <string name="bypass_confirm_start">Start bypass</string>
     <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
     <string name="copyright_notice" translatable="false">© Arthur Girard 2026</string>
 
     <!-- Activation without the tag -->
@@ -79,7 +85,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Manage schedules</string>
-    <string name="needs_tag_value">Link a tag first</string>
     <string name="schedules_title">Schedules</string>
     <string name="schedules_subtitle">Monolith switches on by itself at these times. It never switches off on its own, that still takes your tag.</string>
     <string name="schedules_empty">No schedules yet. Add one to have Monolith come on without you.</string>
@@ -261,4 +266,64 @@
     <string name="widget_stat_held">HELD</string>
     <string name="widget_apps_description">Apps you reached for most today</string>
     <string name="widget_apps_empty">Nothing reached for today</string>
+    <string name="friends_title">Friends</string>
+    <string name="friends_intro">Keep each other honest.</string>
+    <string name="friends_name_label">Your name</string>
+    <string name="friends_share_heading_group">What you share in this group</string>
+    <string name="friends_share_saved">Time gained</string>
+    <string name="friends_share_streak">Current streak</string>
+    <string name="friends_share_pauses">Bypasses and unlocks</string>
+    <string name="friends_share_caption">Hidden stats stay hidden for you too.</string>
+    <string name="friends_create">Create a group</string>
+    <string name="friends_invite_label">Invite code</string>
+    <string name="friends_join">Join</string>
+    <string name="friends_restore">Restore with a recovery code</string>
+    <string name="friends_recovery_label">Recovery code</string>
+    <string name="friends_restore_confirm">Restore</string>
+    <string name="friends_removed">You\'re no longer in a group.</string>
+    <string name="friends_error_network">Couldn\'t reach the server. Check your connection.</string>
+    <string name="friends_error_invite">No group has that invite code.</string>
+    <string name="friends_error_full">That group is full.</string>
+    <string name="friends_error_recovery">That recovery code doesn\'t match anyone.</string>
+    <string name="friends_error_generic">Something went wrong. Try again.</string>
+    <string name="friends_offline">Offline. Showing the last board.</string>
+    <string name="friends_board_failed">Couldn\'t load the board.</string>
+    <string name="friends_retry">Retry</string>
+    <string name="friends_hidden">–</string>
+    <string name="friends_row_streak_label">Streak</string>
+    <string name="friends_row_bypasses_label">Bypasses</string>
+    <string name="friends_row_unlocks_label">Unlocks</string>
+    <string name="friends_row_never_synced">Not synced yet</string>
+    <string name="friends_group_settings">Group settings</string>
+    <string name="friends_copy">Copy</string>
+    <string name="friends_rename">Save name</string>
+    <string name="friends_recovery_hint">Keep this somewhere safe. It\'s the only way to move to a new phone.</string>
+    <string name="friends_leave">Leave group</string>
+    <string name="friends_leave_confirm_title">Leave the group?</string>
+    <string name="friends_leave_confirm_body">Your stats are deleted from the server. You can rejoin with the invite code, but your history won\'t come back.</string>
+    <string name="friends_leave_confirm">Leave</string>
+    <string name="friends_add_group">Add a group</string>
+    <string name="friends_add_join_heading">Join with a code</string>
+    <string name="friends_section_group">This group</string>
+    <string name="friends_group_name_label">Group name</string>
+    <string name="friends_leave_group">Leave this group</string>
+    <string name="friends_leave_group_confirm_title">Leave this group?</string>
+    <string name="friends_leave_group_confirm_body">You\'ll stop seeing this board. You can rejoin with the invite code.</string>
+    <string name="friends_error_too_many">You\'re already in 10 groups.</string>
+    <string name="friends_error_already_member">You\'re already in that group.</string>
+    <string name="friends_error_name_needs_three">Only groups of three or more can have a name.</string>
+    <string name="backup_section">Backup</string>
+    <string name="backup_auto">Back up automatically</string>
+    <string name="backup_last">Last backed up %1$s</string>
+    <string name="backup_never">Not backed up yet</string>
+    <string name="backup_show_code">Show recovery code</string>
+    <string name="backup_restore">Restore from a backup</string>
+    <string name="backup_code_warning">Anyone with this code can restore your data. Keep it private.</string>
+    <string name="backup_restore_title">Restore from a backup</string>
+    <string name="backup_restore_confirm_body">Replace this phone\'s history and setup with the backup from %1$s?</string>
+    <string name="backup_restore_confirm">Replace</string>
+    <string name="backup_restore_refused">Turn Monolith off with your tag first.</string>
+    <string name="backup_restore_unreadable">This backup can\'t be read.</string>
+    <string name="backup_restore_none">No backup found. Your friends groups are back.</string>
+    <string name="backup_restore_done">Restored.</string>
 </resources>

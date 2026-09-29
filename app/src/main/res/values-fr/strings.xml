@@ -30,12 +30,16 @@
     <string name="onboarding_configuration_title">Configuration</string>
     <string name="onboarding_select_apps_subtitle">Choisissez les applis à bloquer.</string>
     <string name="onboarding_link_tag_subtitle">Associez votre tag NFC pour basculer le blocage.</string>
+    <string name="onboarding_name_subtitle">Comment devons-nous vous appeler ?</string>
+    <string name="name_caption">Seules les personnes de vos groupes le voient.</string>
 
     <!-- Settings -->
     <string name="settings_title">Paramètres</string>
     <string name="settings_locked_banner">Approchez votre tag pour modifier</string>
     <string name="settings_language">Langue</string>
     <string name="settings_language_system">Par défaut du système</string>
+    <string name="settings_name">Nom</string>
+    <string name="settings_name_unset">Non défini</string>
 
     <!-- Strictness -->
     <string name="strictness_title">Rigueur</string>
@@ -48,6 +52,7 @@
     <string name="strictness_absolute_desc">Rien ne lève Monolith, sauf le tag.</string>
     <string name="strictness_uninstall_caveat">Vous pouvez toujours désinstaller Monolith. C\'est voulu.</string>
     <string name="onboarding_complete_title">Tout est prêt !</string>
+    <string name="onboarding_complete_title_named">Tout est prêt, %1$s !</string>
     <string name="onboarding_complete_desc">Bienvenue dans Monolith.</string>
 
     <!-- Home -->
@@ -68,6 +73,7 @@
     <string name="bypass_confirm_body">Monolith se désactive pendant 15 minutes. Un seul déblocage par verrouillage, approchez votre tag pour le réarmer. À n\'utiliser que si vous avez perdu votre tag.</string>
     <string name="bypass_confirm_start">Lancer</string>
     <string name="cancel">Annuler</string>
+    <string name="save">Enregistrer</string>
 
     <!-- Activation without the tag -->
     <string name="activate_confirm_title">Activer Monolith ?</string>
@@ -77,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Gérer les routines</string>
-    <string name="needs_tag_value">Associez un tag d\'abord</string>
     <string name="schedules_title">Routines</string>
     <string name="schedules_subtitle">Monolith s\'active tout seul à ces heures. Il ne se coupe jamais seul, cela demande toujours votre tag.</string>
     <string name="schedules_empty">Aucune routine. Ajoutez-en une pour que Monolith démarre sans vous.</string>
@@ -257,4 +262,64 @@
     <string name="widget_stat_held">TENU</string>
     <string name="widget_apps_description">Les applis les plus sollicitées aujourd\'hui</string>
     <string name="widget_apps_empty">Aucune appli sollicitée aujourd\'hui</string>
+    <string name="friends_title">Amis</string>
+    <string name="friends_intro">Restez honnêtes entre vous.</string>
+    <string name="friends_name_label">Votre nom</string>
+    <string name="friends_share_heading_group">Ce que vous partagez dans ce groupe</string>
+    <string name="friends_share_saved">Temps gagné</string>
+    <string name="friends_share_streak">Série en cours</string>
+    <string name="friends_share_pauses">Déblocages et déverrouillages</string>
+    <string name="friends_share_caption">Une stat masquée l\'est aussi pour vous.</string>
+    <string name="friends_create">Créer un groupe</string>
+    <string name="friends_invite_label">Code d\'invitation</string>
+    <string name="friends_join">Rejoindre</string>
+    <string name="friends_restore">Restaurer avec un code de récupération</string>
+    <string name="friends_recovery_label">Code de récupération</string>
+    <string name="friends_restore_confirm">Restaurer</string>
+    <string name="friends_removed">Vous ne faites plus partie d\'un groupe.</string>
+    <string name="friends_error_network">Serveur injoignable. Vérifiez votre connexion.</string>
+    <string name="friends_error_invite">Aucun groupe n\'a ce code d\'invitation.</string>
+    <string name="friends_error_full">Ce groupe est complet.</string>
+    <string name="friends_error_recovery">Ce code de récupération ne correspond à personne.</string>
+    <string name="friends_error_generic">Une erreur s\'est produite. Réessayez.</string>
+    <string name="friends_offline">Hors ligne. Dernier classement affiché.</string>
+    <string name="friends_board_failed">Impossible de charger le classement.</string>
+    <string name="friends_retry">Réessayer</string>
+    <string name="friends_hidden">–</string>
+    <string name="friends_row_streak_label">Série</string>
+    <string name="friends_row_bypasses_label">Déblocages</string>
+    <string name="friends_row_unlocks_label">Déverrouillages</string>
+    <string name="friends_row_never_synced">Pas encore synchronisé</string>
+    <string name="friends_group_settings">Paramètres du groupe</string>
+    <string name="friends_copy">Copier</string>
+    <string name="friends_rename">Enregistrer le nom</string>
+    <string name="friends_recovery_hint">Gardez-le en lieu sûr. C\'est le seul moyen de passer à un nouveau téléphone.</string>
+    <string name="friends_leave">Quitter le groupe</string>
+    <string name="friends_leave_confirm_title">Quitter le groupe ?</string>
+    <string name="friends_leave_confirm_body">Vos statistiques sont supprimées du serveur. Vous pourrez revenir avec le code d\'invitation, mais votre historique ne reviendra pas.</string>
+    <string name="friends_leave_confirm">Quitter</string>
+    <string name="friends_add_group">Ajouter un groupe</string>
+    <string name="friends_add_join_heading">Rejoindre avec un code</string>
+    <string name="friends_section_group">Ce groupe</string>
+    <string name="friends_group_name_label">Nom du groupe</string>
+    <string name="friends_leave_group">Quitter ce groupe</string>
+    <string name="friends_leave_group_confirm_title">Quitter ce groupe ?</string>
+    <string name="friends_leave_group_confirm_body">Vous ne verrez plus ce classement. Vous pourrez revenir avec le code d\'invitation.</string>
+    <string name="friends_error_too_many">Vous êtes déjà dans 10 groupes.</string>
+    <string name="friends_error_already_member">Vous êtes déjà dans ce groupe.</string>
+    <string name="friends_error_name_needs_three">Seuls les groupes de trois ou plus peuvent avoir un nom.</string>
+    <string name="backup_section">Sauvegarde</string>
+    <string name="backup_auto">Sauvegarder automatiquement</string>
+    <string name="backup_last">Dernière sauvegarde %1$s</string>
+    <string name="backup_never">Pas encore sauvegardé</string>
+    <string name="backup_show_code">Afficher le code de récupération</string>
+    <string name="backup_restore">Restaurer une sauvegarde</string>
+    <string name="backup_code_warning">Toute personne ayant ce code peut restaurer vos données. Gardez-le privé.</string>
+    <string name="backup_restore_title">Restaurer une sauvegarde</string>
+    <string name="backup_restore_confirm_body">Remplacer l\'historique et la configuration de ce téléphone par la sauvegarde du %1$s ?</string>
+    <string name="backup_restore_confirm">Remplacer</string>
+    <string name="backup_restore_refused">Désactivez d\'abord Monolith avec votre tag.</string>
+    <string name="backup_restore_unreadable">Cette sauvegarde est illisible.</string>
+    <string name="backup_restore_none">Aucune sauvegarde trouvée. Vos groupes d\'amis sont de retour.</string>
+    <string name="backup_restore_done">Restauré.</string>
 </resources>

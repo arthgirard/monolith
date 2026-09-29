@@ -19,6 +19,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.monolith.app.nfc.NfcManager
 import com.monolith.app.nfc.NfcTagBus
+import com.monolith.app.service.BackupScheduler
+import com.monolith.app.service.LeaderboardSyncer
 import com.monolith.app.ui.navigation.MonolithDestination
 import com.monolith.app.ui.navigation.MonolithNavHost
 import com.monolith.app.ui.theme.MonolithTheme
@@ -31,6 +33,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var nfcManager: NfcManager
     @Inject lateinit var nfcTagBus: NfcTagBus
+    @Inject lateinit var leaderboardSyncer: LeaderboardSyncer
+    @Inject lateinit var backupScheduler: BackupScheduler
 
     private val viewModel: MainViewModel by viewModels()
 
@@ -125,6 +129,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         nfcManager.enableForegroundDispatch(this)
+        leaderboardSyncer.requestSync()
+        backupScheduler.onAppOpen()
     }
 
     override fun onPause() {
@@ -154,6 +160,7 @@ class MainActivity : ComponentActivity() {
         /** Screens that already handle missing permissions themselves. */
         private val SETUP_ROUTES = setOf(
             MonolithDestination.Onboarding.route,
+            MonolithDestination.OnboardingName.route,
             MonolithDestination.OnboardingAppSelector.route,
             MonolithDestination.OnboardingNfcLink.route,
             MonolithDestination.OnboardingStrictness.route,

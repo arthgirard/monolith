@@ -1,16 +1,26 @@
 package com.monolith.app.di
 
+import com.monolith.app.data.datastore.MonolithPreferences
+import com.monolith.app.data.leaderboard.DataStoreIdentityStore
+import com.monolith.app.data.leaderboard.DisplayNameStore
+import com.monolith.app.data.leaderboard.HttpLeaderboardApi
+import com.monolith.app.data.leaderboard.IdentityStore
+import com.monolith.app.data.leaderboard.LeaderboardApi
 import com.monolith.app.data.repository.AppRepositoryImpl
 import com.monolith.app.data.repository.AppUnlockRepositoryImpl
+import com.monolith.app.data.repository.BackupRepositoryImpl
 import com.monolith.app.data.repository.BlockRepositoryImpl
 import com.monolith.app.data.repository.ImportantPersonRepositoryImpl
+import com.monolith.app.data.repository.LeaderboardRepositoryImpl
 import com.monolith.app.data.repository.ScheduleRepositoryImpl
 import com.monolith.app.data.repository.StrictnessRepositoryImpl
 import com.monolith.app.data.repository.UpdateRepositoryImpl
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.AppUnlockRepository
+import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.ImportantPersonRepository
+import com.monolith.app.domain.repository.LeaderboardRepository
 import com.monolith.app.domain.repository.ScheduleRepository
 import com.monolith.app.domain.repository.StrictnessRepository
 import com.monolith.app.domain.repository.TagProvisioner
@@ -48,4 +58,19 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindStrictnessRepository(impl: StrictnessRepositoryImpl): StrictnessRepository
+
+    @Binds
+    abstract fun bindLeaderboardApi(impl: HttpLeaderboardApi): LeaderboardApi
+
+    @Binds
+    abstract fun bindDisplayNameStore(impl: MonolithPreferences): DisplayNameStore
+
+    @Binds
+    abstract fun bindIdentityStore(impl: DataStoreIdentityStore): IdentityStore
+
+    @Binds
+    abstract fun bindLeaderboardRepository(impl: LeaderboardRepositoryImpl): LeaderboardRepository
+
+    @Binds
+    abstract fun bindBackupRepository(impl: BackupRepositoryImpl): BackupRepository
 }

@@ -51,6 +51,9 @@ class AppBlockAccessibilityService : AccessibilityService() {
      *  on every single blocked app while the permission stays revoked. */
     @Volatile private var overlayPermissionNotifiedAt: Long = 0L
 
+    /** The app on screen that was let through, whose restored notifications go once it's left. */
+    @Volatile private var visitedPackage: String? = null
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         serviceScope.launch {
@@ -106,14 +109,32 @@ class AppBlockAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val foregroundPackage = event.packageName?.toString() ?: return
-        blockIfNeeded(foregroundPackage, event.className?.toString())
+        val blocked = blockIfNeeded(foregroundPackage, event.className?.toString())
+        trackVisit(foregroundPackage, blocked)
     }
 
-    private fun blockIfNeeded(foregroundPackage: String, foregroundClass: String?) {
-        if (foregroundPackage == packageName) return
+    /**
+     * Opening a chat normally dismisses its notification, but a stand-in restored by
+     * NotificationBlockListenerService is out of the source app's reach. So once the user has
+     * been in an app and moves on, its stand-ins are taken as read and cleared. On leaving rather
+     * than arriving: unlocking one app posts its stand-ins and drops the user straight into it,
+     * and they'd be gone before they could be used. The shade doesn't count as leaving, since
+     * tapping a stand-in means pulling it down first. A blocked arrival isn't a visit.
+     */
+    private fun trackVisit(foregroundPackage: String, blocked: Boolean) {
+        if (foregroundPackage == SystemPackages.SYSTEM_UI) return
+        val previous = visitedPackage
+        if (foregroundPackage == previous) return
+        visitedPackage = foregroundPackage.takeUnless { blocked }
+        if (previous != null) NotificationBlockListenerService.clearRestored(this, previous)
+    }
+
+    /** Returns whether [foregroundPackage] was blocked. */
+    private fun blockIfNeeded(foregroundPackage: String, foregroundClass: String?): Boolean {
+        if (foregroundPackage == packageName) return false
 
         val now = System.currentTimeMillis()
-        if (!blockState.isEnforcing(now)) return
+        if (!blockState.isEnforcing(now)) return false
 
         // Some system dialogs live inside the Settings package but aren't a user navigating to
         // Settings, e.g. Android's location-accuracy resolution dialog or a biometric/PIN
@@ -128,11 +149,11 @@ class AppBlockAccessibilityService : AccessibilityService() {
                 // added above, instead of guessing at OEM-specific confirm-credential activities.
                 Log.d(LOG_TAG, "settings window class=$foregroundClass (not in exemption list)")
             }
-            if (foregroundClass in TRANSIENT_SETTINGS_DIALOG_CLASSES) return
+            if (foregroundClass in TRANSIENT_SETTINGS_DIALOG_CLASSES) return false
         }
 
-        if (foregroundPackage !in blockedPackages) return
-        if ((unlockedPackages[foregroundPackage] ?: 0L) > now) return
+        if (foregroundPackage !in blockedPackages) return false
+        if ((unlockedPackages[foregroundPackage] ?: 0L) > now) return false
 
         Log.d(LOG_TAG, "blocking foreground=$foregroundPackage class=$foregroundClass")
 
@@ -173,6 +194,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
             putExtra(BlockOverlayActivity.EXTRA_BLOCKED_PACKAGE, foregroundPackage)
         }
         startActivity(overlayIntent)
+        return true
     }
 
     override fun onInterrupt() = Unit

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -85,6 +86,7 @@ fun HomeScreen(
     onLinkTag: () -> Unit,
     onViewTimeSaved: () -> Unit,
     onManageSchedules: () -> Unit,
+    onOpenFriends: () -> Unit,
     onOpenSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -151,6 +153,12 @@ fun HomeScreen(
                 Spacer(Modifier.weight(1f))
                 // Same corner the overflow menu used to sit in. Its two items live in Settings
                 // now, so the corner leads there instead of opening a menu on the way.
+                IconButton(onClick = onOpenFriends) {
+                    Icon(
+                        Icons.Outlined.Group,
+                        contentDescription = stringResource(R.string.friends_title),
+                    )
+                }
                 IconButton(onClick = onOpenSettings) {
                     Icon(
                         Icons.Filled.Settings,
@@ -209,10 +217,9 @@ fun HomeScreen(
                     icon = Icons.Filled.Schedule,
                     label = stringResource(R.string.schedules_cta),
                     // A schedule is a lock that arrives on its own. Without a tag it would arrive
-                    // with nothing to open it, and activation refuses it anyway, so the row says
-                    // what is missing rather than leading to schedules that would never fire.
+                    // with nothing to open it, and activation refuses it anyway, so the row stays
+                    // disabled rather than leading to schedules that would never fire.
                     enabled = uiState.linkedTag != null,
-                    value = stringResource(R.string.needs_tag_value).takeIf { uiState.linkedTag == null },
                     onClick = onManageSchedules,
                 )
             }

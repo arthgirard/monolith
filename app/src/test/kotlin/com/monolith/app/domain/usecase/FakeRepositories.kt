@@ -6,6 +6,7 @@ import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.Pause
 import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.TagLinkMode
 import com.monolith.app.domain.repository.AppUnlockRepository
@@ -61,6 +62,10 @@ class FakeBlockRepository(
         if (expiresAt != null && expiresAt > now) state.value = state.value.copy(bypassExpiresAtMillis = now)
         appUnlocks?.dropLiveUnlocks(now)
     }
+
+    val pauses = MutableStateFlow<List<Pause>>(emptyList())
+
+    override fun observePauses(): Flow<List<Pause>> = pauses
 
     private val storedLink = MutableStateFlow(linkedTag)
 

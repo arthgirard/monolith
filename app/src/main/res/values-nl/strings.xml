@@ -30,12 +30,16 @@
     <string name="onboarding_configuration_title">Instellen</string>
     <string name="onboarding_select_apps_subtitle">Kies de apps die u wilt blokkeren.</string>
     <string name="onboarding_link_tag_subtitle">Koppel uw NFC-tag om het blok om te zetten.</string>
+    <string name="onboarding_name_subtitle">Hoe moeten we u noemen?</string>
+    <string name="name_caption">Alleen mensen in uw groepen zien het.</string>
 
     <!-- Settings -->
     <string name="settings_title">Instellingen</string>
     <string name="settings_locked_banner">Houd uw tag ertegen om te wijzigen</string>
     <string name="settings_language">Taal</string>
     <string name="settings_language_system">Systeemstandaard</string>
+    <string name="settings_name">Naam</string>
+    <string name="settings_name_unset">Niet ingesteld</string>
 
     <!-- Strictness -->
     <string name="strictness_title">Strengheid</string>
@@ -48,6 +52,7 @@
     <string name="strictness_absolute_desc">Niets tilt Monolith op, behalve de tag.</string>
     <string name="strictness_uninstall_caveat">U kunt Monolith nog steeds verwijderen. Dat is met opzet.</string>
     <string name="onboarding_complete_title">Klaar!</string>
+    <string name="onboarding_complete_title_named">Klaar, %1$s!</string>
     <string name="onboarding_complete_desc">Welkom bij Monolith.</string>
 
     <!-- Home -->
@@ -68,6 +73,7 @@
     <string name="bypass_confirm_body">Dit zet Monolith 15 minuten uit. U krijgt één ontgrendeling per blok; uw tag zet hem terug. Alleen gebruiken als u de tag kwijt bent.</string>
     <string name="bypass_confirm_start">Ontgrendelen</string>
     <string name="cancel">Annuleren</string>
+    <string name="save">Opslaan</string>
 
     <!-- Activation without the tag -->
     <string name="activate_confirm_title">Monolith aanzetten?</string>
@@ -77,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Schema\'s beheren</string>
-    <string name="needs_tag_value">Koppel een tag</string>
     <string name="schedules_title">Schema\'s</string>
     <string name="schedules_subtitle">Monolith gaat op deze tijden vanzelf aan. Het gaat nooit vanzelf uit, daar blijft uw tag voor nodig.</string>
     <string name="schedules_empty">Nog geen schema\'s. Voeg er een toe en Monolith start zonder u.</string>
@@ -257,4 +262,64 @@
     <string name="widget_stat_held">TEGENGEHOUDEN</string>
     <string name="widget_apps_description">De apps waar u vandaag het vaakst naar greep</string>
     <string name="widget_apps_empty">Vandaag geen pogingen</string>
+    <string name="friends_title">Vrienden</string>
+    <string name="friends_intro">Houd elkaar eerlijk.</string>
+    <string name="friends_name_label">Uw naam</string>
+    <string name="friends_share_heading_group">Wat u in deze groep deelt</string>
+    <string name="friends_share_saved">Bespaarde tijd</string>
+    <string name="friends_share_streak">Huidige reeks</string>
+    <string name="friends_share_pauses">Nood- en app-ontgrendelingen</string>
+    <string name="friends_share_caption">Verborgen cijfers blijven ook voor u verborgen.</string>
+    <string name="friends_create">Groep maken</string>
+    <string name="friends_invite_label">Uitnodigingscode</string>
+    <string name="friends_join">Deelnemen</string>
+    <string name="friends_restore">Herstellen met een herstelcode</string>
+    <string name="friends_recovery_label">Herstelcode</string>
+    <string name="friends_restore_confirm">Herstellen</string>
+    <string name="friends_removed">U zit niet meer in een groep.</string>
+    <string name="friends_error_network">Server niet bereikbaar. Controleer uw verbinding.</string>
+    <string name="friends_error_invite">Geen groep heeft die uitnodigingscode.</string>
+    <string name="friends_error_full">Die groep is vol.</string>
+    <string name="friends_error_recovery">Die herstelcode hoort bij niemand.</string>
+    <string name="friends_error_generic">Er ging iets mis. Probeer het opnieuw.</string>
+    <string name="friends_offline">Offline. De laatste ranglijst wordt getoond.</string>
+    <string name="friends_board_failed">Ranglijst kon niet worden geladen.</string>
+    <string name="friends_retry">Opnieuw</string>
+    <string name="friends_hidden">–</string>
+    <string name="friends_row_streak_label">Reeks</string>
+    <string name="friends_row_bypasses_label">Noodontgrendelingen</string>
+    <string name="friends_row_unlocks_label">Ontgrendelingen</string>
+    <string name="friends_row_never_synced">Nog niet gesynchroniseerd</string>
+    <string name="friends_group_settings">Groepsinstellingen</string>
+    <string name="friends_copy">Kopiëren</string>
+    <string name="friends_rename">Naam opslaan</string>
+    <string name="friends_recovery_hint">Bewaar hem op een veilige plek. Alleen hiermee stapt u over naar een nieuwe telefoon.</string>
+    <string name="friends_leave">Groep verlaten</string>
+    <string name="friends_leave_confirm_title">Groep verlaten?</string>
+    <string name="friends_leave_confirm_body">Uw statistieken worden van de server verwijderd. U kunt weer deelnemen met de uitnodigingscode, maar uw geschiedenis komt niet terug.</string>
+    <string name="friends_leave_confirm">Verlaten</string>
+    <string name="friends_add_group">Groep toevoegen</string>
+    <string name="friends_add_join_heading">Deelnemen met een code</string>
+    <string name="friends_section_group">Deze groep</string>
+    <string name="friends_group_name_label">Groepsnaam</string>
+    <string name="friends_leave_group">Deze groep verlaten</string>
+    <string name="friends_leave_group_confirm_title">Deze groep verlaten?</string>
+    <string name="friends_leave_group_confirm_body">U ziet deze ranglijst dan niet meer. U kunt weer deelnemen met de uitnodigingscode.</string>
+    <string name="friends_error_too_many">U zit al in 10 groepen.</string>
+    <string name="friends_error_already_member">U zit al in die groep.</string>
+    <string name="friends_error_name_needs_three">Alleen groepen van drie of meer kunnen een naam hebben.</string>
+    <string name="backup_section">Back-up</string>
+    <string name="backup_auto">Automatisch back-uppen</string>
+    <string name="backup_last">Laatste back-up %1$s</string>
+    <string name="backup_never">Nog geen back-up</string>
+    <string name="backup_show_code">Herstelcode tonen</string>
+    <string name="backup_restore">Herstellen vanuit een back-up</string>
+    <string name="backup_code_warning">Iedereen met deze code kan uw gegevens herstellen. Houd hem privé.</string>
+    <string name="backup_restore_title">Herstellen vanuit een back-up</string>
+    <string name="backup_restore_confirm_body">De geschiedenis en instellingen van deze telefoon vervangen door de back-up van %1$s?</string>
+    <string name="backup_restore_confirm">Vervangen</string>
+    <string name="backup_restore_refused">Zet Monolith eerst uit met uw tag.</string>
+    <string name="backup_restore_unreadable">Deze back-up kan niet worden gelezen.</string>
+    <string name="backup_restore_none">Geen back-up gevonden. Uw vriendengroepen zijn terug.</string>
+    <string name="backup_restore_done">Hersteld.</string>
 </resources>

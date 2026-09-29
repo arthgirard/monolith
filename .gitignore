@@ -19,3 +19,6 @@ keystore.properties
 package.json
 package-lock.json
 node_modules/
+.claude/worktrees/
+!server/package.json
+!server/package-lock.json
