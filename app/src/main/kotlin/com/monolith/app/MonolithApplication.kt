@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.nfc.NfcDispatchGate
+import com.monolith.app.service.BackupScheduler
 import com.monolith.app.service.EnforcementForegroundService
 import com.monolith.app.service.LeaderboardSyncer
 import com.monolith.app.service.ScheduleTrigger
@@ -27,6 +28,7 @@ class MonolithApplication : Application() {
     @Inject lateinit var scheduleTrigger: ScheduleTrigger
     @Inject lateinit var nfcDispatchGate: NfcDispatchGate
     @Inject lateinit var leaderboardSyncer: LeaderboardSyncer
+    @Inject lateinit var backupScheduler: BackupScheduler
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -77,5 +79,8 @@ class MonolithApplication : Application() {
 
         // Idle until a group is joined; opt-in means no network calls before that.
         leaderboardSyncer.start(appScope)
+
+        // Idle until backup is turned on.
+        backupScheduler.start(appScope)
     }
 }

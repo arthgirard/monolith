@@ -19,6 +19,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.monolith.app.nfc.NfcManager
 import com.monolith.app.nfc.NfcTagBus
+import com.monolith.app.service.BackupScheduler
 import com.monolith.app.service.LeaderboardSyncer
 import com.monolith.app.ui.navigation.MonolithDestination
 import com.monolith.app.ui.navigation.MonolithNavHost
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var nfcManager: NfcManager
     @Inject lateinit var nfcTagBus: NfcTagBus
     @Inject lateinit var leaderboardSyncer: LeaderboardSyncer
+    @Inject lateinit var backupScheduler: BackupScheduler
 
     private val viewModel: MainViewModel by viewModels()
 
@@ -128,6 +130,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         nfcManager.enableForegroundDispatch(this)
         leaderboardSyncer.requestSync()
+        backupScheduler.onAppOpen()
     }
 
     override fun onPause() {

@@ -16,6 +16,8 @@ class FakeLeaderboardRepository(identity: Identity? = null) : LeaderboardReposit
     val selectedGroupId = MutableStateFlow(identity?.groups?.firstOrNull()?.id)
     val syncCalls = mutableListOf<Pair<List<DayAggregate>, Long?>>()
     var syncResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
+    val restoreCalls = mutableListOf<String>()
+    var restoreResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
 
     val removedNotice = MutableStateFlow(false)
 
@@ -26,7 +28,10 @@ class FakeLeaderboardRepository(identity: Identity? = null) : LeaderboardReposit
     override suspend fun dismissRemovedNotice() { removedNotice.value = false }
     override suspend fun createGroup(displayName: String?, share: ShareSettings) = LeaderboardResult.Ok(Unit)
     override suspend fun joinGroup(inviteCode: String, displayName: String?, share: ShareSettings) = LeaderboardResult.Ok(Unit)
-    override suspend fun restore(recoveryCode: String) = LeaderboardResult.Ok(Unit)
+    override suspend fun restore(recoveryCode: String): LeaderboardResult<Unit> {
+        restoreCalls += recoveryCode
+        return restoreResult
+    }
     override suspend fun rename(displayName: String) = LeaderboardResult.Ok(Unit)
     override suspend fun refreshGroups() = LeaderboardResult.Ok(Unit)
     override suspend fun updateGroup(groupId: String, share: ShareSettings?, name: String?) = LeaderboardResult.Ok(Unit)
