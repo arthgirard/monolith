@@ -107,7 +107,7 @@ fun GroupSheet(
                 Text(stringResource(if (lastGroup) R.string.friends_leave_confirm_body else R.string.friends_leave_group_confirm_body))
             },
             confirmButton = {
-                TextButton(onClick = { confirmLeave = false; onLeave() }) { Text(stringResource(R.string.friends_leave_confirm)) }
+                TextButton(onClick = { confirmLeave = false; onLeave() }, enabled = !busy) { Text(stringResource(R.string.friends_leave_confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmLeave = false }) { Text(stringResource(android.R.string.cancel)) }

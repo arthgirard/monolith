@@ -104,6 +104,7 @@ class FriendsViewModel @Inject constructor(
                 // group or identity (switch, join, restore, leave, removal) resets the board.
                 val appeared = identity != null && identity.token != token
                 val switched = identity?.token != token || selected != groupId
+                val moved = selected != groupId
                 token = identity?.token
                 groupId = selected
                 if (switched) boardJob?.cancel()
@@ -112,7 +113,9 @@ class FriendsViewModel @Inject constructor(
                         loaded = true,
                         identity = identity,
                         selectedGroupId = selected,
-                        sheet = if (selected == null) null else it.sheet,
+                        // The settings sheet edits the selected group: if the selection moved under
+                        // it (a not_member drop fell back to another group), close it, don't retarget.
+                        sheet = if (selected == null || (moved && it.sheet == FriendsSheet.SETTINGS)) null else it.sheet,
                         rows = if (switched) emptyList() else it.rows,
                         boardStatus = if (switched) BoardStatus.LOADING else it.boardStatus,
                         message = if (appeared && it.message == FriendsMessage.REMOVED) null else it.message,
@@ -220,6 +223,8 @@ class FriendsViewModel @Inject constructor(
     }
 
     fun leaveSelectedGroup() {
+        // submit() drops a tap while busy; keep the sheet open so the leave isn't silently lost.
+        if (state.value.busy) return
         val groupId = state.value.selectedGroupId ?: return
         closeSheet()
         submit { repository.leaveGroup(groupId) }
