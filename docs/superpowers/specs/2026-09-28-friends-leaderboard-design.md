@@ -246,4 +246,4 @@ sharing, history beyond 35 days, custom domain, CI deploys.
 - A viewer hiding time gained sees no ranks; rows are ordered by name.
 - Sync accepts dates from UTC today minus 36 days, and the pause log keeps 36 days, so zones
   behind UTC can send all 35 local days.
-- Numbers use the app's tabular Inter style; the app ships no mono font.
+- Data (ranks, durations, counts, codes) is set in JetBrains Mono, bundled for this feature.
