@@ -1,5 +1,6 @@
 package com.monolith.app.ui.schedule
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,18 +49,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import android.text.format.DateFormat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.BlockSchedule
 import com.monolith.app.ui.theme.MonolithButtonShape
+import com.monolith.app.util.appLocale
 import com.monolith.app.util.formatScheduleDays
 import com.monolith.app.util.formatScheduleTime
 import com.monolith.app.util.weekOrder
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.format.TextStyle
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -165,8 +165,9 @@ private fun scheduleSummary(schedule: BlockSchedule): String {
         everyDayLabel = stringResource(R.string.schedules_every_day),
         weekdaysLabel = stringResource(R.string.schedules_weekdays),
         weekendsLabel = stringResource(R.string.schedules_weekends),
+        locale = appLocale(),
     )
-    return "${formatScheduleTime(schedule.startTime)}  •  $days"
+    return "${formatScheduleTime(schedule.startTime, appLocale())}  •  $days"
 }
 
 @Composable
@@ -192,7 +193,7 @@ private fun ScheduleRow(
                 .padding(vertical = 8.dp),
         ) {
             Text(
-                text = formatScheduleTime(schedule.startTime),
+                text = formatScheduleTime(schedule.startTime, appLocale()),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
             )
@@ -202,6 +203,7 @@ private fun ScheduleRow(
                     everyDayLabel = stringResource(R.string.schedules_every_day),
                     weekdaysLabel = stringResource(R.string.schedules_weekdays),
                     weekendsLabel = stringResource(R.string.schedules_weekends),
+                    locale = appLocale(),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
@@ -226,7 +228,7 @@ private fun ScheduleRow(
 
 @Composable
 private fun DayChips(selected: Set<DayOfWeek>, onToggle: (DayOfWeek) -> Unit) {
-    val locale = Locale.getDefault()
+    val locale = appLocale()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),

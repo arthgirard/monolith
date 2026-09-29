@@ -1,6 +1,5 @@
 package com.monolith.app.ui.settings
 
-import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +35,8 @@ import com.monolith.app.ui.components.SettingsToggleRow
 import com.monolith.app.ui.components.copySensitive
 import com.monolith.app.ui.theme.MonolithMonoFamily
 import com.monolith.app.ui.theme.mono
+import com.monolith.app.util.appLocale
+import com.monolith.app.util.formatRelativeTime
 
 /**
  * The encrypted backup: whether it runs, when it last did, the code that brings it back, and the
@@ -101,7 +102,7 @@ fun BackupSection(
 @Composable
 private fun backupCaption(lastBackupAt: Long?): AnnotatedString {
     if (lastBackupAt == null) return AnnotatedString(stringResource(R.string.backup_never))
-    val age = DateUtils.getRelativeTimeSpanString(lastBackupAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+    val age = formatRelativeTime(lastBackupAt, System.currentTimeMillis(), appLocale())
     val text = stringResource(R.string.backup_last, age)
     val start = text.indexOf(age)
     return buildAnnotatedString {

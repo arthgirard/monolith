@@ -143,6 +143,7 @@
     <!-- Time saved -->
     <string name="time_saved_title">Bespaarde tijd</string>
     <string name="time_saved_day">Dag</string>
+    <string name="time_saved_today">Vandaag</string>
     <string name="time_saved_week">Week</string>
     <string name="time_saved_month">Maand</string>
     <string name="time_saved_year">Jaar</string>

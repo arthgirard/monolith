@@ -8,10 +8,13 @@ import java.time.format.FormatStyle
 import java.time.format.TextStyle
 import java.util.Locale
 
-/** Whether the device is on a 24-hour clock is a locale setting, so let java.time decide. */
-private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-
-fun formatScheduleTime(time: LocalTime): String = time.format(timeFormatter)
+/**
+ * Whether the device is on a 24-hour clock is a locale setting, so let java.time decide. Every
+ * function here takes the app's locale (see appLocale), never the default: that one can stay on
+ * the system language while Monolith is in another.
+ */
+fun formatScheduleTime(time: LocalTime, locale: Locale): String =
+    time.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
 
 /**
  * Day set as a short label: the common runs get a name ("Weekdays"), anything else lists the
@@ -23,7 +26,7 @@ fun formatScheduleDays(
     everyDayLabel: String,
     weekdaysLabel: String,
     weekendsLabel: String,
-    locale: Locale = Locale.getDefault(),
+    locale: Locale,
 ): String = when (days) {
     ALL_DAYS -> everyDayLabel
     WEEKDAYS -> weekdaysLabel
@@ -33,13 +36,13 @@ fun formatScheduleDays(
 }
 
 /** "Mon 22:00" -- the next fire, for the home screen's status card. */
-fun formatNextFire(fire: ZonedDateTime, locale: Locale = Locale.getDefault()): String {
+fun formatNextFire(fire: ZonedDateTime, locale: Locale): String {
     val day = fire.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
-    return "$day ${formatScheduleTime(fire.toLocalTime())}"
+    return "$day ${formatScheduleTime(fire.toLocalTime(), locale)}"
 }
 
 /** The seven days starting from the locale's first day of the week. */
-fun weekOrder(locale: Locale = Locale.getDefault()): List<DayOfWeek> {
+fun weekOrder(locale: Locale): List<DayOfWeek> {
     val first = java.time.temporal.WeekFields.of(locale).firstDayOfWeek
     return (0..6).map { first.plus(it.toLong()) }
 }

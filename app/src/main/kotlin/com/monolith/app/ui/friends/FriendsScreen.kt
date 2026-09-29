@@ -1,6 +1,5 @@
 package com.monolith.app.ui.friends
 
-import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,8 +68,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
-import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.DISPLAY_NAME_MAX_LENGTH
+import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.ShareSettings
 import com.monolith.app.domain.model.isValidDisplayName
 import com.monolith.app.domain.usecase.groupLabels
@@ -79,7 +78,9 @@ import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.components.SettingsToggleRow
 import com.monolith.app.ui.settings.RestoreDialog
 import com.monolith.app.ui.theme.mono
+import com.monolith.app.util.appLocale
 import com.monolith.app.util.formatDuration
+import com.monolith.app.util.formatRelativeTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -349,7 +350,7 @@ private fun BoardRowItem(row: BoardRow, leaderMillis: Long?, nowMillis: Long, on
                 )
                 if (showSyncAge(row.lastSyncAt, nowMillis)) {
                     Text(
-                        row.lastSyncAt?.let { DateUtils.getRelativeTimeSpanString(it, nowMillis, DateUtils.MINUTE_IN_MILLIS).toString() }
+                        row.lastSyncAt?.let { formatRelativeTime(it, nowMillis, appLocale()) }
                             ?: stringResource(R.string.friends_row_never_synced),
                         style = MaterialTheme.typography.labelSmall,
                         color = muted,

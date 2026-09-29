@@ -38,10 +38,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
+import com.monolith.app.util.appLocale
 import com.monolith.app.util.formatDuration
+import com.monolith.app.util.formatSkeleton
+import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.TextStyle
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,7 +106,7 @@ fun TimeSavedScreen(
                 IconButton(onClick = viewModel::goToPrevious) {
                     Icon(Icons.Filled.ChevronLeft, contentDescription = stringResource(R.string.time_saved_previous))
                 }
-                Text(uiState.periodLabel, style = MaterialTheme.typography.titleMedium)
+                Text(periodLabel(uiState.periodType, uiState.anchorDate), style = MaterialTheme.typography.titleMedium)
                 IconButton(onClick = viewModel::goToNext, enabled = uiState.canGoNext) {
                     Icon(Icons.Filled.ChevronRight, contentDescription = stringResource(R.string.time_saved_next))
                 }
@@ -179,7 +184,7 @@ fun TimeSavedBarChart(
             Row(modifier = Modifier.fillMaxWidth()) {
                 buckets.forEachIndexed { index, bucket ->
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        bucketLabel(periodType, index, bucket.bucketStartMillis)?.let { label ->
+                        bucketLabel(periodType, index, bucket.bucketStartMillis, appLocale())?.let { label ->
                             Text(label, style = MaterialTheme.typography.labelSmall, color = labelColor)
                         }
                     }
@@ -191,7 +196,24 @@ fun TimeSavedBarChart(
 
 private val zone: ZoneId = ZoneId.systemDefault()
 
-private fun bucketLabel(periodType: TimePeriodType, index: Int, bucketStartMillis: Long): String? {
+/** The period on screen, laid out the way the app's language writes dates. */
+@Composable
+private fun periodLabel(type: TimePeriodType, date: LocalDate): String {
+    val locale = appLocale()
+    return when (type) {
+        TimePeriodType.DAY ->
+            if (date == LocalDate.now()) stringResource(R.string.time_saved_today) else formatSkeleton(date, "EEEMMMd", locale)
+        TimePeriodType.WEEK -> {
+            // Weeks run Monday to Sunday, the same as TimeSavedCalculator's buckets.
+            val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            "${formatSkeleton(weekStart, "MMMd", locale)} – ${formatSkeleton(weekStart.plusDays(6), "MMMd", locale)}"
+        }
+        TimePeriodType.MONTH -> formatSkeleton(date, "yMMMM", locale)
+        TimePeriodType.YEAR -> formatSkeleton(date, "y", locale)
+    }
+}
+
+private fun bucketLabel(periodType: TimePeriodType, index: Int, bucketStartMillis: Long, locale: Locale): String? {
     val date = Instant.ofEpochMilli(bucketStartMillis).atZone(zone)
     return when (periodType) {
         TimePeriodType.DAY -> if (index % 6 == 0) {
@@ -204,11 +226,11 @@ private fun bucketLabel(periodType: TimePeriodType, index: Int, bucketStartMilli
         } else {
             null
         }
-        TimePeriodType.WEEK -> date.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault())
+        TimePeriodType.WEEK -> date.dayOfWeek.getDisplayName(TextStyle.NARROW, locale)
         TimePeriodType.MONTH -> {
             val day = date.dayOfMonth
             if (day == 1 || day % 5 == 0) day.toString() else null
         }
-        TimePeriodType.YEAR -> date.month.getDisplayName(TextStyle.NARROW, Locale.getDefault())
+        TimePeriodType.YEAR -> date.month.getDisplayName(TextStyle.NARROW, locale)
     }
 }

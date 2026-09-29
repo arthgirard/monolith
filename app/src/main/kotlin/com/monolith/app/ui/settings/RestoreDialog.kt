@@ -1,6 +1,5 @@
 package com.monolith.app.ui.settings
 
-import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
+import com.monolith.app.util.formatDateTime
 
 /**
  * Restore from a recovery code: the code, then (when there is a backup) the question naming what
@@ -67,9 +67,7 @@ fun RestoreDialog(
             },
         )
         is RestoreStep.Confirm -> {
-            val date = step.backupAt?.let {
-                DateUtils.formatDateTime(context, it, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME)
-            }.orEmpty()
+            val date = step.backupAt?.let { formatDateTime(context, it) }.orEmpty()
             AlertDialog(
                 onDismissRequest = close,
                 title = { Text(stringResource(R.string.backup_restore_title)) },

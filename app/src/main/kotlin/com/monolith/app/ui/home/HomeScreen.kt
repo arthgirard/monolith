@@ -29,8 +29,8 @@ import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,18 +66,19 @@ import com.monolith.app.R
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.TimePeriodType
 import com.monolith.app.domain.model.TimeSavedBucket
+import com.monolith.app.service.EnforcementStatus
 import com.monolith.app.ui.components.MonolithSnackbarHost
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.components.SettingsRow
-import com.monolith.app.service.EnforcementStatus
 import com.monolith.app.ui.theme.MonolithButtonShape
 import com.monolith.app.ui.theme.tabular
 import com.monolith.app.ui.timesaved.TimeSavedBarChart
+import com.monolith.app.util.appLocale
 import com.monolith.app.util.formatDuration
 import com.monolith.app.util.formatNextFire
-import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -370,7 +371,7 @@ private fun BlockStatusCard(
             if (!isActive && nextScheduledFire != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "${stringResource(R.string.next_scheduled_prefix)} ${formatNextFire(nextScheduledFire)}",
+                    text = "${stringResource(R.string.next_scheduled_prefix)} ${formatNextFire(nextScheduledFire, appLocale())}",
                     style = MaterialTheme.typography.bodySmall,
                     color = onBackground.copy(alpha = 0.7f),
                 )

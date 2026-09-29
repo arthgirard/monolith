@@ -143,6 +143,7 @@
     <!-- Time saved -->
     <string name="time_saved_title">Tempo economizado</string>
     <string name="time_saved_day">Dia</string>
+    <string name="time_saved_today">Hoje</string>
     <string name="time_saved_week">Semana</string>
     <string name="time_saved_month">Mês</string>
     <string name="time_saved_year">Ano</string>

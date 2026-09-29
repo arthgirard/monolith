@@ -16,18 +16,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 
 data class TimeSavedUiState(
     val periodType: TimePeriodType = TimePeriodType.DAY,
     val buckets: List<TimeSavedBucket> = emptyList(),
     val totalMillis: Long = 0L,
-    val periodLabel: String = "",
+    /** Any day inside the period shown; the screen names the period in the app's language. */
+    val anchorDate: LocalDate = LocalDate.now(),
     val canGoNext: Boolean = false,
     val personalRecordMillis: Long = 0L,
 )
@@ -62,7 +60,7 @@ class TimeSavedViewModel @Inject constructor(
             periodType = type,
             buckets = buckets,
             totalMillis = buckets.sumOf { it.durationMillis },
-            periodLabel = labelFor(type, anchorDate),
+            anchorDate = anchorDate,
             canGoNext = periodEnd <= now,
             personalRecordMillis = personalRecord,
         )
@@ -97,21 +95,5 @@ class TimeSavedViewModel @Inject constructor(
         TimePeriodType.WEEK -> date.plusWeeks(amount)
         TimePeriodType.MONTH -> date.plusMonths(amount)
         TimePeriodType.YEAR -> date.plusYears(amount)
-    }
-
-    private fun labelFor(type: TimePeriodType, date: LocalDate): String = when (type) {
-        TimePeriodType.DAY -> if (date == LocalDate.now(zone)) {
-            "Today"
-        } else {
-            date.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
-        }
-        TimePeriodType.WEEK -> {
-            val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-            val weekEnd = weekStart.plusDays(6)
-            val formatter = DateTimeFormatter.ofPattern("MMM d")
-            "${weekStart.format(formatter)} – ${weekEnd.format(formatter)}"
-        }
-        TimePeriodType.MONTH -> date.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
-        TimePeriodType.YEAR -> date.format(DateTimeFormatter.ofPattern("yyyy"))
     }
 }
