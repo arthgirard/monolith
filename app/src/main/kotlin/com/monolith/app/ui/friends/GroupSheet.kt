@@ -35,6 +35,7 @@ import com.monolith.app.ui.theme.mono
 fun GroupSheet(
     membership: GroupMembership,
     busy: Boolean,
+    message: FriendsMessage?,
     onRename: (String) -> Unit,
     onShareChange: (ShareSettings) -> Unit,
     onLeave: () -> Unit,
@@ -50,6 +51,9 @@ fun GroupSheet(
             modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            message?.let {
+                Text(stringResource(it.text), color = MaterialTheme.colorScheme.error)
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.friends_invite_label), style = MaterialTheme.typography.labelMedium)

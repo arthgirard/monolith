@@ -287,11 +287,11 @@
     <string name="friends_retry">Retry</string>
     <string name="friends_you">%1$s (you)</string>
     <string name="friends_hidden">–</string>
-    <string name="friends_row_streak">Streak %1$s</string>
+    <string name="friends_row_streak_label">Streak</string>
     <string name="friends_row_streak_off">Streak off</string>
-    <string name="friends_row_bypasses">Bypasses %1$d</string>
-    <string name="friends_row_unlocks">Unlocks %1$d</string>
-    <string name="friends_row_synced">Synced %1$s</string>
+    <string name="friends_row_bypasses_label">Bypasses</string>
+    <string name="friends_row_unlocks_label">Unlocks</string>
+    <string name="friends_row_synced_label">Synced</string>
     <string name="friends_row_never_synced">Not synced yet</string>
     <string name="friends_group_settings">Group settings</string>
     <string name="friends_copy">Copy</string>

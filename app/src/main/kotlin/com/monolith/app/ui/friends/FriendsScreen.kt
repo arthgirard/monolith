@@ -31,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,12 +40,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.ui.theme.MonolithMonoFamily
 import com.monolith.app.ui.theme.mono
 import com.monolith.app.util.formatDuration
 
@@ -82,8 +87,11 @@ fun FriendsScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            uiState.message?.let { message ->
-                Text(stringResource(message.text), color = MaterialTheme.colorScheme.error)
+            // While the sheet is open it shows the message itself, right where the action was.
+            if (!showSheet) {
+                uiState.message?.let { message ->
+                    Text(stringResource(message.text), color = MaterialTheme.colorScheme.error)
+                }
             }
             when {
                 !uiState.loaded -> Unit
@@ -94,10 +102,12 @@ fun FriendsScreen(
     }
 
     val membership = uiState.membership
+    LaunchedEffect(membership == null) { if (membership == null) showSheet = false }
     if (showSheet && membership != null) {
         GroupSheet(
             membership = membership,
             busy = uiState.busy,
+            message = uiState.message,
             onRename = viewModel::rename,
             onShareChange = viewModel::updateShare,
             onLeave = { viewModel.leave(); showSheet = false },
@@ -237,27 +247,40 @@ private fun BoardRowItem(row: BoardRow, nowMillis: Long) {
                 style = MaterialTheme.typography.titleMedium.mono(),
             )
         }
-        val details = buildList {
-            if (row.streakVisible) {
-                add(
-                    row.streakStartedAt?.let { stringResource(R.string.friends_row_streak, formatDuration(nowMillis - it)) }
-                        ?: stringResource(R.string.friends_row_streak_off),
-                )
+        val detailStyle = MaterialTheme.typography.bodySmall
+        val streakLabel = stringResource(R.string.friends_row_streak_label)
+        val streakOff = stringResource(R.string.friends_row_streak_off)
+        val bypassesLabel = stringResource(R.string.friends_row_bypasses_label)
+        val unlocksLabel = stringResource(R.string.friends_row_unlocks_label)
+        val syncedLabel = stringResource(R.string.friends_row_synced_label)
+        val neverSynced = stringResource(R.string.friends_row_never_synced)
+        val monoValue = SpanStyle(fontFamily = MonolithMonoFamily)
+        // Labels stay in the body face; only the figures are set in mono.
+        val details = buildAnnotatedString {
+            fun part(label: String, value: String?) {
+                if (length > 0) append("  \u00B7  ")
+                append(label)
+                if (value != null) {
+                    append(" ")
+                    withStyle(monoValue) { append(value) }
+                }
             }
-            row.bypassCount?.let { add(stringResource(R.string.friends_row_bypasses, it)) }
-            row.unlockCount?.let { add(stringResource(R.string.friends_row_unlocks, it)) }
-            add(
-                row.lastSyncAt?.let {
-                    stringResource(
-                        R.string.friends_row_synced,
-                        DateUtils.getRelativeTimeSpanString(it, nowMillis, DateUtils.MINUTE_IN_MILLIS).toString(),
-                    )
-                } ?: stringResource(R.string.friends_row_never_synced),
-            )
+            if (row.streakVisible) {
+                val started = row.streakStartedAt
+                if (started != null) part(streakLabel, formatDuration(nowMillis - started)) else part(streakOff, null)
+            }
+            row.bypassCount?.let { part(bypassesLabel, it.toString()) }
+            row.unlockCount?.let { part(unlocksLabel, it.toString()) }
+            val synced = row.lastSyncAt
+            if (synced != null) {
+                part(syncedLabel, DateUtils.getRelativeTimeSpanString(synced, nowMillis, DateUtils.MINUTE_IN_MILLIS).toString())
+            } else {
+                part(neverSynced, null)
+            }
         }
         Text(
-            details.joinToString("  ·  "),
-            style = MaterialTheme.typography.bodySmall.mono(),
+            details,
+            style = detailStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 32.dp),
         )
