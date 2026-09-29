@@ -1,4 +1,5 @@
 import { authenticate } from "./auth";
+import { board } from "./board";
 import { createGroup, getMe, joinGroup, leave, updateMe } from "./groups";
 import { HttpError, json } from "./http";
 import { sync } from "./sync";
@@ -11,6 +12,7 @@ export const authedRoutes: Record<string, AuthedHandler> = {
   "POST /me": updateMe,
   "DELETE /me": leave,
   "POST /sync": sync,
+  "GET /board": board,
 };
 
 async function route(req: Request, env: Env, now: number): Promise<Response> {
