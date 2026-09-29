@@ -59,14 +59,25 @@ class LeaderboardDtosTest {
     }
 
     @Test
-    fun `group responses decode, with or without a token`() {
-        val withToken = LeaderboardJson.decodeFromString<GroupResponse>(
-            """{"token":"t","group":{"id":"g","inviteCode":"ABCDEFGH","name":null,"memberCount":2,"otherMembers":["Sam"],"share":{"saved":true,"streak":false,"pauses":true}}}""",
+    fun `group responses decode`() {
+        val response = LeaderboardJson.decodeFromString<GroupResponse>(
+            """{"group":{"id":"g","inviteCode":"ABCDEFGH","name":null,"memberCount":2,"otherMembers":["Sam"],"share":{"saved":true,"streak":false,"pauses":true}}}""",
         )
-        assertEquals("t", withToken.token)
-        assertEquals(GroupInfo("g", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(true, false, true)), withToken.group.toDomain())
-        val without = LeaderboardJson.decodeFromString<GroupResponse>("""{"group":{"id":"g","inviteCode":"ABCDEFGH","memberCount":1,"otherMembers":[],"share":{"saved":true,"streak":true,"pauses":true}}}""")
-        assertEquals(null, without.token)
+        assertEquals(GroupInfo("g", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(true, false, true)), response.group.toDomain())
+    }
+
+    @Test
+    fun `backup error codes map`() {
+        assertEquals(LeaderboardError.TOKEN_TAKEN, errorOf("token_taken"))
+        assertEquals(LeaderboardError.NO_BACKUP, errorOf("no_backup"))
+        assertEquals(LeaderboardError.TOO_LARGE, errorOf("too_large"))
+    }
+
+    @Test
+    fun `a nameless registration sends only the token, and me decodes backupAt`() {
+        assertEquals("""{"token":"t"}""", LeaderboardJson.encodeToString(RegisterRequest("t")))
+        assertEquals(null, LeaderboardJson.decodeFromString<MeResponse>("""{"displayName":"A","groups":[]}""").backupAt)
+        assertEquals(5L, LeaderboardJson.decodeFromString<MeResponse>("""{"displayName":"A","groups":[],"backupAt":5}""").backupAt)
     }
 
     @Test
@@ -78,7 +89,7 @@ class LeaderboardDtosTest {
     }
 
     @Test
-    fun `a create with a token sends no display name`() {
+    fun `a create for a named identity sends no display name`() {
         assertEquals(
             """{"share":{"saved":true,"streak":true,"pauses":true}}""",
             LeaderboardJson.encodeToString(CreateGroupRequest(share = ShareDto(true, true, true))),

@@ -6,6 +6,7 @@ import com.monolith.app.data.leaderboard.IdentityStore
 import com.monolith.app.data.leaderboard.LeaderboardApi
 import com.monolith.app.data.repository.AppRepositoryImpl
 import com.monolith.app.data.repository.AppUnlockRepositoryImpl
+import com.monolith.app.data.repository.BackupRepositoryImpl
 import com.monolith.app.data.repository.BlockRepositoryImpl
 import com.monolith.app.data.repository.ImportantPersonRepositoryImpl
 import com.monolith.app.data.repository.LeaderboardRepositoryImpl
@@ -14,6 +15,7 @@ import com.monolith.app.data.repository.StrictnessRepositoryImpl
 import com.monolith.app.data.repository.UpdateRepositoryImpl
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.AppUnlockRepository
+import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.ImportantPersonRepository
 import com.monolith.app.domain.repository.LeaderboardRepository
@@ -63,4 +65,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindLeaderboardRepository(impl: LeaderboardRepositoryImpl): LeaderboardRepository
+
+    @Binds
+    abstract fun bindBackupRepository(impl: BackupRepositoryImpl): BackupRepository
 }

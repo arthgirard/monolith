@@ -28,13 +28,16 @@ data class GroupDto(
     val share: ShareDto,
 )
 
-/** [displayName] only without a token: an existing identity keeps its name. */
+/** A phone-generated [token]; without [displayName] the identity stays nameless until its first group. */
+@Serializable data class RegisterRequest(val token: String, val displayName: String? = null)
+@Serializable data class RotateTokenRequest(val token: String)
+
+/** [displayName] only for a nameless identity: a named one keeps its name. */
 @Serializable data class CreateGroupRequest(val displayName: String? = null, val share: ShareDto)
 @Serializable data class JoinRequest(val inviteCode: String, val displayName: String? = null, val share: ShareDto)
 
-/** [token] is present only when the call created the identity. */
-@Serializable data class GroupResponse(val token: String? = null, val group: GroupDto)
-@Serializable data class MeResponse(val displayName: String, val groups: List<GroupDto>)
+@Serializable data class GroupResponse(val group: GroupDto)
+@Serializable data class MeResponse(val displayName: String, val groups: List<GroupDto>, val backupAt: Long? = null)
 @Serializable data class UpdateMeRequest(val displayName: String)
 
 /** An empty [name] clears the group's name. */
@@ -98,5 +101,8 @@ fun errorOf(code: String?): LeaderboardError = when (code) {
     "not_member" -> LeaderboardError.NOT_MEMBER
     "hidden_signal" -> LeaderboardError.HIDDEN_SIGNAL
     "invalid_body" -> LeaderboardError.INVALID
+    "token_taken" -> LeaderboardError.TOKEN_TAKEN
+    "no_backup" -> LeaderboardError.NO_BACKUP
+    "too_large" -> LeaderboardError.TOO_LARGE
     else -> LeaderboardError.SERVER
 }

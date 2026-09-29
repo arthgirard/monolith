@@ -84,7 +84,7 @@ fun GroupSheet(
 
             SectionHeader(stringResource(R.string.friends_section_you))
             DisplayNameField(identity.displayName, busy, onRename)
-            RecoveryCard(identity.token)
+            identity.master?.let { RecoveryCard(it) }
 
             SectionHeader(stringResource(R.string.friends_share_heading_group))
             ShareToggles(group.share, enabled = !busy, onChange = onShareChange)

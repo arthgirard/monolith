@@ -2,9 +2,12 @@ package com.monolith.app.data.leaderboard
 
 import android.content.Context
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.monolith.app.domain.model.GroupInfo
@@ -22,11 +25,24 @@ interface IdentityStore {
 
     /** Set when the server dropped this identity (not when they left); cleared by any [save]. */
     val removedNotice: Flow<Boolean>
+
+    /**
+     * The master a legacy identity is being migrated to, kept until a [save] with a master: if the
+     * server rotated but its answer was lost, the next try still knows the new token.
+     */
+    val pendingMaster: Flow<String?>
+    val backupEnabled: Flow<Boolean>
+    val lastBackupAt: Flow<Long?>
     suspend fun save(identity: Identity)
 
     /** Replaces the cached group list; does nothing without an identity. */
     suspend fun saveGroups(groups: List<GroupInfo>)
+    suspend fun savePendingMaster(master: String)
+    suspend fun setBackupEnabled(enabled: Boolean)
+    suspend fun setLastBackupAt(at: Long?)
     suspend fun select(groupId: String?)
+
+    /** Everything goes, backup settings too: without the identity the server holds no backup. */
     suspend fun clear(removed: Boolean = false)
     suspend fun dismissRemovedNotice()
 }
@@ -47,12 +63,24 @@ class DataStoreIdentityStore @Inject constructor(
 
     override val identity: Flow<Identity?> = context.leaderboardStore.data.map { prefs ->
         val token = prefs[TOKEN] ?: return@map null
-        Identity(token = token, displayName = prefs[DISPLAY_NAME].orEmpty(), groups = decodeGroups(prefs[GROUPS]))
+        Identity(
+            token = token,
+            displayName = prefs[DISPLAY_NAME].orEmpty(),
+            groups = decodeGroups(prefs[GROUPS]),
+            master = prefs[MASTER],
+            backupAt = prefs[BACKUP_AT],
+        )
     }
 
     override val selectedGroupId: Flow<String?> = context.leaderboardStore.data.map { it[SELECTED_GROUP] }
 
     override val removedNotice: Flow<Boolean> = context.leaderboardStore.data.map { it[REMOVED_NOTICE] ?: false }
+
+    override val pendingMaster: Flow<String?> = context.leaderboardStore.data.map { it[PENDING_MASTER] }
+
+    override val backupEnabled: Flow<Boolean> = context.leaderboardStore.data.map { it[BACKUP_ENABLED] ?: false }
+
+    override val lastBackupAt: Flow<Long?> = context.leaderboardStore.data.map { it[LAST_BACKUP_AT] }
 
     override suspend fun save(identity: Identity) {
         context.leaderboardStore.edit { prefs ->
@@ -60,6 +88,9 @@ class DataStoreIdentityStore @Inject constructor(
             prefs[TOKEN] = identity.token
             prefs[DISPLAY_NAME] = identity.displayName
             prefs[GROUPS] = encodeGroups(identity.groups)
+            prefs.putOrRemove(MASTER, identity.master)
+            prefs.putOrRemove(BACKUP_AT, identity.backupAt)
+            if (identity.master != null) prefs.remove(PENDING_MASTER)
         }
     }
 
@@ -69,10 +100,20 @@ class DataStoreIdentityStore @Inject constructor(
         }
     }
 
+    override suspend fun savePendingMaster(master: String) {
+        context.leaderboardStore.edit { it[PENDING_MASTER] = master }
+    }
+
+    override suspend fun setBackupEnabled(enabled: Boolean) {
+        context.leaderboardStore.edit { it[BACKUP_ENABLED] = enabled }
+    }
+
+    override suspend fun setLastBackupAt(at: Long?) {
+        context.leaderboardStore.edit { it.putOrRemove(LAST_BACKUP_AT, at) }
+    }
+
     override suspend fun select(groupId: String?) {
-        context.leaderboardStore.edit { prefs ->
-            if (groupId == null) prefs.remove(SELECTED_GROUP) else prefs[SELECTED_GROUP] = groupId
-        }
+        context.leaderboardStore.edit { it.putOrRemove(SELECTED_GROUP, groupId) }
     }
 
     override suspend fun clear(removed: Boolean) {
@@ -84,6 +125,10 @@ class DataStoreIdentityStore @Inject constructor(
 
     override suspend fun dismissRemovedNotice() {
         context.leaderboardStore.edit { it.remove(REMOVED_NOTICE) }
+    }
+
+    private fun <T> MutablePreferences.putOrRemove(key: Preferences.Key<T>, value: T?) {
+        if (value == null) remove(key) else this[key] = value
     }
 
     private fun encodeGroups(groups: List<GroupInfo>): String = LeaderboardJson.encodeToString(groups.map(GroupInfo::toDto))
@@ -100,5 +145,10 @@ class DataStoreIdentityStore @Inject constructor(
         val GROUPS = stringPreferencesKey("groups")
         val SELECTED_GROUP = stringPreferencesKey("selected_group")
         val REMOVED_NOTICE = booleanPreferencesKey("removed_notice")
+        val MASTER = stringPreferencesKey("master")
+        val PENDING_MASTER = stringPreferencesKey("pending_master")
+        val BACKUP_AT = longPreferencesKey("backup_at")
+        val BACKUP_ENABLED = booleanPreferencesKey("backup_enabled")
+        val LAST_BACKUP_AT = longPreferencesKey("last_backup_at")
     }
 }

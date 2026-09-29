@@ -15,8 +15,18 @@ data class GroupInfo(
     val share: ShareSettings,
 )
 
-/** One person across all their groups: [token] is also the recovery code. */
-data class Identity(val token: String, val displayName: String, val groups: List<GroupInfo>)
+/**
+ * One person across all their groups. [master] is the recovery code, and [token] derives from it;
+ * it is null for an identity from a build before backups, until that one is migrated. [backupAt]
+ * is when the server last held a backup, as of the last restore.
+ */
+data class Identity(
+    val token: String,
+    val displayName: String,
+    val groups: List<GroupInfo>,
+    val master: String? = null,
+    val backupAt: Long? = null,
+)
 
 /** What a group is called on screen; [isCode] while it is still just its invite code. */
 data class GroupLabel(val text: String, val isCode: Boolean)
@@ -58,6 +68,9 @@ enum class LeaderboardError {
     NOT_MEMBER,
     HIDDEN_SIGNAL,
     INVALID,
+    TOKEN_TAKEN,
+    NO_BACKUP,
+    TOO_LARGE,
     SERVER,
 }
 

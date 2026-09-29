@@ -8,6 +8,7 @@ import com.monolith.app.data.datastore.applySnapshot
 import com.monolith.app.data.datastore.readSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BackupPrefsTest {
@@ -59,5 +60,11 @@ class BackupPrefsTest {
         assertEquals(snapshot, BackupSnapshotCodec.decode(BackupSnapshotCodec.encode(snapshot)))
         val future = BackupSnapshotCodec.encode(snapshot.copy(version = 2))
         assertThrows(BackupCryptoException::class.java) { BackupSnapshotCodec.decode(future) }
+    }
+
+    @Test
+    fun `encoded snapshot always carries its version`() {
+        val json = BackupSnapshotCodec.encode(snapshot).toString(Charsets.UTF_8)
+        assertTrue(json, json.contains("\"version\":1"))
     }
 }

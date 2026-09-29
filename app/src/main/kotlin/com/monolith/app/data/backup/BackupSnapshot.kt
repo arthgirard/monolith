@@ -26,7 +26,11 @@ data class BackupSnapshot(
 }
 
 object BackupSnapshotCodec {
-    private val json = Json { ignoreUnknownKeys = true }
+    // Defaults written too, so every blob says which version it is.
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     fun encode(snapshot: BackupSnapshot): ByteArray =
         json.encodeToString(snapshot).toByteArray(Charsets.UTF_8)
