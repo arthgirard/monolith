@@ -33,6 +33,10 @@ class LeaderboardRepositoryImpl @Inject constructor(
 
     override fun observeMembership(): Flow<GroupMembership?> = store.membership
 
+    override fun observeRemovedNotice(): Flow<Boolean> = store.removedNotice
+
+    override suspend fun dismissRemovedNotice() = store.dismissRemovedNotice()
+
     override suspend fun createGroup(displayName: String, share: ShareSettings): LeaderboardResult<Unit> {
         val name = displayName.trim()
         return api.createGroup(CreateGroupRequest(name, share.toDto()))
@@ -80,7 +84,12 @@ class LeaderboardRepositoryImpl @Inject constructor(
     private suspend fun <T> authed(block: suspend (GroupMembership) -> LeaderboardResult<T>): LeaderboardResult<T> {
         val membership = store.membership.first() ?: return LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
         val result = block(membership)
-        if (result is LeaderboardResult.Err && result.error == LeaderboardError.UNAUTHORIZED) store.clear()
+        // Only if this token is still the stored one: a late 401 must not clear a newer membership.
+        if (result is LeaderboardResult.Err && result.error == LeaderboardError.UNAUTHORIZED &&
+            store.membership.first()?.token == membership.token
+        ) {
+            store.clear(removed = true)
+        }
         return result
     }
 }

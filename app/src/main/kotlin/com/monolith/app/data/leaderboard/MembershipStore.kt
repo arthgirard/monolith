@@ -1,8 +1,10 @@
 package com.monolith.app.data.leaderboard
 
 import android.content.Context
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.monolith.app.domain.model.GroupMembership
@@ -15,12 +17,20 @@ import javax.inject.Singleton
 
 interface MembershipStore {
     val membership: Flow<GroupMembership?>
+
+    /** Set when the server dropped this member (not when they left); cleared by any [save]. */
+    val removedNotice: Flow<Boolean>
     suspend fun save(membership: GroupMembership)
-    suspend fun clear()
+    suspend fun clear(removed: Boolean = false)
+    suspend fun dismissRemovedNotice()
 }
 
 // A file of its own: leaving a group clears it whole, and nothing here belongs in the block state.
-private val Context.leaderboardStore by preferencesDataStore(name = "leaderboard_prefs")
+// A corrupt file starts over empty: the member can come back with their recovery code.
+private val Context.leaderboardStore by preferencesDataStore(
+    name = "leaderboard_prefs",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
 
 /** App-private storage, the same protection the linked tag's UID has. */
 @Singleton
@@ -42,8 +52,11 @@ class DataStoreMembershipStore @Inject constructor(
         )
     }
 
+    override val removedNotice: Flow<Boolean> = context.leaderboardStore.data.map { it[REMOVED_NOTICE] ?: false }
+
     override suspend fun save(membership: GroupMembership) {
         context.leaderboardStore.edit { prefs ->
+            prefs.remove(REMOVED_NOTICE)
             prefs[TOKEN] = membership.token
             prefs[DISPLAY_NAME] = membership.displayName
             prefs[INVITE_CODE] = membership.inviteCode
@@ -53,8 +66,15 @@ class DataStoreMembershipStore @Inject constructor(
         }
     }
 
-    override suspend fun clear() {
-        context.leaderboardStore.edit { it.clear() }
+    override suspend fun clear(removed: Boolean) {
+        context.leaderboardStore.edit { prefs ->
+            prefs.clear()
+            if (removed) prefs[REMOVED_NOTICE] = true
+        }
+    }
+
+    override suspend fun dismissRemovedNotice() {
+        context.leaderboardStore.edit { it.remove(REMOVED_NOTICE) }
     }
 
     private companion object {
@@ -64,5 +84,6 @@ class DataStoreMembershipStore @Inject constructor(
         val SHARE_SAVED = booleanPreferencesKey("share_saved")
         val SHARE_STREAK = booleanPreferencesKey("share_streak")
         val SHARE_PAUSES = booleanPreferencesKey("share_pauses")
+        val REMOVED_NOTICE = booleanPreferencesKey("removed_notice")
     }
 }

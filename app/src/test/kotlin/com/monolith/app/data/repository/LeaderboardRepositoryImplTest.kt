@@ -20,19 +20,30 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
 private class FakeMembershipStore(initial: GroupMembership? = null) : MembershipStore {
     override val membership = MutableStateFlow(initial)
-    override suspend fun save(membership: GroupMembership) { this.membership.value = membership }
-    override suspend fun clear() { membership.value = null }
+    override val removedNotice = MutableStateFlow(false)
+    override suspend fun save(membership: GroupMembership) {
+        this.membership.value = membership
+        removedNotice.value = false
+    }
+    override suspend fun clear(removed: Boolean) {
+        membership.value = null
+        removedNotice.value = removed
+    }
+    override suspend fun dismissRemovedNotice() { removedNotice.value = false }
 }
 
 private class FakeLeaderboardApi : LeaderboardApi {
     var createResult: LeaderboardResult<JoinResponse> = LeaderboardResult.Ok(JoinResponse("tok", "ABCDEFGH"))
     var boardResult: LeaderboardResult<BoardResponse> = LeaderboardResult.Ok(BoardResponse(emptyList()))
+    var duringBoard: suspend () -> Unit = {}
     val syncResults = ArrayDeque<LeaderboardResult<Unit>>()
     val syncRequests = mutableListOf<SyncRequest>()
     val updateRequests = mutableListOf<UpdateMeRequest>()
@@ -49,7 +60,10 @@ private class FakeLeaderboardApi : LeaderboardApi {
         syncRequests += request
         return syncResults.removeFirstOrNull() ?: LeaderboardResult.Ok(Unit)
     }
-    override suspend fun board(token: String, window: BoardWindow, date: LocalDate) = boardResult
+    override suspend fun board(token: String, window: BoardWindow, date: LocalDate): LeaderboardResult<BoardResponse> {
+        duringBoard()
+        return boardResult
+    }
     override suspend fun leave(token: String): LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
 }
 
@@ -138,5 +152,53 @@ class LeaderboardRepositoryImplTest {
         LeaderboardRepositoryImpl(FakeLeaderboardApi(), store).leave()
 
         assertNull(store.membership.value)
+    }
+
+    @Test
+    fun `a background 401 leaves a removed notice`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { syncResults += LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED) }
+        val store = FakeMembershipStore(member)
+        val repo = LeaderboardRepositoryImpl(api, store)
+
+        repo.sync(listOf(day), null)
+
+        assertNull(store.membership.value)
+        assertTrue(repo.observeRemovedNotice().first())
+        repo.dismissRemovedNotice()
+        assertFalse(repo.observeRemovedNotice().first())
+    }
+
+    @Test
+    fun `leaving is not a removal`() = runBlocking {
+        val repo = LeaderboardRepositoryImpl(FakeLeaderboardApi(), FakeMembershipStore(member))
+
+        repo.leave()
+
+        assertFalse(repo.observeRemovedNotice().first())
+    }
+
+    @Test
+    fun `a new group clears the removed notice`() = runBlocking {
+        val store = FakeMembershipStore().apply { removedNotice.value = true }
+        val repo = LeaderboardRepositoryImpl(FakeLeaderboardApi(), store)
+
+        repo.createGroup("Ana", member.share)
+
+        assertFalse(repo.observeRemovedNotice().first())
+    }
+
+    @Test
+    fun `a late 401 for an old token keeps the newer membership`() = runBlocking {
+        val newer = member.copy(token = "tok2")
+        val store = FakeMembershipStore(member)
+        val api = FakeLeaderboardApi().apply {
+            boardResult = LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
+            duringBoard = { store.save(newer) }
+        }
+
+        LeaderboardRepositoryImpl(api, store).board(BoardWindow.WEEK, LocalDate.of(2026, 9, 28))
+
+        assertEquals(newer, store.membership.value)
+        assertFalse(store.removedNotice.value)
     }
 }

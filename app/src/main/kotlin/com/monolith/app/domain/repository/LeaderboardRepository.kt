@@ -12,9 +12,13 @@ import java.time.LocalDate
 /**
  * The friends leaderboard. Any call answered with UNAUTHORIZED clears the stored membership:
  * the member left on another phone, or was removed as inactive, and this token is dead.
+ * That removal leaves a notice behind until dismissed or a new membership is saved, since the
+ * background sync usually meets the 401 before the screen does.
  */
 interface LeaderboardRepository {
     fun observeMembership(): Flow<GroupMembership?>
+    fun observeRemovedNotice(): Flow<Boolean>
+    suspend fun dismissRemovedNotice()
     suspend fun createGroup(displayName: String, share: ShareSettings): LeaderboardResult<Unit>
     suspend fun joinGroup(inviteCode: String, displayName: String, share: ShareSettings): LeaderboardResult<Unit>
     suspend fun restore(recoveryCode: String): LeaderboardResult<Unit>
