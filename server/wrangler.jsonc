@@ -5,6 +5,7 @@
   "compatibility_date": "2025-09-01",
   // No per-request logs: nothing about who synced when is retained.
   "observability": { "enabled": false },
+  "workers_dev": true,
   "d1_databases": [
     {
       "binding": "monolith_leaderboard",

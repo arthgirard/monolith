@@ -31,6 +31,7 @@ android {
         versionName = "1.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "LEADERBOARD_URL", "\"https://monolith-leaderboard.maude-ferguson.workers.dev\"")
     }
 
     signingConfigs {
