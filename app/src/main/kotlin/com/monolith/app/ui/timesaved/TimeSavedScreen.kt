@@ -2,7 +2,6 @@ package com.monolith.app.ui.timesaved
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,7 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,6 +50,7 @@ import java.time.ZoneId
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -162,7 +165,7 @@ fun TimeSavedBarChart(
         Canvas(modifier = Modifier.fillMaxWidth().height(chartHeight)) {
             val barCount = buckets.size
             if (barCount == 0) return@Canvas
-            val gap = 4.dp.toPx()
+            val gap = BarGap.toPx()
             val barWidth = (size.width - gap * (barCount - 1)) / barCount
             buckets.forEachIndexed { index, bucket ->
                 val capacity = bucket.capacityMillis.coerceAtLeast(1L).toFloat()
@@ -181,14 +184,42 @@ fun TimeSavedBarChart(
         }
         if (showLabels) {
             Spacer(Modifier.height(4.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                buckets.forEachIndexed { index, bucket ->
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        bucketLabel(periodType, index, bucket.bucketStartMillis, appLocale())?.let { label ->
-                            Text(label, style = MaterialTheme.typography.labelSmall, color = labelColor)
-                        }
-                    }
-                }
+            val locale = appLocale()
+            val labels = buckets.mapIndexedNotNull { index, bucket ->
+                bucketLabel(periodType, index, bucket.bucketStartMillis, locale)?.let { index to it }
+            }
+            BarLabels(labels, barCount = buckets.size, color = labelColor)
+        }
+    }
+}
+
+private val BarGap = 4.dp
+
+/**
+ * Each label centred under its bar on one line. A label is often wider than its bar ("12a",
+ * "20"), so it gets its own width instead of the bar's, which would wrap it; the first and last
+ * are nudged inward rather than cut off at the chart's edges.
+ */
+@Composable
+private fun BarLabels(labels: List<Pair<Int, String>>, barCount: Int, color: Color) {
+    Layout(
+        content = {
+            labels.forEach { (_, label) ->
+                Text(label, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1, softWrap = false)
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val placeables = measurables.map { it.measure(Constraints(maxWidth = width)) }
+        val gap = BarGap.toPx()
+        val barWidth = (width - gap * (barCount - 1)) / barCount
+        layout(width, placeables.maxOfOrNull { it.height } ?: 0) {
+            placeables.forEachIndexed { i, placeable ->
+                // Same geometry as the Canvas above, which draws left to right in every direction.
+                val center = labels[i].first * (barWidth + gap) + barWidth / 2
+                val x = (center - placeable.width / 2f).roundToInt().coerceIn(0, (width - placeable.width).coerceAtLeast(0))
+                placeable.place(x, 0)
             }
         }
     }
