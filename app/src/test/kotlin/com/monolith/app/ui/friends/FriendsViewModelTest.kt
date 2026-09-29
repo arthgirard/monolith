@@ -22,10 +22,4 @@ class FriendsViewModelTest {
         assertEquals(FriendsMessage.NAME_NEEDS_THREE, FriendsMessage.of(LeaderboardError.NAME_NEEDS_THREE))
         assertEquals(FriendsMessage.GENERIC, FriendsMessage.of(LeaderboardError.NOT_MEMBER))
     }
-
-    @Test
-    fun `a failed restore reads as a bad recovery code, not as removal`() {
-        assertEquals(FriendsMessage.BAD_RECOVERY, FriendsMessage.ofRestore(LeaderboardError.UNAUTHORIZED))
-        assertEquals(FriendsMessage.NETWORK, FriendsMessage.ofRestore(LeaderboardError.NETWORK))
-    }
 }

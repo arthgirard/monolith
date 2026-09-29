@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -51,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -64,6 +62,7 @@ import com.monolith.app.domain.usecase.groupLabels
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.components.SettingsToggleRow
+import com.monolith.app.ui.settings.RestoreDialog
 import com.monolith.app.ui.theme.mono
 import com.monolith.app.util.formatDuration
 
@@ -118,7 +117,7 @@ fun FriendsScreen(
                 }
                 when {
                     !uiState.loaded -> Unit
-                    group == null -> JoinContent(uiState.busy, viewModel)
+                    group == null -> JoinContent(uiState.busy, identity?.displayName.orEmpty(), viewModel)
                     else -> BoardContent(uiState, viewModel)
                 }
             }
@@ -197,10 +196,10 @@ private fun GroupSwitcher(
 internal val ShareAll = ShareSettings(saved = true, streak = true, pauses = true)
 
 @Composable
-private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
-    var name by rememberSaveable { mutableStateOf("") }
+private fun JoinContent(busy: Boolean, knownName: String, viewModel: FriendsViewModel) {
+    // An identity kept for its backup already has a name (or an empty one, for backup only).
+    var name by rememberSaveable { mutableStateOf(knownName) }
     var inviteCode by rememberSaveable { mutableStateOf("") }
-    var recoveryCode by rememberSaveable { mutableStateOf("") }
     var showRestore by rememberSaveable { mutableStateOf(false) }
     val nameValid = name.trim().length in 1..24
 
@@ -228,23 +227,9 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
     Button(onClick = { viewModel.create(name, ShareAll) }, enabled = nameValid && !busy, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.friends_create))
     }
-    if (!showRestore) {
-        TextButton(onClick = { showRestore = true }) { Text(stringResource(R.string.friends_restore)) }
-    } else {
-        Text(stringResource(R.string.friends_restore_warning), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = recoveryCode,
-            onValueChange = { recoveryCode = it },
-            label = { Text(stringResource(R.string.friends_recovery_label)) },
-            singleLine = true,
-            // The code is the account: keep it out of keyboard dictionaries and suggestions.
-            keyboardOptions = KeyboardOptions(autoCorrect = false, keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedButton(onClick = { viewModel.restore(recoveryCode) }, enabled = recoveryCode.isNotBlank() && !busy) {
-            Text(stringResource(R.string.friends_restore_confirm))
-        }
-    }
+    // The same restore as Settings: a code with a backup brings back history and setup too.
+    TextButton(onClick = { showRestore = true }) { Text(stringResource(R.string.friends_restore)) }
+    if (showRestore) RestoreDialog(onDismiss = { showRestore = false })
 }
 
 @Composable

@@ -1,19 +1,11 @@
 package com.monolith.app.ui.friends
 
-import android.content.ClipData
-import android.content.ClipDescription
-import android.content.ClipboardManager
-import android.content.Context
-import android.os.Build
-import android.os.PersistableBundle
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -36,9 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.monolith.app.R
@@ -84,7 +74,6 @@ fun GroupSheet(
 
             SectionHeader(stringResource(R.string.friends_section_you))
             DisplayNameField(identity.displayName, busy, onRename)
-            identity.master?.let { RecoveryCard(it) }
 
             SectionHeader(stringResource(R.string.friends_share_heading_group))
             ShareToggles(group.share, enabled = !busy, onChange = onShareChange)
@@ -196,58 +185,4 @@ private fun DisplayNameField(displayName: String, busy: Boolean, onSave: (String
             enabled = !busy && name.trim().length in 1..24 && name.trim() != displayName,
         ) { Text(stringResource(R.string.friends_rename)) }
     }
-}
-
-@Composable
-private fun RecoveryCard(token: String) {
-    val context = LocalContext.current
-    var showRecovery by rememberSaveable { mutableStateOf(false) }
-    SettingsGroup {
-        if (showRecovery) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    stringResource(R.string.friends_recovery_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 12.dp),
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SelectionContainer(modifier = Modifier.weight(1f)) {
-                        Text(token, style = MaterialTheme.typography.bodyMedium.mono())
-                    }
-                    IconButton(onClick = { copyRecoveryCode(context, token) }) {
-                        Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.friends_copy))
-                    }
-                }
-            }
-        } else {
-            Text(
-                stringResource(R.string.friends_recovery_show),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(role = Role.Button) { showRecovery = true }
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-            )
-        }
-    }
-}
-
-/**
- * Copies the recovery code marked sensitive, so Android 13+ hides it from the clipboard preview
- * and keyboards don't offer it as a suggestion. The code is the account.
- */
-private fun copyRecoveryCode(context: Context, token: String) {
-    val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
-    val clip = ClipData.newPlainText(context.getString(R.string.friends_recovery_label), token)
-    val sensitiveKey = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        ClipDescription.EXTRA_IS_SENSITIVE
-    } else {
-        "android.content.extra.IS_SENSITIVE"
-    }
-    clip.description.extras = PersistableBundle().apply { putBoolean(sensitiveKey, true) }
-    clipboard.setPrimaryClip(clip)
 }

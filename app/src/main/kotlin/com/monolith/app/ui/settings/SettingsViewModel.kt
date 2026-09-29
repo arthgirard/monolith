@@ -3,9 +3,12 @@ package com.monolith.app.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monolith.app.domain.model.DownloadState
+import com.monolith.app.domain.model.LeaderboardError
+import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.UpdateCheckResult
+import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.usecase.CanInstallPackagesUseCase
 import com.monolith.app.domain.usecase.CheckForUpdateUseCase
 import com.monolith.app.domain.usecase.DownloadUpdateUseCase
@@ -13,7 +16,9 @@ import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.ObserveLinkedTagUseCase
 import com.monolith.app.domain.usecase.ObserveStrictnessUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -31,6 +36,14 @@ data class SettingsUiState(
      * blocked-app list already follows.
      */
     val isLocked: Boolean = false,
+)
+
+data class BackupUiState(
+    val enabled: Boolean = false,
+    val lastBackupAt: Long? = null,
+    /** Null until an identity with a master exists; "Show recovery code" stays hidden until then. */
+    val recoveryCode: String? = null,
+    val busy: Boolean = false,
 )
 
 sealed interface UpdateUiState {
@@ -52,7 +65,37 @@ class SettingsViewModel @Inject constructor(
     private val checkForUpdate: CheckForUpdateUseCase,
     private val downloadUpdate: DownloadUpdateUseCase,
     private val canInstallPackages: CanInstallPackagesUseCase,
+    private val backupRepository: BackupRepository,
 ) : ViewModel() {
+
+    private val backupBusy = MutableStateFlow(false)
+
+    val backupState: StateFlow<BackupUiState> = combine(
+        backupRepository.observeBackupEnabled(),
+        backupRepository.observeLastBackupAt(),
+        backupRepository.observeRecoveryCode(),
+        backupBusy,
+    ) { enabled, lastBackupAt, code, busy ->
+        BackupUiState(enabled = enabled, lastBackupAt = lastBackupAt, recoveryCode = code, busy = busy)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackupUiState())
+
+    private val _backupErrors = MutableSharedFlow<LeaderboardError>(extraBufferCapacity = 1)
+
+    /** A toggle that didn't go through (turning on needs the server to register the identity). */
+    val backupErrors: SharedFlow<LeaderboardError> = _backupErrors
+
+    fun setBackupEnabled(enabled: Boolean) {
+        if (backupBusy.value) return
+        backupBusy.value = true
+        viewModelScope.launch {
+            try {
+                val result = backupRepository.setBackupEnabled(enabled)
+                if (result is LeaderboardResult.Err) _backupErrors.tryEmit(result.error)
+            } finally {
+                backupBusy.value = false
+            }
+        }
+    }
 
     val uiState: StateFlow<SettingsUiState> = combine(
         observeStrictness(),

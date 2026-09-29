@@ -36,7 +36,6 @@ enum class FriendsMessage(@StringRes val text: Int) {
     TOO_MANY_GROUPS(R.string.friends_error_too_many),
     ALREADY_MEMBER(R.string.friends_error_already_member),
     NAME_NEEDS_THREE(R.string.friends_error_name_needs_three),
-    BAD_RECOVERY(R.string.friends_error_recovery),
     REMOVED(R.string.friends_removed),
     GENERIC(R.string.friends_error_generic);
 
@@ -52,10 +51,6 @@ enum class FriendsMessage(@StringRes val text: Int) {
             // NOT_MEMBER included: the repository already dropped that group from the switcher.
             else -> GENERIC
         }
-
-        /** A restore that isn't recognized is a mistyped code; the member was never "removed". */
-        fun ofRestore(error: LeaderboardError): FriendsMessage =
-            if (error == LeaderboardError.UNAUTHORIZED) BAD_RECOVERY else of(error)
     }
 }
 
@@ -202,8 +197,6 @@ class FriendsViewModel @Inject constructor(
     fun join(inviteCode: String, displayName: String?, share: ShareSettings) =
         submit(onOk = ::enteredGroup) { repository.joinGroup(inviteCode, displayName, share) }
 
-    fun restore(recoveryCode: String) = submit(FriendsMessage::ofRestore) { repository.restore(recoveryCode) }
-
     fun rename(displayName: String) = submit { repository.rename(displayName) }
 
     /** An empty [name] clears it. */
@@ -239,7 +232,6 @@ class FriendsViewModel @Inject constructor(
     }
 
     private fun submit(
-        toMessage: (LeaderboardError) -> FriendsMessage = FriendsMessage.Companion::of,
         onOk: () -> Unit = {},
         action: suspend () -> LeaderboardResult<Unit>,
     ) {
@@ -250,7 +242,7 @@ class FriendsViewModel @Inject constructor(
             try {
                 when (val result = action()) {
                     is LeaderboardResult.Ok -> onOk()
-                    is LeaderboardResult.Err -> message = toMessage(result.error)
+                    is LeaderboardResult.Err -> message = FriendsMessage.of(result.error)
                 }
             } catch (e: CancellationException) {
                 throw e

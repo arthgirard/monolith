@@ -275,7 +275,6 @@
     <string name="friends_restore">Restore with a recovery code</string>
     <string name="friends_recovery_label">Recovery code</string>
     <string name="friends_restore_confirm">Restore</string>
-    <string name="friends_restore_warning">Only use this on one phone.</string>
     <string name="friends_removed">You\'re no longer in a group.</string>
     <string name="friends_error_network">Couldn\'t reach the server. Check your connection.</string>
     <string name="friends_error_invite">No group has that invite code.</string>
@@ -294,7 +293,6 @@
     <string name="friends_copy">Copy</string>
     <string name="friends_rename">Save name</string>
     <string name="friends_recovery_hint">Keep this somewhere safe. It\'s the only way to move to a new phone.</string>
-    <string name="friends_recovery_show">Show recovery code</string>
     <string name="friends_leave">Leave group</string>
     <string name="friends_leave_confirm_title">Leave the group?</string>
     <string name="friends_leave_confirm_body">Your stats are deleted from the server. You can rejoin with the invite code, but your history won\'t come back.</string>
@@ -311,4 +309,18 @@
     <string name="friends_error_too_many">You\'re already in 10 groups.</string>
     <string name="friends_error_already_member">You\'re already in that group.</string>
     <string name="friends_error_name_needs_three">Only groups of three or more can have a name.</string>
+    <string name="backup_section">Backup</string>
+    <string name="backup_auto">Back up automatically</string>
+    <string name="backup_last">Last backed up %1$s</string>
+    <string name="backup_never">Not backed up yet</string>
+    <string name="backup_show_code">Show recovery code</string>
+    <string name="backup_restore">Restore from a backup</string>
+    <string name="backup_code_warning">Anyone with this code can restore your data. Keep it private.</string>
+    <string name="backup_restore_title">Restore from a backup</string>
+    <string name="backup_restore_confirm_body">Replace this phone\'s history and setup with the backup from %1$s?</string>
+    <string name="backup_restore_confirm">Replace</string>
+    <string name="backup_restore_refused">Turn Monolith off with your tag first.</string>
+    <string name="backup_restore_unreadable">This backup can\'t be read.</string>
+    <string name="backup_restore_none">No backup found. Your friends groups are back.</string>
+    <string name="backup_restore_done">Restored.</string>
 </resources>

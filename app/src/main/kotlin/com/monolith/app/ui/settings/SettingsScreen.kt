@@ -57,6 +57,7 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.AppLanguage
+import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.ui.components.MonolithSnackbarHost
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
@@ -80,6 +81,8 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val backupState by viewModel.backupState.collectAsState()
+    var showRestore by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -88,6 +91,13 @@ fun SettingsScreen(
     // Read rather than collected: below API 33 the choice lives in SharedPreferences, and either
     // way the activity is recreated the moment it changes, which re-reads this.
     val language = remember(context) { AppLocale.selected(context) }
+
+    LaunchedEffect(Unit) {
+        viewModel.backupErrors.collect { error ->
+            val text = if (error == LeaderboardError.NETWORK) R.string.friends_error_network else R.string.friends_error_generic
+            snackbarHostState.showSnackbar(context.getString(text))
+        }
+    }
 
     LaunchedEffect(updateState) {
         when (val state = updateState) {
@@ -181,8 +191,19 @@ fun SettingsScreen(
                         onClick = viewModel::checkForUpdates,
                     )
                 }
+
+                BackupSection(
+                    state = backupState,
+                    isLocked = uiState.isLocked,
+                    onToggle = viewModel::setBackupEnabled,
+                    onRestore = { showRestore = true },
+                )
             }
         }
+    }
+
+    if (showRestore) {
+        RestoreDialog(onDismiss = { showRestore = false })
     }
 
     if (showLanguagePicker) {
