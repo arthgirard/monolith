@@ -533,13 +533,13 @@ class BackupCryptoTest {
 }
 ```
 
-- [ ] **Step 2: Run to see it fail** — `./gradlew testDebugUnitTest --tests 'com.monolith.app.data.backup.BackupCryptoTest'` (unresolved `BackupCrypto`).
+- [ ] **Step 2: Run to see it fail**: `./gradlew testDebugUnitTest --tests 'com.monolith.app.data.backup.BackupCryptoTest'` (unresolved `BackupCrypto`).
 
 - [ ] **Step 3: Implement** `BackupCrypto` per Interfaces. HKDF: `prk = HMAC(salt, ikm)`; `T(i) = HMAC(prk, T(i-1) ‖ info ‖ i)`; concatenate to `length`. `decrypt`: size < 1 + 12 + 16 → throw; version byte != 1 → throw; GCM failure (`AEADBadTagException`/`GeneralSecurityException`) → throw; gzip failure (`IOException`) → throw; all wrapped in `BackupCryptoException`.
 
-- [ ] **Step 4: Pass** — same command, PASS.
+- [ ] **Step 4: Pass**: same command, PASS.
 
-- [ ] **Step 5: Commit** — `feat: backup encryption with keys derived from the recovery code`.
+- [ ] **Step 5: Commit**: `feat: backup encryption with keys derived from the recovery code`.
 
 ---
 
@@ -645,7 +645,7 @@ class BackupPrefsTest {
 ```
 (Verify the real key names `tag_uid`, `block_mode_active`, `session_started_at`, `pause_log` in `MonolithPreferences.Keys` and adjust the test if they differ.)
 
-- [ ] **Step 2: Run to see it fail.** **Step 3: Implement** per Interfaces. **Step 4: Pass** (`./gradlew testDebugUnitTest`). **Step 5: Commit** — `feat: export and restore history and setup as a snapshot`.
+- [ ] **Step 2: Run to see it fail.** **Step 3: Implement** per Interfaces. **Step 4: Pass** (`./gradlew testDebugUnitTest`). **Step 5: Commit**: `feat: export and restore history and setup as a snapshot`.
 
 ---
 
@@ -689,7 +689,7 @@ Behavior:
   7. `fetch with an undecryptable blob is INVALID`.
   8. `disabling deletes the server copy and clears lastBackupAt`.
   And in `LeaderboardRepositoryImplTest`: `create sends the bearer and the name only for a nameless identity`.
-- [ ] **Step 2: Run to see failures.** **Step 3: Implement.** **Step 4:** `./gradlew testDebugUnitTest assembleDebug` PASS. **Step 5: Commit** — `feat: phone-generated recovery code and backup repository`.
+- [ ] **Step 2: Run to see failures.** **Step 3: Implement.** **Step 4:** `./gradlew testDebugUnitTest assembleDebug` PASS. **Step 5: Commit**: `feat: phone-generated recovery code and backup repository`.
 
 ---
 
@@ -732,7 +732,7 @@ interface AfterRestore { suspend fun run() }                              // wid
     4. `confirm writes the snapshot, saves the identity and runs afterRestore`.
     5. `confirm re-checks active` (activate between prepare and confirm → Refused, no write).
     6. `no backup restores only the identity` (Ready(hasBackup = false); confirm writes no snapshot, saves identity).
-- [ ] **Step 2: Run to see failures.** **Step 3: Implement**, with Hilt bindings for `SnapshotWriter` (MonolithPreferences adapter) and `AfterRestore` (calls `TimeSavedWidgetRefresher.refresh()` and `ScheduleTrigger.reconcile()`). **Step 4:** `./gradlew testDebugUnitTest assembleDebug` PASS. **Step 5: Commit** — `feat: automatic backups and a guarded restore`.
+- [ ] **Step 2: Run to see failures.** **Step 3: Implement**, with Hilt bindings for `SnapshotWriter` (MonolithPreferences adapter) and `AfterRestore` (calls `TimeSavedWidgetRefresher.refresh()` and `ScheduleTrigger.reconcile()`). **Step 4:** `./gradlew testDebugUnitTest assembleDebug` PASS. **Step 5: Commit**: `feat: automatic backups and a guarded restore`.
 
 ---
 
@@ -769,7 +769,7 @@ interface AfterRestore { suspend fun run() }                              // wid
 - The Friends settings sheet's "You, in every group" loses the recovery card (display name only). The first-use Friends "Restore with a recovery code" flow uses the same `RestoreBackupUseCase` (same messages).
 
 - [ ] **Step 1:** Add a ViewModel-free pure helper test if any formatting logic is introduced (e.g. `backupCaption(lastBackupAt, now)` returning null for never): write and run a failing test first.
-- [ ] **Step 2:** Implement. **Step 3:** `./gradlew testDebugUnitTest assembleDebug` PASS. **Step 4: Commit** — `feat: backup settings and restore flow`.
+- [ ] **Step 2:** Implement. **Step 3:** `./gradlew testDebugUnitTest assembleDebug` PASS. **Step 4: Commit**: `feat: backup settings and restore flow`.
 
 ---
 
