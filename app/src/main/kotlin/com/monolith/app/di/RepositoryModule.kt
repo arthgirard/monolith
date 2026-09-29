@@ -1,9 +1,9 @@
 package com.monolith.app.di
 
-import com.monolith.app.data.leaderboard.DataStoreMembershipStore
+import com.monolith.app.data.leaderboard.DataStoreIdentityStore
 import com.monolith.app.data.leaderboard.HttpLeaderboardApi
+import com.monolith.app.data.leaderboard.IdentityStore
 import com.monolith.app.data.leaderboard.LeaderboardApi
-import com.monolith.app.data.leaderboard.MembershipStore
 import com.monolith.app.data.repository.AppRepositoryImpl
 import com.monolith.app.data.repository.AppUnlockRepositoryImpl
 import com.monolith.app.data.repository.BlockRepositoryImpl
@@ -59,7 +59,7 @@ abstract class RepositoryModule {
     abstract fun bindLeaderboardApi(impl: HttpLeaderboardApi): LeaderboardApi
 
     @Binds
-    abstract fun bindMembershipStore(impl: DataStoreMembershipStore): MembershipStore
+    abstract fun bindIdentityStore(impl: DataStoreIdentityStore): IdentityStore
 
     @Binds
     abstract fun bindLeaderboardRepository(impl: LeaderboardRepositoryImpl): LeaderboardRepository

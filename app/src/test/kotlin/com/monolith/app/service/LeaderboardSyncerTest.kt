@@ -1,6 +1,7 @@
 package com.monolith.app.service
 
-import com.monolith.app.domain.model.GroupMembership
+import com.monolith.app.domain.model.GroupInfo
+import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
@@ -20,7 +21,11 @@ import org.junit.Test
 
 class LeaderboardSyncerTest {
 
-    private val member = GroupMembership("tok", "Ana", "ABCDEFGH", ShareSettings(saved = true, streak = true, pauses = true))
+    private val member = Identity(
+        "tok",
+        "Ana",
+        listOf(GroupInfo("g1", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(saved = true, streak = true, pauses = true))),
+    )
 
     private fun syncerFor(leaderboard: FakeLeaderboardRepository): LeaderboardSyncer {
         val blocks = FakeBlockRepository()

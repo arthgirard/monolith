@@ -2,9 +2,12 @@ package com.monolith.app.data.repository
 
 import com.monolith.app.data.leaderboard.BoardRowDto
 import com.monolith.app.data.leaderboard.CreateGroupRequest
+import com.monolith.app.data.leaderboard.GroupDto
+import com.monolith.app.data.leaderboard.GroupResponse
+import com.monolith.app.data.leaderboard.IdentityStore
 import com.monolith.app.data.leaderboard.JoinRequest
 import com.monolith.app.data.leaderboard.LeaderboardApi
-import com.monolith.app.data.leaderboard.MembershipStore
+import com.monolith.app.data.leaderboard.UpdateGroupRequest
 import com.monolith.app.data.leaderboard.UpdateMeRequest
 import com.monolith.app.data.leaderboard.syncRequestOf
 import com.monolith.app.data.leaderboard.toDomain
@@ -12,13 +15,15 @@ import com.monolith.app.data.leaderboard.toDto
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
 import com.monolith.app.domain.model.DayAggregate
-import com.monolith.app.domain.model.GroupMembership
+import com.monolith.app.domain.model.GroupInfo
+import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
 import com.monolith.app.domain.model.andThen
 import com.monolith.app.domain.model.map
 import com.monolith.app.domain.repository.LeaderboardRepository
+import com.monolith.app.domain.usecase.shareUnion
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -28,65 +33,146 @@ import javax.inject.Singleton
 @Singleton
 class LeaderboardRepositoryImpl @Inject constructor(
     private val api: LeaderboardApi,
-    private val store: MembershipStore,
+    private val store: IdentityStore,
 ) : LeaderboardRepository {
 
-    override fun observeMembership(): Flow<GroupMembership?> = store.membership
+    override fun observeIdentity(): Flow<Identity?> = store.identity
+
+    override fun observeSelectedGroupId(): Flow<String?> = store.selectedGroupId
+
+    override suspend fun selectGroup(groupId: String) = store.select(groupId)
 
     override fun observeRemovedNotice(): Flow<Boolean> = store.removedNotice
 
     override suspend fun dismissRemovedNotice() = store.dismissRemovedNotice()
 
-    override suspend fun createGroup(displayName: String, share: ShareSettings): LeaderboardResult<Unit> {
-        val name = displayName.trim()
-        return api.createGroup(CreateGroupRequest(name, share.toDto()))
-            .andThen { store.save(GroupMembership(it.token, name, it.inviteCode, share)) }
-    }
+    override suspend fun createGroup(displayName: String?, share: ShareSettings): LeaderboardResult<Unit> =
+        enterGroup(displayName) { token, name -> api.createGroup(token, CreateGroupRequest(name, share.toDto())) }
 
-    override suspend fun joinGroup(inviteCode: String, displayName: String, share: ShareSettings): LeaderboardResult<Unit> {
-        val name = displayName.trim()
-        return api.join(JoinRequest(inviteCode, name, share.toDto()))
-            .andThen { store.save(GroupMembership(it.token, name, it.inviteCode, share)) }
-    }
+    override suspend fun joinGroup(inviteCode: String, displayName: String?, share: ShareSettings): LeaderboardResult<Unit> =
+        enterGroup(displayName) { token, name -> api.join(token, JoinRequest(inviteCode.trim(), name, share.toDto())) }
 
     override suspend fun restore(recoveryCode: String): LeaderboardResult<Unit> {
         val token = recoveryCode.trim()
-        return api.me(token).andThen { store.save(GroupMembership(token, it.displayName, it.inviteCode, it.share.toDomain())) }
+        return api.me(token).andThen { me ->
+            val groups = me.groups.map(GroupDto::toDomain)
+            store.save(Identity(token, me.displayName, groups))
+            store.select(groups.firstOrNull()?.id)
+        }
     }
 
-    override suspend fun updateProfile(displayName: String?, share: ShareSettings?): LeaderboardResult<Unit> = authed { m ->
-        api.updateMe(m.token, UpdateMeRequest(displayName?.trim(), share?.toDto()))
-            .andThen { store.save(m.copy(displayName = it.displayName, share = it.share.toDomain())) }
+    override suspend fun rename(displayName: String): LeaderboardResult<Unit> = authed { identity ->
+        api.updateMe(identity.token, UpdateMeRequest(displayName.trim()))
+            .andThen { me ->
+                if (store.identity.first()?.token == identity.token) {
+                    store.save(Identity(identity.token, me.displayName, me.groups.map(GroupDto::toDomain)))
+                }
+            }
     }
 
-    override suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?): LeaderboardResult<Unit> = authed { m ->
-        val request = syncRequestOf(days, streakStartedAt, m.share)
-        val first = api.sync(m.token, request)
-        // The server's flags drifted from ours (an update that failed offline). Ours are the
-        // member's latest choice: push them, then retry once.
+    override suspend fun refreshGroups(): LeaderboardResult<Unit> = authed { identity ->
+        api.me(identity.token).andThen { me -> cacheGroups(identity.token, me.groups.map(GroupDto::toDomain)) }
+    }
+
+    override suspend fun updateGroup(groupId: String, share: ShareSettings?, name: String?): LeaderboardResult<Unit> =
+        authed { identity ->
+            api.updateGroup(identity.token, groupId, UpdateGroupRequest(share?.toDto(), name?.trim()))
+                .andThen { response ->
+                    val updated = response.group.toDomain()
+                    val groups = store.identity.first()?.groups ?: return@andThen
+                    cacheGroups(identity.token, groups.map { if (it.id == updated.id) updated else it })
+                }
+                .alsoDropIfNotMember()
+        }
+
+    override suspend fun leaveGroup(groupId: String): LeaderboardResult<Unit> = authed { identity ->
+        api.leaveGroup(identity.token, groupId)
+            .andThen {
+                // The server deletes a user who leaves their last group: nothing is left to keep.
+                if (identity.groups.singleOrNull()?.id == groupId) {
+                    store.clear()
+                } else {
+                    // Drop it now so an offline refresh can't leave it on screen.
+                    cacheGroups(identity.token, identity.groups.filter { it.id != groupId })
+                    refreshGroups()
+                }
+            }
+            .alsoDropIfNotMember()
+    }
+
+    override suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?): LeaderboardResult<Unit> = authed { identity ->
+        val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, shareUnion(identity.groups)))
+        // The cached share flags are older than the server's (a change on another phone, or an
+        // update that raced this upload). Take the server's, then retry once with their union.
         if (first is LeaderboardResult.Err && first.error == LeaderboardError.HIDDEN_SIGNAL) {
-            val updated = api.updateMe(m.token, UpdateMeRequest(share = m.share.toDto()))
-            if (updated is LeaderboardResult.Err) return@authed updated
-            api.sync(m.token, request)
+            val refreshed = refreshGroups()
+            if (refreshed is LeaderboardResult.Err) return@authed refreshed
+            val current = store.identity.first()?.takeIf { it.token == identity.token } ?: return@authed first
+            api.sync(identity.token, syncRequestOf(days, streakStartedAt, shareUnion(current.groups)))
         } else {
             first
         }
     }
 
-    override suspend fun board(window: BoardWindow, today: LocalDate): LeaderboardResult<List<BoardRow>> = authed { m ->
-        api.board(m.token, window, today).map { response -> response.rows.map(BoardRowDto::toDomain) }
+    override suspend fun board(groupId: String, window: BoardWindow, today: LocalDate): LeaderboardResult<List<BoardRow>> =
+        authed { identity ->
+            api.board(identity.token, groupId, window, today)
+                .map { response -> response.rows.map(BoardRowDto::toDomain) }
+                .alsoDropIfNotMember()
+        }
+
+    /**
+     * Creating and joining work with or without an identity. With one, the token goes along and
+     * the name stays as it is; without, the response carries the new identity's token.
+     */
+    private suspend fun enterGroup(
+        displayName: String?,
+        call: suspend (token: String?, displayName: String?) -> LeaderboardResult<GroupResponse>,
+    ): LeaderboardResult<Unit> {
+        val identity = store.identity.first()
+        val name = displayName?.trim()
+        val result = if (identity == null) call(null, name) else guarded(identity.token) { call(identity.token, null) }
+        return result.andThen { response ->
+            val group = response.group.toDomain()
+            val token = response.token
+            if (token != null) {
+                store.save(Identity(token, name.orEmpty(), listOf(group)))
+            } else if (identity != null) {
+                // Cached right away, so the new group shows even if the refresh below fails.
+                cacheGroups(identity.token, identity.groups.filter { it.id != group.id } + group)
+            }
+            refreshGroups()
+            store.select(group.id)
+        }
     }
 
-    override suspend fun leave(): LeaderboardResult<Unit> = authed { m ->
-        api.leave(m.token).andThen { store.clear() }
+    /** A group this member is no longer in (removed, or left on another phone) leaves the cache. */
+    private suspend fun <T> LeaderboardResult<T>.alsoDropIfNotMember(): LeaderboardResult<T> {
+        if (this is LeaderboardResult.Err && error == LeaderboardError.NOT_MEMBER) refreshGroups()
+        return this
     }
 
-    private suspend fun <T> authed(block: suspend (GroupMembership) -> LeaderboardResult<T>): LeaderboardResult<T> {
-        val membership = store.membership.first() ?: return LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
-        val result = block(membership)
-        // Only if this token is still the stored one: a late 401 must not clear a newer membership.
+    /**
+     * Stores [groups] only while [token] is still the stored identity, and moves the selection
+     * when the selected group is gone.
+     */
+    private suspend fun cacheGroups(token: String, groups: List<GroupInfo>) {
+        if (store.identity.first()?.token != token) return
+        store.saveGroups(groups)
+        val selected = store.selectedGroupId.first()
+        if (groups.none { it.id == selected }) store.select(groups.firstOrNull()?.id)
+    }
+
+    private suspend fun <T> authed(block: suspend (Identity) -> LeaderboardResult<T>): LeaderboardResult<T> {
+        val identity = store.identity.first() ?: return LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
+        return guarded(identity.token) { block(identity) }
+    }
+
+    private suspend fun <T> guarded(token: String, block: suspend () -> LeaderboardResult<T>): LeaderboardResult<T> {
+        val result = block()
+        // Only if this token is still the stored one: a late 401 must not clear a newer identity.
         if (result is LeaderboardResult.Err && result.error == LeaderboardError.UNAUTHORIZED &&
-            store.membership.first()?.token == membership.token
+            store.identity.first()?.token == token
         ) {
             store.clear(removed = true)
         }

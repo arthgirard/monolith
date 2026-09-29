@@ -56,15 +56,15 @@ class LeaderboardSyncer @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     fun start(scope: CoroutineScope) {
-        val debounced = leaderboardRepository.observeMembership()
-            .map { it != null }
+        val debounced = leaderboardRepository.observeIdentity()
+            .map { it != null && it.groups.isNotEmpty() }
             .distinctUntilChanged()
             .flatMapLatest { joined -> if (joined) merge(localChanges(), requests) else emptyFlow() }
             .debounce(DEBOUNCE_MILLIS)
-            // This process also hosts enforcement: an unreadable membership must not crash it.
+            // This process also hosts enforcement: an unreadable identity must not crash it.
             .catch { Log.w(TAG, "Leaderboard triggers stopped", it) }
-        // Not gated on membership: a request sent right after a join can arrive before the
-        // membership flow flips, and without a membership the sync makes no network call.
+        // Not gated on the identity: a request sent right after a join can arrive before the
+        // identity flow flips, and without an identity the sync makes no network call.
         val triggers = merge(debounced, immediateRequests)
         scope.launch {
             // collectLatest: a new trigger cancels a pending pause-end wait, since the upload it

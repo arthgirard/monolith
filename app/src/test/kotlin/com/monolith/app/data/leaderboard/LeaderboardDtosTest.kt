@@ -1,6 +1,7 @@
 package com.monolith.app.data.leaderboard
 
 import com.monolith.app.domain.model.DayAggregate
+import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.ShareSettings
 import kotlinx.serialization.encodeToString
@@ -55,5 +56,32 @@ class LeaderboardDtosTest {
         assertEquals(LeaderboardError.HIDDEN_SIGNAL, errorOf("hidden_signal"))
         assertEquals(LeaderboardError.INVALID, errorOf("invalid_body"))
         assertEquals(LeaderboardError.SERVER, errorOf(null))
+    }
+
+    @Test
+    fun `group responses decode, with or without a token`() {
+        val withToken = LeaderboardJson.decodeFromString<GroupResponse>(
+            """{"token":"t","group":{"id":"g","inviteCode":"ABCDEFGH","name":null,"memberCount":2,"otherMembers":["Sam"],"share":{"saved":true,"streak":false,"pauses":true}}}""",
+        )
+        assertEquals("t", withToken.token)
+        assertEquals(GroupInfo("g", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(true, false, true)), withToken.group.toDomain())
+        val without = LeaderboardJson.decodeFromString<GroupResponse>("""{"group":{"id":"g","inviteCode":"ABCDEFGH","memberCount":1,"otherMembers":[],"share":{"saved":true,"streak":true,"pauses":true}}}""")
+        assertEquals(null, without.token)
+    }
+
+    @Test
+    fun `new error codes map`() {
+        assertEquals(LeaderboardError.TOO_MANY_GROUPS, errorOf("too_many_groups"))
+        assertEquals(LeaderboardError.ALREADY_MEMBER, errorOf("already_member"))
+        assertEquals(LeaderboardError.NAME_NEEDS_THREE, errorOf("name_needs_three"))
+        assertEquals(LeaderboardError.NOT_MEMBER, errorOf("not_member"))
+    }
+
+    @Test
+    fun `a create with a token sends no display name`() {
+        assertEquals(
+            """{"share":{"saved":true,"streak":true,"pauses":true}}""",
+            LeaderboardJson.encodeToString(CreateGroupRequest(share = ShareDto(true, true, true))),
+        )
     }
 }

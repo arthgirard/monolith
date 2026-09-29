@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.monolith.app.R
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
-import com.monolith.app.domain.model.GroupMembership
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
@@ -19,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -52,6 +52,16 @@ enum class FriendsMessage(@StringRes val text: Int) {
 
 enum class BoardStatus { LOADING, READY, OFFLINE, FAILED }
 
+// Temporary shim until Task 7 rewrites this screen for several groups: the old single-group
+// view of the identity, showing its selected group (or the first one).
+data class GroupMembership(
+    val token: String,
+    val displayName: String,
+    val groupId: String,
+    val inviteCode: String,
+    val share: ShareSettings,
+)
+
 data class FriendsUiState(
     val loaded: Boolean = false,
     val membership: GroupMembership? = null,
@@ -76,12 +86,17 @@ class FriendsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            var token: String? = null
-            repository.observeMembership().collect { membership ->
+            var key: Pair<String, String>? = null
+            // Task 7 shim: one membership derived from the identity and the selected group.
+            combine(repository.observeIdentity(), repository.observeSelectedGroupId()) { identity, selected ->
+                val group = identity?.groups?.let { groups -> groups.find { it.id == selected } ?: groups.firstOrNull() }
+                if (identity == null || group == null) null
+                else GroupMembership(identity.token, identity.displayName, group.id, group.inviteCode, group.share)
+            }.collect { membership ->
                 // Renames and share changes update the sheet in place; only a different
                 // membership (join, restore, leave, removal) resets the board.
-                val switched = membership?.token != token
-                token = membership?.token
+                val switched = membership?.let { it.token to it.groupId } != key
+                key = membership?.let { it.token to it.groupId }
                 val answersRemoval = switched && membership != null
                 state.update {
                     it.copy(
@@ -135,10 +150,11 @@ class FriendsViewModel @Inject constructor(
         boardJob = viewModelScope.launch {
             state.update { it.copy(boardStatus = if (it.rows.isEmpty()) BoardStatus.LOADING else it.boardStatus) }
             val window = state.value.window
-            val token = state.value.membership?.token
-            val result = repository.board(window, LocalDate.now())
+            val membership = state.value.membership ?: return@launch
+            val result = repository.board(membership.groupId, window, LocalDate.now())
             // The blocking HTTP call can't be cancelled, so check what it was asked for as well.
-            if (state.value.window != window || state.value.membership?.token != token) return@launch
+            val current = state.value.membership
+            if (state.value.window != window || current?.token != membership.token || current.groupId != membership.groupId) return@launch
             when (result) {
                 is LeaderboardResult.Ok -> state.update { it.copy(rows = result.value, boardStatus = BoardStatus.READY) }
                 is LeaderboardResult.Err -> state.update {
@@ -160,10 +176,11 @@ class FriendsViewModel @Inject constructor(
 
     fun restore(recoveryCode: String) = submit(FriendsMessage::ofRestore) { repository.restore(recoveryCode) }
 
-    fun rename(displayName: String) = submit { repository.updateProfile(displayName, null) }
+    fun rename(displayName: String) = submit { repository.rename(displayName) }
 
     fun updateShare(share: ShareSettings) = submit {
-        repository.updateProfile(null, share).also {
+        val groupId = state.value.membership?.groupId ?: return@submit LeaderboardResult.Ok(Unit)
+        repository.updateGroup(groupId, share = share).also {
             if (it is LeaderboardResult.Ok) {
                 // Turning a signal back on needs an upload (the server nulled it when it was
                 // hidden); the board fetches again when it lands. A hidden one shows right away.
@@ -173,7 +190,10 @@ class FriendsViewModel @Inject constructor(
         }
     }
 
-    fun leave() = submit { repository.leave() }
+    fun leave() = submit {
+        val groupId = state.value.membership?.groupId ?: return@submit LeaderboardResult.Ok(Unit)
+        repository.leaveGroup(groupId)
+    }
 
     fun dismissMessage() = state.update { it.copy(message = null) }
 

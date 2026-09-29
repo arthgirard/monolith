@@ -5,13 +5,21 @@ import java.time.LocalDate
 /** Which signals this member shares. Hiding one also hides it on everyone else's row. */
 data class ShareSettings(val saved: Boolean, val streak: Boolean, val pauses: Boolean)
 
-/** The membership is the identity: [token] is also the recovery code. */
-data class GroupMembership(
-    val token: String,
-    val displayName: String,
+/** One group as this member sees it, with the signals this member shares in it. */
+data class GroupInfo(
+    val id: String,
     val inviteCode: String,
+    val name: String?,
+    val memberCount: Int,
+    val otherMembers: List<String>,
     val share: ShareSettings,
 )
+
+/** One person across all their groups: [token] is also the recovery code. */
+data class Identity(val token: String, val displayName: String, val groups: List<GroupInfo>)
+
+/** What a group is called on screen; [isCode] while it is still just its invite code. */
+data class GroupLabel(val text: String, val isCode: Boolean)
 
 enum class BoardWindow(val apiName: String) { DAY("day"), WEEK("week"), MONTH("month") }
 
@@ -39,7 +47,19 @@ data class DayAggregate(
     val unlockCount: Int,
 )
 
-enum class LeaderboardError { NETWORK, UNAUTHORIZED, INVITE_NOT_FOUND, GROUP_FULL, HIDDEN_SIGNAL, INVALID, SERVER }
+enum class LeaderboardError {
+    NETWORK,
+    UNAUTHORIZED,
+    INVITE_NOT_FOUND,
+    GROUP_FULL,
+    TOO_MANY_GROUPS,
+    ALREADY_MEMBER,
+    NAME_NEEDS_THREE,
+    NOT_MEMBER,
+    HIDDEN_SIGNAL,
+    INVALID,
+    SERVER,
+}
 
 sealed interface LeaderboardResult<out T> {
     data class Ok<T>(val value: T) : LeaderboardResult<T>

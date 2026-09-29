@@ -40,7 +40,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.monolith.app.R
-import com.monolith.app.domain.model.GroupMembership
 import com.monolith.app.domain.model.ShareSettings
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.theme.mono

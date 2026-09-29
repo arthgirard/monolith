@@ -2,6 +2,7 @@ package com.monolith.app.data.leaderboard
 
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.DayAggregate
+import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.ShareSettings
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -16,11 +17,28 @@ val LeaderboardJson = Json {
 }
 
 @Serializable data class ShareDto(val saved: Boolean, val streak: Boolean, val pauses: Boolean)
-@Serializable data class CreateGroupRequest(val displayName: String, val share: ShareDto)
-@Serializable data class JoinRequest(val inviteCode: String, val displayName: String, val share: ShareDto)
-@Serializable data class JoinResponse(val token: String, val inviteCode: String)
-@Serializable data class MeResponse(val displayName: String, val share: ShareDto, val inviteCode: String)
-@Serializable data class UpdateMeRequest(val displayName: String? = null, val share: ShareDto? = null)
+
+@Serializable
+data class GroupDto(
+    val id: String,
+    val inviteCode: String,
+    val name: String? = null,
+    val memberCount: Int,
+    val otherMembers: List<String> = emptyList(),
+    val share: ShareDto,
+)
+
+/** [displayName] only without a token: an existing identity keeps its name. */
+@Serializable data class CreateGroupRequest(val displayName: String? = null, val share: ShareDto)
+@Serializable data class JoinRequest(val inviteCode: String, val displayName: String? = null, val share: ShareDto)
+
+/** [token] is present only when the call created the identity. */
+@Serializable data class GroupResponse(val token: String? = null, val group: GroupDto)
+@Serializable data class MeResponse(val displayName: String, val groups: List<GroupDto>)
+@Serializable data class UpdateMeRequest(val displayName: String)
+
+/** An empty [name] clears the group's name. */
+@Serializable data class UpdateGroupRequest(val share: ShareDto? = null, val name: String? = null)
 @Serializable data class SyncDayDto(val date: String, val savedMs: Long? = null, val bypassCount: Int? = null, val unlockCount: Int? = null)
 @Serializable data class SyncRequest(val days: List<SyncDayDto>, val streakStartedAt: Long? = null)
 @Serializable data class StreakDto(val startedAt: Long? = null)
@@ -42,6 +60,8 @@ data class BoardRowDto(
 
 fun ShareSettings.toDto() = ShareDto(saved, streak, pauses)
 fun ShareDto.toDomain() = ShareSettings(saved, streak, pauses)
+fun GroupDto.toDomain() = GroupInfo(id, inviteCode, name, memberCount, otherMembers, share.toDomain())
+fun GroupInfo.toDto() = GroupDto(id, inviteCode, name, memberCount, otherMembers, share.toDto())
 
 fun BoardRowDto.toDomain() = BoardRow(
     name = name,
@@ -72,6 +92,10 @@ fun errorOf(code: String?): LeaderboardError = when (code) {
     "unauthorized" -> LeaderboardError.UNAUTHORIZED
     "invite_not_found" -> LeaderboardError.INVITE_NOT_FOUND
     "group_full" -> LeaderboardError.GROUP_FULL
+    "too_many_groups" -> LeaderboardError.TOO_MANY_GROUPS
+    "already_member" -> LeaderboardError.ALREADY_MEMBER
+    "name_needs_three" -> LeaderboardError.NAME_NEEDS_THREE
+    "not_member" -> LeaderboardError.NOT_MEMBER
     "hidden_signal" -> LeaderboardError.HIDDEN_SIGNAL
     "invalid_body" -> LeaderboardError.INVALID
     else -> LeaderboardError.SERVER
