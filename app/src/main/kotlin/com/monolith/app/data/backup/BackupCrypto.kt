@@ -29,6 +29,8 @@ object BackupCrypto {
     private const val CODE_LENGTH = 43
     private const val HMAC = "HmacSHA256"
     private const val HASH_BYTES = 32
+    private const val KEY_BYTES = 32
+    private const val MAX_PLAIN_BYTES = 16 * 1024 * 1024
 
     private val random = SecureRandom()
     private val salt = "monolith".toByteArray(Charsets.UTF_8)
@@ -73,11 +75,14 @@ object BackupCrypto {
     fun deriveKey(master: ByteArray): ByteArray =
         hkdf(master, salt, "backup v1".toByteArray(Charsets.UTF_8), 32)
 
+    /** A key that is not 32 bytes is a programming error and throws IllegalArgumentException. */
     fun encrypt(key: ByteArray, plain: ByteArray): ByteArray {
+        require(key.size == KEY_BYTES) { "key must be $KEY_BYTES bytes" }
         try {
             val nonce = ByteArray(NONCE_BYTES).also { random.nextBytes(it) }
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_BITS, nonce))
+            cipher.updateAAD(byteArrayOf(VERSION))
             return byteArrayOf(VERSION) + nonce + cipher.doFinal(gzip(plain))
         } catch (e: GeneralSecurityException) {
             throw BackupCryptoException("encryption failed", e)
@@ -89,10 +94,12 @@ object BackupCrypto {
     fun decrypt(key: ByteArray, blob: ByteArray): ByteArray {
         if (blob.size < 1 + NONCE_BYTES + TAG_BYTES) throw BackupCryptoException("backup is too short")
         if (blob[0] != VERSION) throw BackupCryptoException("unsupported backup version ${blob[0]}")
+        if (key.size != KEY_BYTES) throw BackupCryptoException("key must be $KEY_BYTES bytes")
         try {
             val nonce = blob.copyOfRange(1, 1 + NONCE_BYTES)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_BITS, nonce))
+            cipher.updateAAD(byteArrayOf(blob[0]))
             val compressed = cipher.doFinal(blob, 1 + NONCE_BYTES, blob.size - 1 - NONCE_BYTES)
             return gunzip(compressed)
         } catch (e: GeneralSecurityException) {
@@ -117,5 +124,15 @@ object BackupCrypto {
     }
 
     private fun gunzip(data: ByteArray): ByteArray =
-        GZIPInputStream(ByteArrayInputStream(data)).use { it.readBytes() }
+        GZIPInputStream(ByteArrayInputStream(data)).use { input ->
+            val out = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                if (out.size() + n > MAX_PLAIN_BYTES) throw BackupCryptoException("backup too large")
+                out.write(buffer, 0, n)
+            }
+            out.toByteArray()
+        }
 }

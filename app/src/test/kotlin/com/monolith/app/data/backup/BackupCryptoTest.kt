@@ -63,4 +63,41 @@ class BackupCryptoTest {
         assertThrows(BackupCryptoException::class.java) { BackupCrypto.decrypt(key, future) }
         assertThrows(BackupCryptoException::class.java) { BackupCrypto.decrypt(key, ByteArray(5)) }
     }
+
+    @Test
+    fun `hkdf matches RFC 5869 test case 3`() {
+        val okm = BackupCrypto.hkdf(
+            ikm = ByteArray(22) { 0x0b },
+            salt = ByteArray(0),
+            info = ByteArray(0),
+            length = 42,
+        )
+        assertArrayEquals(
+            hex("8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8"),
+            okm,
+        )
+    }
+
+    @Test
+    fun `non canonical and overlong codes are rejected`() {
+        val zeros = BackupCrypto.encodeCode(ByteArray(32))
+        assertEquals("A".repeat(43), zeros)
+        // 'B' sets a spare bit; a lenient decoder would still yield 32 zero bytes.
+        assertNull(BackupCrypto.decodeCode("A".repeat(42) + "B"))
+        assertNull(BackupCrypto.decodeCode("A".repeat(44)))
+    }
+
+    @Test
+    fun `truncated blob fails`() {
+        val key = BackupCrypto.deriveKey(BackupCrypto.newMaster())
+        val blob = BackupCrypto.encrypt(key, "hello".toByteArray())
+        assertThrows(BackupCryptoException::class.java) { BackupCrypto.decrypt(key, blob.copyOf(29)) }
+    }
+
+    @Test
+    fun `wrong size keys are refused`() {
+        assertThrows(IllegalArgumentException::class.java) { BackupCrypto.encrypt(ByteArray(16), ByteArray(1)) }
+        val blob = BackupCrypto.encrypt(BackupCrypto.deriveKey(BackupCrypto.newMaster()), ByteArray(1))
+        assertThrows(BackupCryptoException::class.java) { BackupCrypto.decrypt(ByteArray(16), blob) }
+    }
 }
