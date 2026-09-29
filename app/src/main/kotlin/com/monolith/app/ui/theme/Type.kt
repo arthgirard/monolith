@@ -15,6 +15,15 @@ val MonolithFontFamily = FontFamily(
     Font(R.font.inter_bold, FontWeight.Bold),
 )
 
+/**
+ * Monospace as a material for data only: durations, counts, codes. Never headings or body copy,
+ * where Inter stays. Fixed width also keeps a ticking streak from shifting its neighbours.
+ */
+val MonolithMonoFamily = FontFamily(
+    Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
+    Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
+)
+
 val MonolithTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = MonolithFontFamily,
@@ -119,3 +128,6 @@ val MonolithTypography = Typography(
  * shipping a second font family.
  */
 fun TextStyle.tabular(): TextStyle = copy(fontFeatureSettings = "tnum")
+
+/** This style set in [MonolithMonoFamily], for figures and codes. */
+fun TextStyle.mono(): TextStyle = copy(fontFamily = MonolithMonoFamily)
