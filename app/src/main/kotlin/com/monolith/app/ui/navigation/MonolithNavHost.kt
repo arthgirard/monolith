@@ -18,6 +18,7 @@ import com.monolith.app.ui.onboarding.OnboardingScreen
 import com.monolith.app.ui.schedule.ScheduleScreen
 import com.monolith.app.ui.settings.SettingsScreen
 import com.monolith.app.ui.strictness.StrictnessScreen
+import com.monolith.app.ui.friends.FriendsScreen
 import com.monolith.app.ui.timesaved.TimeSavedScreen
 
 private const val TRANSITION_DURATION_MILLIS = 300
@@ -97,6 +98,7 @@ fun MonolithNavHost(
                 onLinkTag = { navController.navigate(MonolithDestination.NfcLink.route) },
                 onViewTimeSaved = { navController.navigate(MonolithDestination.TimeSaved.route) },
                 onManageSchedules = { navController.navigate(MonolithDestination.Schedules.route) },
+                onOpenFriends = { navController.navigate(MonolithDestination.Friends.route) },
                 onOpenSettings = { navController.navigate(MonolithDestination.Settings.route) },
             )
         }
@@ -111,6 +113,9 @@ fun MonolithNavHost(
         }
         composable(MonolithDestination.TimeSaved.route) {
             TimeSavedScreen(onBack = { navController.popBackStack() })
+        }
+        composable(MonolithDestination.Friends.route) {
+            FriendsScreen(onBack = { navController.popBackStack() })
         }
         composable(MonolithDestination.Schedules.route) {
             ScheduleScreen(onBack = { navController.popBackStack() })
