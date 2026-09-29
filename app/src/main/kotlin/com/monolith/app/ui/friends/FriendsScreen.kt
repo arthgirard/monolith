@@ -199,9 +199,9 @@ internal fun ShareToggles(share: ShareSettings, enabled: Boolean, onChange: (Sha
         )
         SettingsGroup {
             SettingsToggleRow(stringResource(R.string.friends_share_saved), share.saved, { onChange(share.copy(saved = it)) }, enabled)
-            SettingsDivider()
+            SettingsDivider(startInset = 20.dp)
             SettingsToggleRow(stringResource(R.string.friends_share_streak), share.streak, { onChange(share.copy(streak = it)) }, enabled)
-            SettingsDivider()
+            SettingsDivider(startInset = 20.dp)
             SettingsToggleRow(stringResource(R.string.friends_share_pauses), share.pauses, { onChange(share.copy(pauses = it)) }, enabled)
         }
         Text(
@@ -245,7 +245,7 @@ private fun BoardContent(uiState: FriendsUiState, viewModel: FriendsViewModel) {
     }
     SettingsGroup {
         uiState.rows.forEachIndexed { index, row ->
-            if (index > 0) SettingsDivider()
+            if (index > 0) SettingsDivider(startInset = 20.dp)
             BoardRowItem(row, uiState.nowMillis)
         }
     }

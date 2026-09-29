@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.monolith.app.ui.theme.DisabledAlpha
 
@@ -125,11 +126,14 @@ fun SettingsToggleRow(
     }
 }
 
-/** Inset past the icon column, so the rows read as one list rather than stacked slices. */
+/**
+ * Inset past the icon column ([startInset], 54dp by default), so the rows read as one list
+ * rather than stacked slices. Cards whose rows have no icon pass the 20dp row padding instead.
+ */
 @Composable
-fun SettingsDivider() {
+fun SettingsDivider(startInset: Dp = 54.dp) {
     HorizontalDivider(
         color = MaterialTheme.colorScheme.outlineVariant,
-        modifier = Modifier.padding(start = 54.dp),
+        modifier = Modifier.padding(start = startInset),
     )
 }
