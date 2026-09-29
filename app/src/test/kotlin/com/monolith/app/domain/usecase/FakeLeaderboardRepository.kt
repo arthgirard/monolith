@@ -6,6 +6,7 @@ import com.monolith.app.domain.model.DayAggregate
 import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.domain.model.SharedApp
 import com.monolith.app.domain.repository.LeaderboardRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ class FakeLeaderboardRepository(identity: Identity? = null) : LeaderboardReposit
     val identity = MutableStateFlow(identity)
     val selectedGroupId = MutableStateFlow(identity?.groups?.firstOrNull()?.id)
     val syncCalls = mutableListOf<Pair<List<DayAggregate>, Long?>>()
+    val syncedApps = mutableListOf<List<SharedApp>>()
     var syncResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
     val restoreCalls = mutableListOf<String>()
     var restoreResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
@@ -41,8 +43,9 @@ class FakeLeaderboardRepository(identity: Identity? = null) : LeaderboardReposit
     override suspend fun refreshGroups() = LeaderboardResult.Ok(Unit)
     override suspend fun updateGroup(groupId: String, share: ShareSettings?, name: String?) = LeaderboardResult.Ok(Unit)
     override suspend fun leaveGroup(groupId: String) = LeaderboardResult.Ok(Unit)
-    override suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?): LeaderboardResult<Unit> {
+    override suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?, blockedApps: List<SharedApp>): LeaderboardResult<Unit> {
         syncCalls += days to streakStartedAt
+        syncedApps += blockedApps
         return syncResult
     }
     override suspend fun board(groupId: String, window: BoardWindow, today: LocalDate): LeaderboardResult<List<BoardRow>> =

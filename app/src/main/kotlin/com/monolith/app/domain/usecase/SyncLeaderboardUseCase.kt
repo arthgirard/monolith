@@ -1,6 +1,8 @@
 package com.monolith.app.domain.usecase
 
 import com.monolith.app.domain.model.LeaderboardResult
+import com.monolith.app.domain.model.SharedApp
+import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.LeaderboardRepository
 import kotlinx.coroutines.flow.first
@@ -21,6 +23,7 @@ data class SyncOutcome(val synced: Boolean, val pauseEndsAt: Long?)
 class SyncLeaderboardUseCase @Inject constructor(
     private val blockRepository: BlockRepository,
     private val leaderboardRepository: LeaderboardRepository,
+    private val appRepository: AppRepository,
 ) {
     suspend operator fun invoke(
         now: Long = System.currentTimeMillis(),
@@ -35,10 +38,26 @@ class SyncLeaderboardUseCase @Inject constructor(
         val result = leaderboardRepository.sync(
             days = DailyAggregates.build(sessions, ongoing, pauses, today, zone),
             streakStartedAt = DailyAggregates.streakStartedAt(ongoing, now),
+            blockedApps = blockedApps(),
         )
         return SyncOutcome(
             synced = result is LeaderboardResult.Ok,
             pauseEndsAt = DailyAggregates.pauseEndsAt(blockState, activeSessionStart, now),
         )
+    }
+
+    /** Named as this phone names them, within what the server takes. */
+    private suspend fun blockedApps(): List<SharedApp> =
+        appRepository.observeBlockedPackages().first()
+            .map { packageName ->
+                val label = appRepository.getAppLabel(packageName).trim().take(MAX_LABEL_LENGTH)
+                SharedApp(packageName, label.ifBlank { packageName.takeLast(MAX_LABEL_LENGTH) })
+            }
+            .sortedBy { it.label.lowercase() }
+            .take(MAX_SHARED_APPS)
+
+    private companion object {
+        const val MAX_SHARED_APPS = 200
+        const val MAX_LABEL_LENGTH = 64
     }
 }

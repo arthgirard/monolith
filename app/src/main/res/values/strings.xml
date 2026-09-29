@@ -273,6 +273,7 @@
     <string name="friends_share_saved">Time gained</string>
     <string name="friends_share_streak">Current streak</string>
     <string name="friends_share_pauses">Bypasses and unlocks</string>
+    <string name="friends_share_apps">Blocked apps</string>
     <string name="friends_share_caption">Hidden stats stay hidden for you too.</string>
     <string name="friends_create">Create a group</string>
     <string name="friends_invite_label">Invite code</string>
@@ -293,6 +294,9 @@
     <string name="friends_row_streak_label">Streak</string>
     <string name="friends_row_bypasses_label">Bypasses</string>
     <string name="friends_row_unlocks_label">Unlocks</string>
+    <string name="friends_row_apps">Blocked apps</string>
+    <string name="friends_apps_heading">Blocked apps</string>
+    <string name="friends_apps_empty">Nothing uploaded yet. The list arrives with the next sync.</string>
     <string name="friends_row_never_synced">Not synced yet</string>
     <string name="friends_group_settings">Group settings</string>
     <string name="friends_copy">Copy</string>

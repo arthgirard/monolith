@@ -9,6 +9,7 @@ fun shareUnion(groups: List<GroupInfo>): ShareSettings = ShareSettings(
     saved = groups.any { it.share.saved },
     streak = groups.any { it.share.streak },
     pauses = groups.any { it.share.pauses },
+    apps = groups.any { it.share.apps },
 )
 
 /**

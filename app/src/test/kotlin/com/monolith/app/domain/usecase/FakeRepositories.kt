@@ -1,5 +1,7 @@
 package com.monolith.app.domain.usecase
 
+import android.graphics.Bitmap
+import com.monolith.app.domain.model.AppInfo
 import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSchedule
 import com.monolith.app.domain.model.BlockSession
@@ -9,6 +11,7 @@ import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.Pause
 import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.TagLinkMode
+import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.ScheduleRepository
@@ -125,6 +128,21 @@ class FakeAppUnlockRepository : AppUnlockRepository {
         unlocks.value = emptyMap()
         codeBreakers.value = emptyMap()
     }
+}
+
+/** Labels come from [labels], falling back to the package name like the real one. */
+class FakeAppRepository(
+    blocked: Set<String> = emptySet(),
+    private val labels: Map<String, String> = emptyMap(),
+) : AppRepository {
+    val blocked = MutableStateFlow(blocked)
+
+    override suspend fun getInstalledApps(): List<AppInfo> = emptyList()
+    override fun observeBlockedPackages(): Flow<Set<String>> = blocked
+    override suspend fun setBlockedPackages(packages: Set<String>) { blocked.value = packages }
+    override suspend fun getEssentialPackages(): Set<String> = emptySet()
+    override suspend fun getAppLabel(packageName: String): String = labels[packageName] ?: packageName
+    override suspend fun getAppIcon(packageName: String, sizeDp: Int): Bitmap? = null
 }
 
 class FakeStrictnessRepository(level: StrictnessLevel = StrictnessLevel.DEFAULT) : StrictnessRepository {

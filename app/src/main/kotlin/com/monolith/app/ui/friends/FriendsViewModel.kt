@@ -72,6 +72,8 @@ data class FriendsUiState(
     val busy: Boolean = false,
     val message: FriendsMessage? = null,
     val nowMillis: Long = System.currentTimeMillis(),
+    /** The member whose blocked apps are open on their own page. */
+    val appsOf: BoardRow? = null,
 ) {
     val groups: List<GroupInfo> get() = identity?.groups.orEmpty()
     val selectedGroup: GroupInfo? get() = groups.find { it.id == selectedGroupId }
@@ -190,6 +192,8 @@ class FriendsViewModel @Inject constructor(
             }
         }
     }
+
+    fun showApps(row: BoardRow) = state.update { it.copy(appsOf = row) }
 
     fun openSheet(sheet: FriendsSheet) = state.update { it.copy(sheet = sheet, message = null) }
 

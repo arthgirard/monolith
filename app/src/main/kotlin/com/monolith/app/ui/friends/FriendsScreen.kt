@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,7 +22,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Timelapse
@@ -82,6 +85,7 @@ import com.monolith.app.util.formatDuration
 @Composable
 fun FriendsScreen(
     onBack: () -> Unit,
+    onOpenApps: () -> Unit,
     viewModel: FriendsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -130,7 +134,7 @@ fun FriendsScreen(
                 when {
                     !uiState.loaded -> Unit
                     group == null -> JoinContent(uiState.busy, uiState.displayName, viewModel)
-                    else -> BoardContent(uiState, viewModel)
+                    else -> BoardContent(uiState, viewModel, onOpenApps = { row -> viewModel.showApps(row); onOpenApps() })
                 }
             }
         }
@@ -204,7 +208,7 @@ private fun GroupSwitcher(
 }
 
 /** Creating or joining shares everything; what a group sees is adjusted afterwards in its settings. */
-internal val ShareAll = ShareSettings(saved = true, streak = true, pauses = true)
+internal val ShareAll = ShareSettings(saved = true, streak = true, pauses = true, apps = true)
 
 @Composable
 private fun JoinContent(busy: Boolean, knownName: String, viewModel: FriendsViewModel) {
@@ -256,6 +260,8 @@ internal fun ShareToggles(share: ShareSettings, enabled: Boolean, onChange: (Sha
             SettingsToggleRow(stringResource(R.string.friends_share_streak), share.streak, { onChange(share.copy(streak = it)) }, enabled)
             SettingsDivider(startInset = 20.dp)
             SettingsToggleRow(stringResource(R.string.friends_share_pauses), share.pauses, { onChange(share.copy(pauses = it)) }, enabled)
+            SettingsDivider(startInset = 20.dp)
+            SettingsToggleRow(stringResource(R.string.friends_share_apps), share.apps, { onChange(share.copy(apps = it)) }, enabled)
         }
         Text(
             stringResource(R.string.friends_share_caption),
@@ -267,7 +273,7 @@ internal fun ShareToggles(share: ShareSettings, enabled: Boolean, onChange: (Sha
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BoardContent(uiState: FriendsUiState, viewModel: FriendsViewModel) {
+private fun BoardContent(uiState: FriendsUiState, viewModel: FriendsViewModel, onOpenApps: (BoardRow) -> Unit) {
     val windows = listOf(
         BoardWindow.DAY to R.string.time_saved_day,
         BoardWindow.WEEK to R.string.time_saved_week,
@@ -302,7 +308,7 @@ private fun BoardContent(uiState: FriendsUiState, viewModel: FriendsViewModel) {
     SettingsGroup {
         uiState.rows.forEachIndexed { index, row ->
             if (index > 0) SettingsDivider(startInset = 20.dp)
-            BoardRowItem(row, leaderMillis, uiState.nowMillis)
+            BoardRowItem(row, leaderMillis, uiState.nowMillis, onOpenApps = { onOpenApps(row) })
         }
     }
 }
@@ -311,7 +317,7 @@ private val RankWidth = 28.dp
 private val SlabEdgeWidth = 3.dp
 
 @Composable
-private fun BoardRowItem(row: BoardRow, leaderMillis: Long?, nowMillis: Long) {
+private fun BoardRowItem(row: BoardRow, leaderMillis: Long?, nowMillis: Long, onOpenApps: () -> Unit) {
     val hidden = stringResource(R.string.friends_hidden)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     // The viewer's own row carries a slab edge rather than a suffix, so the name stays just the name.
@@ -382,6 +388,20 @@ private fun BoardRowItem(row: BoardRow, leaderMillis: Long?, nowMillis: Long) {
                 }
                 row.bypassCount?.let { MiniReadout(Icons.Outlined.LockOpen, stringResource(R.string.friends_row_bypasses_label), it.toString()) }
                 row.unlockCount?.let { MiniReadout(Icons.Outlined.PhoneAndroid, stringResource(R.string.friends_row_unlocks_label), it.toString()) }
+            }
+        }
+        row.blockedApps?.let { apps ->
+            TextButton(
+                onClick = onOpenApps,
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                modifier = Modifier.padding(start = RankWidth).heightIn(min = 32.dp),
+            ) {
+                Icon(Icons.Outlined.Block, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.friends_row_apps), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(8.dp))
+                Text(apps.size.toString(), style = MaterialTheme.typography.bodyMedium.mono())
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
     }

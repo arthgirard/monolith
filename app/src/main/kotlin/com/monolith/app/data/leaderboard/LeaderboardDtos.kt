@@ -5,6 +5,8 @@ import com.monolith.app.domain.model.DayAggregate
 import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.domain.model.SharedApp
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -16,7 +18,15 @@ val LeaderboardJson = Json {
     explicitNulls = false
 }
 
-@Serializable data class ShareDto(val saved: Boolean, val streak: Boolean, val pauses: Boolean)
+/**
+ * [apps] defaults for groups cached before that signal existed. Always encoded: the server reads
+ * a missing flag as an older client's and keeps what it has.
+ */
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+data class ShareDto(val saved: Boolean, val streak: Boolean, val pauses: Boolean, @EncodeDefault val apps: Boolean = false)
+
+@Serializable data class SharedAppDto(val packageName: String, val label: String)
 
 @Serializable
 data class GroupDto(
@@ -43,7 +53,7 @@ data class GroupDto(
 /** An empty [name] clears the group's name. */
 @Serializable data class UpdateGroupRequest(val share: ShareDto? = null, val name: String? = null)
 @Serializable data class SyncDayDto(val date: String, val savedMs: Long? = null, val bypassCount: Int? = null, val unlockCount: Int? = null)
-@Serializable data class SyncRequest(val days: List<SyncDayDto>, val streakStartedAt: Long? = null)
+@Serializable data class SyncRequest(val days: List<SyncDayDto>, val streakStartedAt: Long? = null, val apps: List<SharedAppDto>? = null)
 @Serializable data class StreakDto(val startedAt: Long? = null)
 
 @Serializable
@@ -56,13 +66,16 @@ data class BoardRowDto(
     val bypassCount: Int? = null,
     val unlockCount: Int? = null,
     val lastSyncAt: Long? = null,
+    val apps: List<SharedAppDto>? = null,
 )
 
 @Serializable data class BoardResponse(val rows: List<BoardRowDto>)
 @Serializable data class ErrorResponse(val error: String)
 
-fun ShareSettings.toDto() = ShareDto(saved, streak, pauses)
-fun ShareDto.toDomain() = ShareSettings(saved, streak, pauses)
+fun ShareSettings.toDto() = ShareDto(saved, streak, pauses, apps)
+fun ShareDto.toDomain() = ShareSettings(saved, streak, pauses, apps)
+fun SharedAppDto.toDomain() = SharedApp(packageName, label)
+fun SharedApp.toDto() = SharedAppDto(packageName, label)
 fun GroupDto.toDomain() = GroupInfo(id, inviteCode, name, memberCount, otherMembers, share.toDomain())
 fun GroupInfo.toDto() = GroupDto(id, inviteCode, name, memberCount, otherMembers, share.toDto())
 
@@ -76,10 +89,11 @@ fun BoardRowDto.toDomain() = BoardRow(
     bypassCount = bypassCount,
     unlockCount = unlockCount,
     lastSyncAt = lastSyncAt,
+    blockedApps = apps?.map(SharedAppDto::toDomain),
 )
 
 /** The upload body, with every signal [share] hides left out before it reaches the network. */
-fun syncRequestOf(days: List<DayAggregate>, streakStartedAt: Long?, share: ShareSettings) = SyncRequest(
+fun syncRequestOf(days: List<DayAggregate>, streakStartedAt: Long?, blockedApps: List<SharedApp>, share: ShareSettings) = SyncRequest(
     days = days.map {
         SyncDayDto(
             date = it.date.toString(),
@@ -89,6 +103,7 @@ fun syncRequestOf(days: List<DayAggregate>, streakStartedAt: Long?, share: Share
         )
     },
     streakStartedAt = streakStartedAt.takeIf { share.streak },
+    apps = blockedApps.map(SharedApp::toDto).takeIf { share.apps },
 )
 
 fun errorOf(code: String?): LeaderboardError = when (code) {

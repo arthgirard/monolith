@@ -4,7 +4,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,6 +21,7 @@ import com.monolith.app.ui.onboarding.OnboardingScreen
 import com.monolith.app.ui.schedule.ScheduleScreen
 import com.monolith.app.ui.settings.SettingsScreen
 import com.monolith.app.ui.strictness.StrictnessScreen
+import com.monolith.app.ui.friends.BlockedAppsScreen
 import com.monolith.app.ui.friends.FriendsScreen
 import com.monolith.app.ui.timesaved.TimeSavedScreen
 
@@ -126,7 +129,15 @@ fun MonolithNavHost(
             TimeSavedScreen(onBack = { navController.popBackStack() })
         }
         composable(MonolithDestination.Friends.route) {
-            FriendsScreen(onBack = { navController.popBackStack() })
+            FriendsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenApps = { navController.navigate(MonolithDestination.FriendApps.route) },
+            )
+        }
+        composable(MonolithDestination.FriendApps.route) { entry ->
+            // The board's view model, so the page shows the row that was tapped.
+            val friendsEntry = remember(entry) { navController.getBackStackEntry(MonolithDestination.Friends.route) }
+            BlockedAppsScreen(onBack = { navController.popBackStack() }, viewModel = hiltViewModel(friendsEntry))
         }
         composable(MonolithDestination.Schedules.route) {
             ScheduleScreen(onBack = { navController.popBackStack() })

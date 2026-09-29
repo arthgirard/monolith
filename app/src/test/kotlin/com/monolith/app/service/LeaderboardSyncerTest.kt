@@ -5,6 +5,7 @@ import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.domain.usecase.FakeAppRepository
 import com.monolith.app.domain.usecase.FakeBlockRepository
 import com.monolith.app.domain.usecase.FakeLeaderboardRepository
 import com.monolith.app.domain.usecase.SyncLeaderboardUseCase
@@ -24,12 +25,13 @@ class LeaderboardSyncerTest {
     private val member = Identity(
         "tok",
         "Ana",
-        listOf(GroupInfo("g1", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(saved = true, streak = true, pauses = true))),
+        listOf(GroupInfo("g1", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(saved = true, streak = true, pauses = true, apps = true))),
     )
 
     private fun syncerFor(leaderboard: FakeLeaderboardRepository): LeaderboardSyncer {
         val blocks = FakeBlockRepository()
-        return LeaderboardSyncer(blocks, leaderboard, SyncLeaderboardUseCase(blocks, leaderboard))
+        val apps = FakeAppRepository()
+        return LeaderboardSyncer(blocks, apps, leaderboard, SyncLeaderboardUseCase(blocks, leaderboard, apps))
     }
 
     @Test

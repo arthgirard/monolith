@@ -7,14 +7,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class GroupsTest {
-    private fun group(memberCount: Int, others: List<String>, name: String? = null, share: ShareSettings = ShareSettings(true, true, true)) =
+    private fun group(memberCount: Int, others: List<String>, name: String? = null, share: ShareSettings = ShareSettings(true, true, true, false)) =
         GroupInfo("g", "ABCDEFGH", name, memberCount, others, share)
 
     @Test
     fun `a signal is uploaded when any group shares it`() {
-        val union = shareUnion(listOf(group(2, listOf("Sam"), share = ShareSettings(true, false, false)), group(2, listOf("Lea"), share = ShareSettings(false, false, true))))
-        assertEquals(ShareSettings(saved = true, streak = false, pauses = true), union)
-        assertEquals(ShareSettings(false, false, false), shareUnion(emptyList()))
+        val union = shareUnion(listOf(group(2, listOf("Sam"), share = ShareSettings(true, false, false, false)), group(2, listOf("Lea"), share = ShareSettings(false, false, true, false))))
+        assertEquals(ShareSettings(saved = true, streak = false, pauses = true, apps = false), union)
+        assertEquals(ShareSettings(false, false, false, false), shareUnion(emptyList()))
     }
 
     @Test
@@ -27,9 +27,9 @@ class GroupsTest {
 
     @Test
     fun `labels that collide carry the start of the invite code`() {
-        val a = GroupInfo("a", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(true, true, true))
-        val b = GroupInfo("b", "JKLMNPQR", null, 2, listOf("Sam"), ShareSettings(true, true, true))
-        val c = GroupInfo("c", "STUVWXYZ", null, 2, listOf("Lea"), ShareSettings(true, true, true))
+        val a = GroupInfo("a", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(true, true, true, false))
+        val b = GroupInfo("b", "JKLMNPQR", null, 2, listOf("Sam"), ShareSettings(true, true, true, false))
+        val c = GroupInfo("c", "STUVWXYZ", null, 2, listOf("Lea"), ShareSettings(true, true, true, false))
 
         assertEquals(
             mapOf(
@@ -43,8 +43,8 @@ class GroupsTest {
 
     @Test
     fun `distinct labels are left alone`() {
-        val a = GroupInfo("a", "ABCDEFGH", null, 1, emptyList(), ShareSettings(true, true, true))
-        val b = GroupInfo("b", "JKLMNPQR", null, 2, listOf("Sam"), ShareSettings(true, true, true))
+        val a = GroupInfo("a", "ABCDEFGH", null, 1, emptyList(), ShareSettings(true, true, true, false))
+        val b = GroupInfo("b", "JKLMNPQR", null, 2, listOf("Sam"), ShareSettings(true, true, true, false))
 
         assertEquals(
             mapOf("a" to GroupLabel("ABCDEFGH", isCode = true), "b" to GroupLabel("Sam", isCode = false)),

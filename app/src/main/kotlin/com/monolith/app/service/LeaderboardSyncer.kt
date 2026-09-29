@@ -1,6 +1,7 @@
 package com.monolith.app.service
 
 import android.util.Log
+import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.LeaderboardRepository
 import com.monolith.app.domain.usecase.SyncLeaderboardUseCase
@@ -29,12 +30,13 @@ import javax.inject.Singleton
 
 /**
  * Keeps the leaderboard near-live without a retry queue. Idle until the member joins a group;
- * then any change to sessions, pauses or block state uploads once things settle. The process
+ * then any change to sessions, pauses, block state or blocked apps uploads once things settle. The process
  * stays warm through the accessibility service, so these triggers keep firing.
  */
 @Singleton
 class LeaderboardSyncer @Inject constructor(
     private val blockRepository: BlockRepository,
+    private val appRepository: AppRepository,
     private val leaderboardRepository: LeaderboardRepository,
     private val syncLeaderboard: SyncLeaderboardUseCase,
 ) {
@@ -94,6 +96,7 @@ class LeaderboardSyncer @Inject constructor(
         blockRepository.observePauses().distinctUntilChanged().map { },
         blockRepository.observeBlockState().distinctUntilChanged().map { },
         blockRepository.observeActiveSessionStart().distinctUntilChanged().map { },
+        appRepository.observeBlockedPackages().distinctUntilChanged().map { },
     ).catch { Log.w(TAG, "Leaderboard local changes stopped", it) }
 
     private companion object {

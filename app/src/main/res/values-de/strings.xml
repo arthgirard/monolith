@@ -269,6 +269,7 @@
     <string name="friends_share_saved">Gewonnene Zeit</string>
     <string name="friends_share_streak">Aktuelle Serie</string>
     <string name="friends_share_pauses">Freigaben und Entsperrungen</string>
+    <string name="friends_share_apps">Gesperrte Apps</string>
     <string name="friends_share_caption">Verborgene Werte bleiben auch für Sie verborgen.</string>
     <string name="friends_create">Gruppe erstellen</string>
     <string name="friends_invite_label">Einladungscode</string>
@@ -289,6 +290,9 @@
     <string name="friends_row_streak_label">Serie</string>
     <string name="friends_row_bypasses_label">Freigaben</string>
     <string name="friends_row_unlocks_label">Entsperrungen</string>
+    <string name="friends_row_apps">Gesperrte Apps</string>
+    <string name="friends_apps_heading">Gesperrte Apps</string>
+    <string name="friends_apps_empty">Noch nichts hochgeladen. Die Liste kommt mit der nächsten Synchronisierung.</string>
     <string name="friends_row_never_synced">Noch nicht synchronisiert</string>
     <string name="friends_group_settings">Gruppeneinstellungen</string>
     <string name="friends_copy">Kopieren</string>
