@@ -60,7 +60,7 @@ import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
 import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.ShareSettings
-import com.monolith.app.domain.usecase.groupLabel
+import com.monolith.app.domain.usecase.groupLabels
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.components.SettingsToggleRow
@@ -160,12 +160,13 @@ private fun GroupSwitcher(
     onSelect: (String) -> Unit,
     onAdd: () -> Unit,
 ) {
+    val labels = groupLabels(groups)
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(groups, key = { it.id }) { group ->
-            val label = groupLabel(group)
+            val label = labels.getValue(group.id)
             FilterChip(
                 selected = group.id == selectedGroupId,
                 onClick = { onSelect(group.id) },

@@ -24,4 +24,31 @@ class GroupsTest {
         assertEquals(GroupLabel("Lea, Max", isCode = false), groupLabel(group(3, listOf("Max", "Lea"))))
         assertEquals(GroupLabel("Flat", isCode = false), groupLabel(group(3, listOf("Max", "Lea"), name = "Flat")))
     }
+
+    @Test
+    fun `labels that collide carry the start of the invite code`() {
+        val a = GroupInfo("a", "ABCDEFGH", null, 2, listOf("Sam"), ShareSettings(true, true, true))
+        val b = GroupInfo("b", "JKLMNPQR", null, 2, listOf("Sam"), ShareSettings(true, true, true))
+        val c = GroupInfo("c", "STUVWXYZ", null, 2, listOf("Lea"), ShareSettings(true, true, true))
+
+        assertEquals(
+            mapOf(
+                "a" to GroupLabel("Sam · ABCD", isCode = false),
+                "b" to GroupLabel("Sam · JKLM", isCode = false),
+                "c" to GroupLabel("Lea", isCode = false),
+            ),
+            groupLabels(listOf(a, b, c)),
+        )
+    }
+
+    @Test
+    fun `distinct labels are left alone`() {
+        val a = GroupInfo("a", "ABCDEFGH", null, 1, emptyList(), ShareSettings(true, true, true))
+        val b = GroupInfo("b", "JKLMNPQR", null, 2, listOf("Sam"), ShareSettings(true, true, true))
+
+        assertEquals(
+            mapOf("a" to GroupLabel("ABCDEFGH", isCode = true), "b" to GroupLabel("Sam", isCode = false)),
+            groupLabels(listOf(a, b)),
+        )
+    }
 }

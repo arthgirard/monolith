@@ -20,3 +20,16 @@ fun groupLabel(group: GroupInfo): GroupLabel = when {
     group.memberCount == 2 -> GroupLabel(group.otherMembers.first(), isCode = false)
     else -> GroupLabel(group.name ?: group.otherMembers.sorted().joinToString(", "), isCode = false)
 }
+
+/**
+ * [groupLabel] for each group, by id. Two groups can read the same (two pairs with the same
+ * friend): those get the start of their invite code so the chips tell them apart.
+ */
+fun groupLabels(groups: List<GroupInfo>): Map<String, GroupLabel> {
+    val labels = groups.associate { it.id to groupLabel(it) }
+    val counts = labels.values.groupingBy { it.text }.eachCount()
+    return groups.associate { group ->
+        val label = labels.getValue(group.id)
+        group.id to if (counts.getValue(label.text) > 1) label.copy(text = "${label.text} · ${group.inviteCode.take(4)}") else label
+    }
+}
