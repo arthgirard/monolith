@@ -260,12 +260,11 @@
     <string name="friends_title">Vrienden</string>
     <string name="friends_intro">Houd elkaar eerlijk.</string>
     <string name="friends_name_label">Uw naam</string>
-    <string name="friends_share_heading">Wat u deelt</string>
+    <string name="friends_share_heading_group">Wat u in deze groep deelt</string>
     <string name="friends_share_saved">Bespaarde tijd</string>
     <string name="friends_share_streak">Huidige reeks</string>
     <string name="friends_share_pauses">Nood- en app-ontgrendelingen</string>
     <string name="friends_share_caption">Verborgen cijfers blijven ook voor u verborgen.</string>
-    <string name="friends_join_divider">of word lid van een groep</string>
     <string name="friends_create">Groep maken</string>
     <string name="friends_invite_label">Uitnodigingscode</string>
     <string name="friends_join">Deelnemen</string>

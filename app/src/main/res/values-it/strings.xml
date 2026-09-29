@@ -260,12 +260,11 @@
     <string name="friends_title">Amici</string>
     <string name="friends_intro">Per tenersi d\'occhio a vicenda.</string>
     <string name="friends_name_label">Nome</string>
-    <string name="friends_share_heading">Cosa condivide</string>
+    <string name="friends_share_heading_group">Cosa condivide in questo gruppo</string>
     <string name="friends_share_saved">Tempo risparmiato</string>
     <string name="friends_share_streak">Serie in corso</string>
     <string name="friends_share_pauses">Sblocchi e aperture</string>
     <string name="friends_share_caption">Ciò che nasconde non lo vedrà negli altri.</string>
-    <string name="friends_join_divider">o si unisca a uno</string>
     <string name="friends_create">Crea un gruppo</string>
     <string name="friends_invite_label">Codice d\'invito</string>
     <string name="friends_join">Partecipa</string>
