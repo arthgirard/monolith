@@ -30,6 +30,18 @@ class DailyAggregatesTest {
     }
 
     @Test
+    fun `a bad day is clamped to what the server accepts`() {
+        // Overlapping sessions would credit 48 hours to one day; the server refuses more than 24.
+        val session = BlockSession(at(today, 0), at(today.plusDays(1), 0))
+        val pauses = List(10_001) { Pause(PauseType.BYPASS, at(today, 12)) }
+
+        val day = DailyAggregates.build(listOf(session, session), emptyList(), pauses, today, zone).first()
+
+        assertEquals(86_400_000L, day.savedMillis)
+        assertEquals(10_000, day.bypassCount)
+    }
+
+    @Test
     fun `a session over midnight is split between the two days`() {
         val yesterday = today.minusDays(1)
         val session = BlockSession(at(yesterday, 23), at(today, 1))

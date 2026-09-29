@@ -18,6 +18,10 @@ object DailyAggregates {
 
     const val DAYS = 35
 
+    // The server's limits: one value past them fails the whole upload, not just that day.
+    private const val MAX_SAVED_MILLIS = 86_400_000L
+    private const val MAX_COUNT = 10_000
+
     fun build(
         sessions: List<BlockSession>,
         ongoing: List<BlockSession>,
@@ -31,9 +35,10 @@ object DailyAggregates {
             val dayPauses = pausesByDate[date].orEmpty()
             DayAggregate(
                 date = date,
-                savedMillis = TimeSavedCalculator.totalFor(TimePeriodType.DAY, date, sessions, ongoing),
-                bypassCount = dayPauses.count { it.type == PauseType.BYPASS },
-                unlockCount = dayPauses.count { it.type == PauseType.UNLOCK },
+                savedMillis = TimeSavedCalculator.totalFor(TimePeriodType.DAY, date, sessions, ongoing)
+                    .coerceIn(0, MAX_SAVED_MILLIS),
+                bypassCount = dayPauses.count { it.type == PauseType.BYPASS }.coerceIn(0, MAX_COUNT),
+                unlockCount = dayPauses.count { it.type == PauseType.UNLOCK }.coerceIn(0, MAX_COUNT),
             )
         }
     }
