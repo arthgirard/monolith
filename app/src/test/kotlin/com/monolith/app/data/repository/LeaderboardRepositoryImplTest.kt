@@ -113,6 +113,54 @@ class LeaderboardRepositoryImplTest {
     }
 
     @Test
+    fun `restoring another identity never carries backup settings over`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Bea", listOf(g1))) }
+        // A backup-only identity with backup on.
+        val store = FakeIdentityStore(Identity("a", "", emptyList(), "m")).apply {
+            backupEnabled.value = true
+            lastBackupAt.value = 1000
+        }
+
+        val result = repo(api, store).restore(BackupCrypto.encodeCode(BackupCrypto.newMaster()))
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
+        assertEquals("Bea", store.identity.value?.displayName)
+        assertFalse(store.backupEnabled.value)
+        assertNull(store.lastBackupAt.value)
+    }
+
+    @Test
+    fun `restoring the same identity keeps its backup settings`() = runBlocking {
+        val master = BackupCrypto.newMaster()
+        val code = BackupCrypto.encodeCode(master)
+        val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1))) }
+        val store = FakeIdentityStore(Identity(BackupCrypto.deriveToken(master), "Ana", emptyList(), code)).apply {
+            backupEnabled.value = true
+            lastBackupAt.value = 1000
+        }
+
+        repo(api, store).restore(code)
+
+        assertTrue(store.backupEnabled.value)
+        assertEquals(1000L, store.lastBackupAt.value)
+    }
+
+    @Test
+    fun `the retry after a dead token keeps the old name when the form gave none`() = runBlocking {
+        val api = FakeLeaderboardApi().apply {
+            deadTokens += "old"
+            meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g1)))
+        }
+        val store = FakeIdentityStore(ana(token = "old"))
+
+        val result = repo(api, store).createGroup(null, share)
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
+        assertEquals("Ana", api.registerRequests.single().displayName)
+        assertEquals("Ana", store.identity.value?.displayName)
+    }
+
+    @Test
     fun `restore with a malformed code is UNAUTHORIZED and skips the network`() = runBlocking {
         val api = FakeLeaderboardApi()
         val store = FakeIdentityStore()

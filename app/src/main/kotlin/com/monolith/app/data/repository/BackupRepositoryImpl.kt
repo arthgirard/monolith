@@ -52,7 +52,15 @@ class BackupRepositoryImpl @Inject constructor(
             store.setLastBackupAt(null)
             return LeaderboardResult.Ok(Unit)
         }
-        return identities.guarded(identity) { api.deleteBackup(identity.token) }.andThen {
+        val deleted = identities.guarded(identity) { api.deleteBackup(identity.token) }
+        // A groupless identity the server no longer knows: it was cleared, and there is no backup
+        // left to delete. That is what turning backup off asked for.
+        if (deleted is LeaderboardResult.Err && deleted.error == LeaderboardError.UNAUTHORIZED &&
+            identity.groups.isEmpty() && store.identity.first()?.token != identity.token
+        ) {
+            return LeaderboardResult.Ok(Unit)
+        }
+        return deleted.andThen {
             store.setBackupEnabled(false)
             store.setLastBackupAt(null)
             // The server deletes a user with no group and no backup. Ask it rather than the cache:

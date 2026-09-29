@@ -143,7 +143,11 @@ class BackupRepositoryTest {
     @Test
     fun `fetch with a bad code is UNAUTHORIZED and writes nothing`() = runBlocking {
         val api = FakeLeaderboardApi()
-        val store = FakeIdentityStore()
+        val stored = Identity("tok", "Ana", listOf(g1.toDomain()), "m")
+        val store = FakeIdentityStore(stored, selected = "g1").apply {
+            backupEnabled.value = true
+            lastBackupAt.value = 1000
+        }
         val repo = repo(api, store)
 
         assertEquals(LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED), repo.fetch("not a code"))
@@ -154,8 +158,45 @@ class BackupRepositoryTest {
         api.deadTokens += BackupCrypto.deriveToken(unknown)
         assertEquals(LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED), repo.fetch(BackupCrypto.encodeCode(unknown)))
         assertTrue(api.getBackupTokens.isEmpty())
+        assertEquals(stored, store.identity.value)
+        assertEquals("g1", store.selectedGroupId.value)
+        assertTrue(store.backupEnabled.value)
+        assertEquals(1000L, store.lastBackupAt.value)
+        assertFalse(store.removedNotice.value)
+    }
+
+    @Test
+    fun `a successful fetch writes nothing either`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Bea", listOf(g2))) }
+        val stored = Identity("tok", "Ana", listOf(g1.toDomain()), "m")
+        val store = FakeIdentityStore(stored, selected = "g1").apply {
+            backupEnabled.value = true
+            lastBackupAt.value = 1000
+        }
+
+        repo(api, store).fetch(BackupCrypto.encodeCode(BackupCrypto.newMaster()))
+
+        assertEquals(stored, store.identity.value)
+        assertEquals("g1", store.selectedGroupId.value)
+        assertTrue(store.backupEnabled.value)
+        assertEquals(1000L, store.lastBackupAt.value)
+    }
+
+    @Test
+    fun `disabling for a dead groupless identity clears it quietly and succeeds`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { deadTokens += "tok" }
+        val store = FakeIdentityStore(Identity("tok", "", emptyList(), "m")).apply {
+            backupEnabled.value = true
+            lastBackupAt.value = 1000
+        }
+
+        val result = repo(api, store).setBackupEnabled(false)
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
         assertNull(store.identity.value)
         assertFalse(store.backupEnabled.value)
+        assertNull(store.lastBackupAt.value)
+        assertFalse(store.removedNotice.value)
     }
 
     @Test

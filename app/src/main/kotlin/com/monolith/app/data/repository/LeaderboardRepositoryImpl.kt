@@ -59,6 +59,12 @@ class LeaderboardRepositoryImpl @Inject constructor(
         val token = BackupCrypto.deriveToken(master)
         return api.me(token).andThen { me ->
             val groups = me.groups.map(GroupDto::toDomain)
+            // Backup settings belong to an identity: carried over, the next upload would overwrite
+            // the restored identity's backup with this phone's data. Restoring a backup turns it on.
+            if (store.identity.first()?.token != token) {
+                store.setBackupEnabled(false)
+                store.setLastBackupAt(null)
+            }
             store.save(Identity(token, me.displayName, groups, BackupCrypto.encodeCode(master), me.backupAt))
             store.select(groups.firstOrNull()?.id)
         }
@@ -163,7 +169,8 @@ class LeaderboardRepositoryImpl @Inject constructor(
         if (!retried && tried != null && tried.groups.isEmpty() && result is LeaderboardResult.Err &&
             result.error == LeaderboardError.UNAUTHORIZED && store.identity.first() == null
         ) {
-            return enterGroup(displayName, retried = true, call)
+            // The form may not have asked for a name (there was an identity): keep the old one.
+            return enterGroup(name ?: tried.displayName.takeIf { it.isNotEmpty() }, retried = true, call)
         }
         if (identity == null) return result.andThen { }
         return result.andThen { response ->
