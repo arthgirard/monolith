@@ -269,6 +269,7 @@
     <string name="friends_share_saved">Temps gagné</string>
     <string name="friends_share_streak">Série en cours</string>
     <string name="friends_share_pauses">Déblocages et déverrouillages</string>
+    <string name="friends_share_apps">Applis bloquées</string>
     <string name="friends_share_caption">Une stat masquée l\'est aussi pour vous.</string>
     <string name="friends_create">Créer un groupe</string>
     <string name="friends_invite_label">Code d\'invitation</string>
@@ -289,6 +290,9 @@
     <string name="friends_row_streak_label">Série</string>
     <string name="friends_row_bypasses_label">Déblocages</string>
     <string name="friends_row_unlocks_label">Déverrouillages</string>
+    <string name="friends_row_apps">Applis bloquées</string>
+    <string name="friends_apps_heading">Applis bloquées</string>
+    <string name="friends_apps_empty">Rien d\'envoyé pour l\'instant. La liste arrivera à la prochaine synchronisation.</string>
     <string name="friends_row_never_synced">Pas encore synchronisé</string>
     <string name="friends_group_settings">Paramètres du groupe</string>
     <string name="friends_copy">Copier</string>

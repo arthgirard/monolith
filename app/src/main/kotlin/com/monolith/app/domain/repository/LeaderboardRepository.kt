@@ -6,6 +6,7 @@ import com.monolith.app.domain.model.DayAggregate
 import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.domain.model.SharedApp
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -37,6 +38,6 @@ interface LeaderboardRepository {
     /** Null leaves a field alone; an empty [name] clears it. */
     suspend fun updateGroup(groupId: String, share: ShareSettings? = null, name: String? = null): LeaderboardResult<Unit>
     suspend fun leaveGroup(groupId: String): LeaderboardResult<Unit>
-    suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?): LeaderboardResult<Unit>
+    suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?, blockedApps: List<SharedApp>): LeaderboardResult<Unit>
     suspend fun board(groupId: String, window: BoardWindow, today: LocalDate): LeaderboardResult<List<BoardRow>>
 }

@@ -3,7 +3,10 @@ package com.monolith.app.domain.model
 import java.time.LocalDate
 
 /** Which signals this member shares. Hiding one also hides it on everyone else's row. */
-data class ShareSettings(val saved: Boolean, val streak: Boolean, val pauses: Boolean)
+data class ShareSettings(val saved: Boolean, val streak: Boolean, val pauses: Boolean, val apps: Boolean)
+
+/** One app a member blocks, as named on their phone. */
+data class SharedApp(val packageName: String, val label: String)
 
 /** One group as this member sees it, with the signals this member shares in it. */
 data class GroupInfo(
@@ -41,6 +44,7 @@ enum class BoardWindow(val apiName: String) { DAY("day"), WEEK("week"), MONTH("m
 /**
  * One member on the board. A null value means that signal is hidden for this viewer.
  * [streakVisible] separates "hidden" from "visible but not enforcing" ([streakStartedAt] null).
+ * [blockedApps] is empty, not null, when shared but not uploaded yet.
  */
 data class BoardRow(
     val name: String,
@@ -52,6 +56,7 @@ data class BoardRow(
     val bypassCount: Int?,
     val unlockCount: Int?,
     val lastSyncAt: Long?,
+    val blockedApps: List<SharedApp>? = null,
 )
 
 /** One local day as uploaded to the leaderboard. */

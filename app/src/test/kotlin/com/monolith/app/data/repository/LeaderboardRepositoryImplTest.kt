@@ -26,7 +26,7 @@ import java.time.LocalDate
 
 class LeaderboardRepositoryImplTest {
 
-    private val share = ShareSettings(saved = true, streak = true, pauses = true)
+    private val share = ShareSettings(saved = true, streak = true, pauses = true, apps = false)
     private val day = DayAggregate(LocalDate.of(2026, 9, 28), 1000, 1, 0)
     private val today = LocalDate.of(2026, 9, 28)
     private fun ana(vararg groups: GroupDto, token: String = "tok") = Identity(token, "Ana", groups.map { it.toDomain() }, master = "m")
@@ -180,7 +180,7 @@ class LeaderboardRepositoryImplTest {
     fun `sync filters by the union of group shares`() = runBlocking {
         val api = FakeLeaderboardApi()
 
-        repo(api, FakeIdentityStore(ana(g1, g2))).sync(listOf(day), streakStartedAt = 5)
+        repo(api, FakeIdentityStore(ana(g1, g2))).sync(listOf(day), streakStartedAt = 5, blockedApps = emptyList())
 
         val request = api.syncRequests.single()
         assertEquals(1000L, request.days.single().savedMs)
@@ -197,7 +197,7 @@ class LeaderboardRepositoryImplTest {
         }
         val store = FakeIdentityStore(ana(g1), selected = "g1")
 
-        val result = repo(api, store).sync(listOf(day), null)
+        val result = repo(api, store).sync(listOf(day), null, emptyList())
 
         assertEquals(LeaderboardResult.Ok(Unit), result)
         assertEquals(2, api.syncRequests.size)
@@ -254,7 +254,7 @@ class LeaderboardRepositoryImplTest {
         val api = FakeLeaderboardApi()
         val store = FakeIdentityStore(ana())
 
-        val result = repo(api, store).sync(listOf(day), streakStartedAt = 5)
+        val result = repo(api, store).sync(listOf(day), streakStartedAt = 5, blockedApps = emptyList())
 
         assertEquals(LeaderboardResult.Ok(Unit), result)
         assertTrue(api.syncRequests.isEmpty())
@@ -292,7 +292,7 @@ class LeaderboardRepositoryImplTest {
         val store = FakeIdentityStore(ana(g1), selected = "g1")
         val repo = repo(api, store)
 
-        val result = repo.sync(listOf(day), null)
+        val result = repo.sync(listOf(day), null, emptyList())
 
         assertEquals(LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED), result)
         assertNull(store.identity.value)
@@ -320,7 +320,7 @@ class LeaderboardRepositoryImplTest {
     fun `calls without an identity are UNAUTHORIZED and skip the network`() = runBlocking {
         val api = FakeLeaderboardApi()
 
-        val result = repo(api, FakeIdentityStore()).sync(listOf(day), null)
+        val result = repo(api, FakeIdentityStore()).sync(listOf(day), null, emptyList())
 
         assertEquals(LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED), result)
         assertEquals(0, api.syncRequests.size)
@@ -332,7 +332,7 @@ class LeaderboardRepositoryImplTest {
         val api = FakeLeaderboardApi().apply { updateGroupResult = LeaderboardResult.Ok(GroupResponse(group = renamed)) }
         val store = FakeIdentityStore(ana(g1, g2), selected = "g1")
 
-        repo(api, store).updateGroup("g1", share = ShareSettings(true, true, true), name = " Flat ")
+        repo(api, store).updateGroup("g1", share = ShareSettings(true, true, true, false), name = " Flat ")
 
         assertEquals(UpdateGroupRequest(ShareDto(true, true, true), "Flat"), api.updateGroupRequests.single())
         assertEquals(ana(renamed, g2), store.identity.value)

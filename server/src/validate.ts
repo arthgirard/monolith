@@ -1,14 +1,18 @@
 import { addDays, isIsoDate, utcToday } from "./dates";
 import { HttpError, invalidBody } from "./http";
-import { RETENTION_DAYS, type Share } from "./types";
+import { MAX_BLOCKED_APPS, RETENTION_DAYS, type Share } from "./types";
 
-export function parseShare(v: unknown): Share {
+/** [apps] is undefined from a client older than the blocked-apps signal, which never shares it. */
+export type ShareInput = Omit<Share, "apps"> & { apps: boolean | undefined };
+
+export function parseShare(v: unknown): ShareInput {
   if (typeof v !== "object" || v === null) throw invalidBody();
   const s = v as Record<string, unknown>;
   if (typeof s.saved !== "boolean" || typeof s.streak !== "boolean" || typeof s.pauses !== "boolean") {
     throw invalidBody();
   }
-  return { saved: s.saved, streak: s.streak, pauses: s.pauses };
+  if (s.apps !== undefined && typeof s.apps !== "boolean") throw invalidBody();
+  return { saved: s.saved, streak: s.streak, pauses: s.pauses, apps: s.apps };
 }
 
 export function parseDisplayName(v: unknown): string {
@@ -41,9 +45,35 @@ export interface SyncDay {
   unlockCount: number | null;
 }
 
+export interface BlockedApp {
+  packageName: string;
+  label: string;
+}
+
+/** [apps] undefined leaves the stored list alone: a client older than the signal never sends it. */
 export interface SyncBody {
   days: SyncDay[];
   streakStartedAt: number | null;
+  apps: BlockedApp[] | null | undefined;
+}
+
+const PACKAGE_NAME = /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*$/;
+
+function parseBlockedApps(v: unknown): BlockedApp[] | null | undefined {
+  if (v === undefined || v === null) return v;
+  if (!Array.isArray(v) || v.length > MAX_BLOCKED_APPS) throw invalidBody();
+  const seen = new Set<string>();
+  return v.map((raw): BlockedApp => {
+    if (typeof raw !== "object" || raw === null) throw invalidBody();
+    const a = raw as Record<string, unknown>;
+    if (typeof a.packageName !== "string" || a.packageName.length > 255 || !PACKAGE_NAME.test(a.packageName)) throw invalidBody();
+    if (seen.has(a.packageName) || typeof a.label !== "string") throw invalidBody();
+    seen.add(a.packageName);
+    const label = a.label.trim();
+    const length = [...label].length;
+    if (length < 1 || length > 64) throw invalidBody();
+    return { packageName: a.packageName, label };
+  });
 }
 
 const hidden = () => new HttpError(422, "hidden_signal");
@@ -82,5 +112,7 @@ export function parseSync(body: Record<string, unknown>, share: Share, now: numb
   const rawStreak = optionalInt(body.streakStartedAt, 1, Number.MAX_SAFE_INTEGER);
   const streakStartedAt = rawStreak === null ? null : Math.min(rawStreak, now);
   if (!share.streak && streakStartedAt !== null) throw hidden();
-  return { days, streakStartedAt };
+  const apps = parseBlockedApps(body.apps);
+  if (!share.apps && apps) throw hidden();
+  return { days, streakStartedAt, apps };
 }

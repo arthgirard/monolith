@@ -6,6 +6,7 @@ export interface Share {
   saved: boolean;
   streak: boolean;
   pauses: boolean;
+  apps: boolean;
 }
 
 export interface UserRow {
@@ -17,15 +18,17 @@ export interface ShareColumns {
   share_saved: number;
   share_streak: number;
   share_pauses: number;
+  share_apps: number;
 }
 
 export function shareOf(c: ShareColumns): Share {
-  return { saved: c.share_saved === 1, streak: c.share_streak === 1, pauses: c.share_pauses === 1 };
+  return { saved: c.share_saved === 1, streak: c.share_streak === 1, pauses: c.share_pauses === 1, apps: c.share_apps === 1 };
 }
 
 export const MAX_GROUPS = 10;
 
 export const MAX_MEMBERS = 20;
+export const MAX_BLOCKED_APPS = 200;
 export const RETENTION_DAYS = 35;
 export const INACTIVE_DAYS = 120;
 export const DAY_MS = 24 * 60 * 60 * 1000;

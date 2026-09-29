@@ -4,6 +4,7 @@ import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.Pause
 import com.monolith.app.domain.model.PauseType
+import com.monolith.app.domain.model.SharedApp
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,7 +27,7 @@ class SyncLeaderboardUseCaseTest {
         }
         val leaderboard = FakeLeaderboardRepository()
 
-        val outcome = SyncLeaderboardUseCase(blocks, leaderboard)(now, zone)
+        val outcome = SyncLeaderboardUseCase(blocks, leaderboard, FakeAppRepository())(now, zone)
 
         val (days, streakStartedAt) = leaderboard.syncCalls.single()
         assertEquals(Instant.ofEpochMilli(now).atZone(zone).toLocalDate(), days.first().date)
@@ -43,7 +44,7 @@ class SyncLeaderboardUseCaseTest {
         val blocks = FakeBlockRepository(initiallyActive = true).apply { setActiveSessionStart(now + 5 * 60_000) }
         val leaderboard = FakeLeaderboardRepository()
 
-        val outcome = SyncLeaderboardUseCase(blocks, leaderboard)(now, zone)
+        val outcome = SyncLeaderboardUseCase(blocks, leaderboard, FakeAppRepository())(now, zone)
 
         assertNull(leaderboard.syncCalls.single().second)
         assertEquals(now + 5 * 60_000, outcome.pauseEndsAt)
@@ -53,8 +54,28 @@ class SyncLeaderboardUseCaseTest {
     fun `a failed upload is reported as not synced`() = runBlocking {
         val leaderboard = FakeLeaderboardRepository().apply { syncResult = LeaderboardResult.Err(LeaderboardError.NETWORK) }
 
-        val outcome = SyncLeaderboardUseCase(FakeBlockRepository(), leaderboard)(System.currentTimeMillis(), zone)
+        val outcome = SyncLeaderboardUseCase(FakeBlockRepository(), leaderboard, FakeAppRepository())(System.currentTimeMillis(), zone)
 
         assertFalse(outcome.synced)
+    }
+
+    @Test
+    fun `uploads the blocked apps by label, named as this phone names them`() = runBlocking {
+        val apps = FakeAppRepository(
+            blocked = setOf("com.example.video", "com.example.chat", "com.example.gone"),
+            labels = mapOf("com.example.video" to " Video ", "com.example.chat" to "chat"),
+        )
+        val leaderboard = FakeLeaderboardRepository()
+
+        SyncLeaderboardUseCase(FakeBlockRepository(), leaderboard, apps)(System.currentTimeMillis(), zone)
+
+        assertEquals(
+            listOf(
+                SharedApp("com.example.chat", "chat"),
+                SharedApp("com.example.gone", "com.example.gone"),
+                SharedApp("com.example.video", "Video"),
+            ),
+            leaderboard.syncedApps.single(),
+        )
     }
 }

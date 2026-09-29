@@ -21,6 +21,7 @@ export function invariantStatements(db: D1Database, userIds: string[], groupIds:
       db.prepare(`UPDATE days SET saved_ms = NULL WHERE user_id = ?1 AND ${noneShares("share_saved")}`).bind(u),
       db.prepare(`UPDATE users SET streak_started_at = NULL WHERE id = ?1 AND ${noneShares("share_streak")}`).bind(u),
       db.prepare(`UPDATE days SET bypass_count = NULL, unlock_count = NULL WHERE user_id = ?1 AND ${noneShares("share_pauses")}`).bind(u),
+      db.prepare(`UPDATE users SET blocked_apps = NULL WHERE id = ?1 AND ${noneShares("share_apps")}`).bind(u),
       db.prepare("DELETE FROM days WHERE user_id = ?1 AND NOT EXISTS (SELECT 1 FROM memberships WHERE user_id = ?1)").bind(u),
       db
         .prepare(

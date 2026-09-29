@@ -2,7 +2,7 @@ import { SELF } from "cloudflare:test";
 import { addDays, utcToday } from "../src/dates";
 import type { Share } from "../src/types";
 
-export const share = (saved = true, streak = true, pauses = true): Share => ({ saved, streak, pauses });
+export const share = (saved = true, streak = true, pauses = true, apps = true): Share => ({ saved, streak, pauses, apps });
 
 export async function call(method: string, path: string, body?: unknown, token?: string) {
   const headers: Record<string, string> = {};

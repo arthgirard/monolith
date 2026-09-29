@@ -22,6 +22,7 @@ import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.domain.model.SharedApp
 import com.monolith.app.domain.model.andThen
 import com.monolith.app.domain.model.map
 import com.monolith.app.domain.repository.LeaderboardRepository
@@ -137,18 +138,22 @@ class LeaderboardRepositoryImpl @Inject constructor(
             .let { if (it is LeaderboardResult.Err && it.error == LeaderboardError.NOT_MEMBER) LeaderboardResult.Ok(Unit) else it }
     }
 
-    override suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?): LeaderboardResult<Unit> = authed { identity ->
+    override suspend fun sync(
+        days: List<DayAggregate>,
+        streakStartedAt: Long?,
+        blockedApps: List<SharedApp>,
+    ): LeaderboardResult<Unit> = authed { identity ->
         // With no group cached the share union is all off, and uploading it would wipe the
         // server's values with nulls. Nobody could see them anyway.
         if (identity.groups.isEmpty()) return@authed LeaderboardResult.Ok(Unit)
-        val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, shareUnion(identity.groups)))
+        val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, shareUnion(identity.groups)))
         // The cached share flags are older than the server's (a change on another phone, or an
         // update that raced this upload). Take the server's, then retry once with their union.
         if (first is LeaderboardResult.Err && first.error == LeaderboardError.HIDDEN_SIGNAL) {
             val refreshed = refreshGroups()
             if (refreshed is LeaderboardResult.Err) return@authed refreshed
             val current = store.identity.first()?.takeIf { it.token == identity.token } ?: return@authed first
-            api.sync(identity.token, syncRequestOf(days, streakStartedAt, shareUnion(current.groups)))
+            api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, shareUnion(current.groups)))
         } else {
             first
         }

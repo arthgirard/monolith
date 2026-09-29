@@ -269,6 +269,7 @@
     <string name="friends_share_saved">Tempo economizado</string>
     <string name="friends_share_streak">Sequência atual</string>
     <string name="friends_share_pauses">Desbloqueios e aberturas</string>
+    <string name="friends_share_apps">Apps bloqueados</string>
     <string name="friends_share_caption">O que você ocultar também fica oculto para você.</string>
     <string name="friends_create">Criar um grupo</string>
     <string name="friends_invite_label">Código de convite</string>
@@ -289,6 +290,9 @@
     <string name="friends_row_streak_label">Sequência</string>
     <string name="friends_row_bypasses_label">Desbloqueios</string>
     <string name="friends_row_unlocks_label">Aberturas</string>
+    <string name="friends_row_apps">Apps bloqueados</string>
+    <string name="friends_apps_heading">Apps bloqueados</string>
+    <string name="friends_apps_empty">Nada enviado ainda. A lista chega na próxima sincronização.</string>
     <string name="friends_row_never_synced">Ainda não sincronizado</string>
     <string name="friends_group_settings">Configurações do grupo</string>
     <string name="friends_copy">Copiar</string>

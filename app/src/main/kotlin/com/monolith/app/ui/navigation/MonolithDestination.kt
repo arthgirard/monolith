@@ -16,6 +16,7 @@ sealed class MonolithDestination(val route: String) {
     data object NfcLink : MonolithDestination("nfc_link")
     data object TimeSaved : MonolithDestination("time_saved")
     data object Friends : MonolithDestination("friends")
+    data object FriendApps : MonolithDestination("friend_apps")
     data object Schedules : MonolithDestination("schedules")
     data object Settings : MonolithDestination("settings")
     data object Strictness : MonolithDestination("strictness")
