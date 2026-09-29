@@ -5,6 +5,7 @@ import com.monolith.app.domain.model.BlockHit
 import com.monolith.app.domain.model.BlockSession
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.Pause
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.nfc.NfcDispatchGate
 import com.monolith.app.widget.TimeSavedWidgetRefresher
@@ -69,4 +70,6 @@ class BlockRepositoryImpl @Inject constructor(
     }
 
     override fun observeBlockHits(): Flow<List<BlockHit>> = preferences.blockHits
+
+    override fun observePauses(): Flow<List<Pause>> = preferences.pauses
 }

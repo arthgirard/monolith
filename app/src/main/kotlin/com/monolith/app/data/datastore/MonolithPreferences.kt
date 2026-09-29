@@ -16,10 +16,13 @@ import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.CodeBreaker
 import com.monolith.app.domain.model.ImportantPerson
 import com.monolith.app.domain.model.NfcTagLink
+import com.monolith.app.domain.model.Pause
+import com.monolith.app.domain.model.PauseType
 import com.monolith.app.domain.model.SlotResult
 import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.model.TagLinkMode
 import com.monolith.app.domain.usecase.BlockHitLog
+import com.monolith.app.domain.usecase.PauseLog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -49,6 +52,12 @@ private data class BlockSessionDto(
 private data class BlockHitDto(
     val packageName: String,
     val atMillis: Long,
+)
+
+@Serializable
+private data class PauseDto(
+    val type: String,
+    val at: Long,
 )
 
 @Serializable
@@ -149,6 +158,7 @@ class MonolithPreferences @Inject constructor(
         val BLOCK_SESSIONS = stringPreferencesKey("block_sessions")
         val BLOCK_HITS = stringPreferencesKey("block_hits")
         val APP_UNLOCKS = stringPreferencesKey("app_unlocks")
+        val PAUSE_LOG = stringPreferencesKey("pause_log")
         val APP_CODE_BREAKERS = stringPreferencesKey("app_code_breakers")
         val BLOCK_SCHEDULES = stringPreferencesKey("block_schedules")
         val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
@@ -227,6 +237,7 @@ class MonolithPreferences @Inject constructor(
         context.dataStore.edit { prefs ->
             val now = System.currentTimeMillis()
             prefs[Keys.BYPASS_EXPIRES_AT] = now + durationMillis
+            appendPause(prefs, PauseType.BYPASS, now)
 
             val isActive = prefs[Keys.BLOCK_MODE_ACTIVE] ?: false
             val startedAt = prefs[Keys.SESSION_STARTED_AT]
@@ -333,6 +344,7 @@ class MonolithPreferences @Inject constructor(
                 it.expiresAt > now && it.packageName != packageName
             } + AppUnlockDto(packageName, now + durationMillis)
             prefs[Keys.APP_UNLOCKS] = json.encodeToString(unlocks)
+            appendPause(prefs, PauseType.UNLOCK, now)
 
             val codeBreakers = decodeCodeBreakers(prefs[Keys.APP_CODE_BREAKERS]).filterNot { it.packageName == packageName }
             prefs[Keys.APP_CODE_BREAKERS] = json.encodeToString(codeBreakers)
@@ -364,6 +376,21 @@ class MonolithPreferences @Inject constructor(
 
     val blockHits: Flow<List<BlockHit>> = context.dataStore.data.map { prefs ->
         decodeBlockHits(prefs[Keys.BLOCK_HITS]).map { BlockHit(it.packageName, it.atMillis) }
+    }
+
+    /** Every bypass and app unlock of the last [PauseLog.RETENTION_MILLIS], for the leaderboard's daily counts. */
+    val pauses: Flow<List<Pause>> = context.dataStore.data.map { prefs -> decodePauses(prefs[Keys.PAUSE_LOG]) }
+
+    private fun appendPause(prefs: MutablePreferences, type: PauseType, now: Long) {
+        val updated = PauseLog.record(decodePauses(prefs[Keys.PAUSE_LOG]), type, now)
+        prefs[Keys.PAUSE_LOG] = json.encodeToString(updated.map { PauseDto(it.type.name, it.atMillis) })
+    }
+
+    private fun decodePauses(raw: String?): List<Pause> {
+        if (raw == null) return emptyList()
+        return runCatching { json.decodeFromString<List<PauseDto>>(raw) }
+            .getOrDefault(emptyList())
+            .mapNotNull { dto -> runCatching { PauseType.valueOf(dto.type) }.getOrNull()?.let { Pause(it, dto.at) } }
     }
 
     private fun decodeBlockHits(raw: String?): List<BlockHitDto> {
