@@ -48,6 +48,21 @@ describe("GET /groups/:id/board", () => {
     for (const r of rows) expect(r.rank).toBeUndefined();
   });
 
+  it("blocked apps show only when both share them", async () => {
+    const ana = await newUser("Ana");
+    const ben = await join(ana.group.inviteCode, "Ben");
+    const apps = [{ packageName: "com.example.video", label: "Video" }];
+    await call("POST", "/sync", { days: [], apps }, ben.token);
+    const benRow = async () => (await board(ana.token, ana.group.id)).body.rows.find((r: { name: string }) => r.name === "Ben");
+    expect((await benRow()).apps).toEqual(apps);
+    // Ana shares but never uploaded: an empty list, not hidden.
+    const anaRow = (await board(ben.token, ana.group.id)).body.rows.find((r: { name: string }) => r.name === "Ana");
+    expect(anaRow.apps).toEqual([]);
+
+    await call("POST", `/groups/${ana.group.id}`, { share: share(true, true, true, false) }, ana.token);
+    expect((await benRow()).apps).toBeUndefined();
+  });
+
   it("a board for a group you're not in is not_member", async () => {
     const ana = await newUser("Ana");
     const ben = await newUser("Ben");

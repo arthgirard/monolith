@@ -2,6 +2,7 @@ import { isIsoDate, windowRange, type BoardWindow } from "./dates";
 import { HttpError, json } from "./http";
 import { invariantStatements } from "./invariants";
 import { DAY_MS, INACTIVE_DAYS, shareOf, type Env, type Share, type ShareColumns, type UserRow } from "./types";
+import type { BlockedApp } from "./validate";
 
 export interface BoardQueryRow {
   id: string;
@@ -9,6 +10,8 @@ export interface BoardQueryRow {
   share_saved: number;
   share_streak: number;
   share_pauses: number;
+  share_apps: number;
+  blocked_apps: string | null;
   streak_started_at: number | null;
   last_sync_at: number | null;
   saved: number | null;
@@ -24,6 +27,7 @@ export interface BoardRow {
   streak?: { startedAt: number | null };
   bypassCount?: number;
   unlockCount?: number;
+  apps?: BlockedApp[];
   lastSyncAt: number | null;
 }
 
@@ -41,6 +45,8 @@ export function rankRows(rows: BoardQueryRow[], meId: string, viewer: Share): Bo
       row.bypassCount = r.bypass ?? 0;
       row.unlockCount = r.unlock ?? 0;
     }
+    // Shared but not uploaded yet (an older app, or no sync since) reads as an empty list.
+    if (viewer.apps && r.share_apps === 1) row.apps = r.blocked_apps ? (JSON.parse(r.blocked_apps) as BlockedApp[]) : [];
     return row;
   });
   const byName = (a: BoardRow, b: BoardRow) => a.name.localeCompare(b.name);
@@ -84,7 +90,7 @@ async function removeStaleMembers(db: D1Database, groupId: string, viewerId: str
 export async function board(req: Request, env: Env, user: UserRow, now: number, groupId: string): Promise<Response> {
   const db = env.monolith_leaderboard;
   const viewer = await db
-    .prepare("SELECT share_saved, share_streak, share_pauses FROM memberships WHERE user_id = ?1 AND group_id = ?2")
+    .prepare("SELECT share_saved, share_streak, share_pauses, share_apps FROM memberships WHERE user_id = ?1 AND group_id = ?2")
     .bind(user.id, groupId)
     .first<ShareColumns>();
   if (!viewer) throw new HttpError(404, "not_member");
@@ -101,7 +107,8 @@ export async function board(req: Request, env: Env, user: UserRow, now: number, 
 
   const { results } = await db
     .prepare(
-      `SELECT u.id, u.display_name, m.share_saved, m.share_streak, m.share_pauses, u.streak_started_at, u.last_sync_at,
+      `SELECT u.id, u.display_name, m.share_saved, m.share_streak, m.share_pauses, m.share_apps, u.blocked_apps,
+              u.streak_started_at, u.last_sync_at,
               SUM(d.saved_ms) AS saved, SUM(d.bypass_count) AS bypass, SUM(d.unlock_count) AS unlock
        FROM memberships m
        JOIN users u ON u.id = m.user_id
@@ -112,5 +119,5 @@ export async function board(req: Request, env: Env, user: UserRow, now: number, 
     .bind(groupId, from, to)
     .all<BoardQueryRow>();
 
-  return json({ rows: rankRows(results, user.id, shareOf(viewer) as Share) });
+  return json({ rows: rankRows(results, user.id, shareOf(viewer)) });
 }

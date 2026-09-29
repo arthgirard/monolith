@@ -64,4 +64,46 @@ describe("POST /sync", () => {
       expect((await call("POST", "/sync", body, ana.token)).status).toBe(400);
     }
   });
+
+  describe("blocked apps", () => {
+    const stored = () =>
+      env.monolith_leaderboard.prepare("SELECT blocked_apps FROM users").first<{ blocked_apps: string | null }>().then((r) => r!.blocked_apps);
+    const apps = [{ packageName: "com.example.video", label: " Video " }];
+
+    it("stores the trimmed list, keeps it when absent, clears it on null", async () => {
+      const ana = await newUser();
+      expect((await call("POST", "/sync", { days: [], apps }, ana.token)).status).toBe(204);
+      expect(JSON.parse((await stored())!)).toEqual([{ packageName: "com.example.video", label: "Video" }]);
+      await call("POST", "/sync", { days: [] }, ana.token);
+      expect(await stored()).not.toBeNull();
+      await call("POST", "/sync", { days: [], apps: null }, ana.token);
+      expect(await stored()).toBeNull();
+    });
+
+    it("is a hidden signal when no group shares it, and is nulled when the last one stops", async () => {
+      const hiding = await newUser("Ben", share(true, true, true, false));
+      expect(await call("POST", "/sync", { days: [], apps }, hiding.token)).toEqual({ status: 422, body: { error: "hidden_signal" } });
+
+      await env.monolith_leaderboard.prepare("DELETE FROM users").run();
+      const ana = await newUser();
+      await call("POST", "/sync", { days: [], apps }, ana.token);
+      await call("POST", `/groups/${ana.group.id}`, { share: share(true, true, true, false) }, ana.token);
+      expect(await stored()).toBeNull();
+    });
+
+    it("rejects malformed lists", async () => {
+      const ana = await newUser();
+      const many = Array.from({ length: 201 }, (_, i) => ({ packageName: `com.example.a${i}`, label: "A" }));
+      for (const bad of [
+        "nope",
+        many,
+        [{ packageName: "not a package", label: "A" }],
+        [{ packageName: "com.example.a", label: "  " }],
+        [{ packageName: "com.example.a", label: "x".repeat(65) }],
+        [{ packageName: "com.example.a", label: "A" }, { packageName: "com.example.a", label: "B" }],
+      ]) {
+        expect((await call("POST", "/sync", { days: [], apps: bad }, ana.token)).status).toBe(400);
+      }
+    });
+  });
 });

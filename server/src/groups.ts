@@ -3,7 +3,7 @@ import { newInviteCode, normalizeInviteCode, sha256Hex } from "./codes";
 import { empty, HttpError, json, readJson } from "./http";
 import { MAX_GROUPS, MAX_MEMBERS, shareOf, type Env, type Share, type ShareColumns, type UserRow } from "./types";
 import { invariantStatements } from "./invariants";
-import { parseDisplayName, parseGroupName, parseShare, parseToken } from "./validate";
+import { parseDisplayName, parseGroupName, parseShare, parseToken, type ShareInput } from "./validate";
 
 export interface GroupInfo {
   id: string;
@@ -25,7 +25,7 @@ interface GroupInfoRow extends ShareColumns {
 export async function groupInfos(db: D1Database, userId: string): Promise<GroupInfo[]> {
   const { results } = await db
     .prepare(
-      `SELECT g.id, g.invite_code, g.name, m.share_saved, m.share_streak, m.share_pauses,
+      `SELECT g.id, g.invite_code, g.name, m.share_saved, m.share_streak, m.share_pauses, m.share_apps,
               (SELECT COUNT(*) FROM memberships c WHERE c.group_id = g.id) AS member_count,
               (SELECT json_group_array(u.display_name) FROM memberships o JOIN users u ON u.id = o.user_id
                  WHERE o.group_id = g.id AND o.user_id != ?1) AS others
@@ -62,13 +62,13 @@ function insertUser(db: D1Database, id: string, name: string, tokenHash: string,
     .bind(id, tokenHash, name, now);
 }
 
-function insertMembership(db: D1Database, userId: string, groupId: string, share: Share, now: number) {
+function insertMembership(db: D1Database, userId: string, groupId: string, share: ShareInput, now: number) {
   return db
     .prepare(
-      `INSERT INTO memberships (user_id, group_id, share_saved, share_streak, share_pauses, joined_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+      `INSERT INTO memberships (user_id, group_id, share_saved, share_streak, share_pauses, share_apps, joined_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
     )
-    .bind(userId, groupId, +share.saved, +share.streak, +share.pauses, now);
+    .bind(userId, groupId, +share.saved, +share.streak, +share.pauses, +(share.apps ?? false), now);
 }
 
 async function assertRoomForAnotherGroup(db: D1Database, userId: string) {
@@ -189,8 +189,12 @@ export async function updateGroup(req: Request, env: Env, user: UserRow, _now: n
     const share = parseShare(body.share);
     statements.push(
       db
-        .prepare("UPDATE memberships SET share_saved = ?3, share_streak = ?4, share_pauses = ?5 WHERE user_id = ?1 AND group_id = ?2")
-        .bind(user.id, groupId, +share.saved, +share.streak, +share.pauses),
+        // An older client sends no apps flag: its choice there stands.
+        .prepare(
+          `UPDATE memberships SET share_saved = ?3, share_streak = ?4, share_pauses = ?5, share_apps = COALESCE(?6, share_apps)
+           WHERE user_id = ?1 AND group_id = ?2`,
+        )
+        .bind(user.id, groupId, +share.saved, +share.streak, +share.pauses, share.apps === undefined ? null : +share.apps),
     );
   }
   if (body.name !== undefined) {

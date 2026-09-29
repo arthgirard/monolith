@@ -133,9 +133,19 @@ describe("updating and leaving groups", () => {
     const second = await anotherGroup(ana.token);
     const res = await call("POST", `/groups/${second.id}`, { share: share(false, true, true) }, ana.token);
     expect(res.status).toBe(200);
-    expect(res.body.group.share).toEqual({ saved: false, streak: true, pauses: true });
+    expect(res.body.group.share).toEqual({ saved: false, streak: true, pauses: true, apps: true });
     const me = await call("GET", "/me", undefined, ana.token);
     expect(me.body.groups[0].share.saved).toBe(true);
+  });
+
+  it("a client without the apps flag joins hiding it and keeps it on update", async () => {
+    const ana = await newUser("Ana");
+    const legacy = { saved: true, streak: true, pauses: true };
+    const second = (await call("POST", "/groups", { share: legacy }, ana.token)).body.group;
+    expect(second.share.apps).toBe(false);
+    const res = await call("POST", `/groups/${ana.group.id}`, { share: legacy }, ana.token);
+    expect(res.body.group.share.apps).toBe(true);
+    expect((await call("POST", "/groups", { share: { ...legacy, apps: "yes" } }, ana.token)).status).toBe(400);
   });
 
   it("hiding a signal in one group keeps the data while another group shares it", async () => {
