@@ -16,6 +16,14 @@ class FriendsViewModelTest {
     }
 
     @Test
+    fun `group limits get their own messages and a stale group reads as generic`() {
+        assertEquals(FriendsMessage.TOO_MANY_GROUPS, FriendsMessage.of(LeaderboardError.TOO_MANY_GROUPS))
+        assertEquals(FriendsMessage.ALREADY_MEMBER, FriendsMessage.of(LeaderboardError.ALREADY_MEMBER))
+        assertEquals(FriendsMessage.NAME_NEEDS_THREE, FriendsMessage.of(LeaderboardError.NAME_NEEDS_THREE))
+        assertEquals(FriendsMessage.GENERIC, FriendsMessage.of(LeaderboardError.NOT_MEMBER))
+    }
+
+    @Test
     fun `a failed restore reads as a bad recovery code, not as removal`() {
         assertEquals(FriendsMessage.BAD_RECOVERY, FriendsMessage.ofRestore(LeaderboardError.UNAUTHORIZED))
         assertEquals(FriendsMessage.NETWORK, FriendsMessage.ofRestore(LeaderboardError.NETWORK))

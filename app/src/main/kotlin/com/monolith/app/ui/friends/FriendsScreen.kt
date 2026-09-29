@@ -4,23 +4,33 @@ import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -33,10 +43,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +58,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
+import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.domain.usecase.groupLabel
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.components.SettingsToggleRow
@@ -64,7 +74,8 @@ fun FriendsScreen(
     viewModel: FriendsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showSheet by remember { mutableStateOf(false) }
+    val identity = uiState.identity
+    val group = uiState.selectedGroup
 
     Scaffold(
         topBar = {
@@ -74,8 +85,8 @@ fun FriendsScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
                 },
                 actions = {
-                    if (uiState.membership != null) {
-                        IconButton(onClick = { showSheet = true }) {
+                    if (group != null) {
+                        IconButton(onClick = { viewModel.openSheet(FriendsSheet.SETTINGS) }) {
                             Icon(Icons.Outlined.Tune, contentDescription = stringResource(R.string.friends_group_settings))
                         }
                     }
@@ -83,40 +94,102 @@ fun FriendsScreen(
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            // While the sheet is open it shows the message itself, right where the action was.
-            if (!showSheet) {
-                uiState.message?.let { message ->
-                    Text(stringResource(message.text), color = MaterialTheme.colorScheme.error)
-                }
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            if (group != null) {
+                GroupSwitcher(
+                    groups = uiState.groups,
+                    selectedGroupId = group.id,
+                    onSelect = viewModel::selectGroup,
+                    onAdd = { viewModel.openSheet(FriendsSheet.ADD) },
+                )
             }
-            when {
-                !uiState.loaded -> Unit
-                uiState.membership == null -> JoinContent(uiState.busy, viewModel)
-                else -> BoardContent(uiState, viewModel)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                // While a sheet is open it shows the message itself, right where the action was.
+                if (uiState.sheet == null) {
+                    uiState.message?.let { message ->
+                        Text(stringResource(message.text), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                when {
+                    !uiState.loaded -> Unit
+                    group == null -> JoinContent(uiState.busy, viewModel)
+                    else -> BoardContent(uiState, viewModel)
+                }
             }
         }
     }
 
-    val membership = uiState.membership
-    LaunchedEffect(membership == null) { if (membership == null) showSheet = false }
-    if (showSheet && membership != null) {
-        GroupSheet(
-            membership = membership,
+    when (uiState.sheet) {
+        FriendsSheet.SETTINGS -> if (identity != null && group != null) {
+            GroupSheet(
+                identity = identity,
+                group = group,
+                busy = uiState.busy,
+                message = uiState.message,
+                onRenameGroup = viewModel::renameGroup,
+                onShareChange = viewModel::updateShare,
+                onLeave = viewModel::leaveSelectedGroup,
+                onRename = viewModel::rename,
+                onDismiss = viewModel::closeSheet,
+            )
+        }
+        FriendsSheet.ADD -> AddGroupSheet(
+            defaultShare = group?.share ?: ShareSettings(saved = true, streak = true, pauses = true),
             busy = uiState.busy,
             message = uiState.message,
-            onRename = viewModel::rename,
-            onShareChange = viewModel::updateShare,
-            onLeave = { viewModel.leave(); showSheet = false },
-            onDismiss = { showSheet = false },
+            onCreate = { share -> viewModel.create(null, share) },
+            onJoin = { code, share -> viewModel.join(code, null, share) },
+            onDismiss = viewModel::closeSheet,
         )
+        null -> Unit
+    }
+}
+
+/** One chip per group, the selected one filled, then the way to another. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupSwitcher(
+    groups: List<GroupInfo>,
+    selectedGroupId: String,
+    onSelect: (String) -> Unit,
+    onAdd: () -> Unit,
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(groups, key = { it.id }) { group ->
+            val label = groupLabel(group)
+            FilterChip(
+                selected = group.id == selectedGroupId,
+                onClick = { onSelect(group.id) },
+                label = {
+                    Text(
+                        label.text,
+                        // A group that is still just its invite code shows it as the data it is.
+                        style = if (label.isCode) LocalTextStyle.current.mono() else LocalTextStyle.current,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 200.dp),
+                    )
+                },
+            )
+        }
+        item(key = "add") {
+            AssistChip(
+                onClick = onAdd,
+                label = { Text(stringResource(R.string.friends_add_group)) },
+                leadingIcon = {
+                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+                },
+            )
+        }
     }
 }
 

@@ -300,4 +300,16 @@
     <string name="friends_leave_confirm_title">Leave the group?</string>
     <string name="friends_leave_confirm_body">Your stats are deleted from the server. You can rejoin with the invite code, but your history won\'t come back.</string>
     <string name="friends_leave_confirm">Leave</string>
+    <string name="friends_add_group">Add a group</string>
+    <string name="friends_add_join_heading">Join with a code</string>
+    <string name="friends_section_group">This group</string>
+    <string name="friends_section_you">You, in every group</string>
+    <string name="friends_group_name_label">Group name</string>
+    <string name="friends_group_name_hint">Groups of two go by the other person\'s name.</string>
+    <string name="friends_leave_group">Leave this group</string>
+    <string name="friends_leave_group_confirm_title">Leave this group?</string>
+    <string name="friends_leave_group_confirm_body">You\'ll stop seeing this board. You can rejoin with the invite code.</string>
+    <string name="friends_error_too_many">You\'re already in 10 groups.</string>
+    <string name="friends_error_already_member">You\'re already in that group.</string>
+    <string name="friends_error_name_needs_three">Only groups of three or more can have a name.</string>
 </resources>

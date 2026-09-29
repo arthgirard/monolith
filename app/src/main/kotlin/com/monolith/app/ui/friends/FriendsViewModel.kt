@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.monolith.app.R
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
+import com.monolith.app.domain.model.GroupInfo
+import com.monolith.app.domain.model.Identity
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.ShareSettings
@@ -31,6 +33,9 @@ enum class FriendsMessage(@StringRes val text: Int) {
     NETWORK(R.string.friends_error_network),
     INVITE_NOT_FOUND(R.string.friends_error_invite),
     GROUP_FULL(R.string.friends_error_full),
+    TOO_MANY_GROUPS(R.string.friends_error_too_many),
+    ALREADY_MEMBER(R.string.friends_error_already_member),
+    NAME_NEEDS_THREE(R.string.friends_error_name_needs_three),
     BAD_RECOVERY(R.string.friends_error_recovery),
     REMOVED(R.string.friends_removed),
     GENERIC(R.string.friends_error_generic);
@@ -40,7 +45,11 @@ enum class FriendsMessage(@StringRes val text: Int) {
             LeaderboardError.NETWORK -> NETWORK
             LeaderboardError.INVITE_NOT_FOUND -> INVITE_NOT_FOUND
             LeaderboardError.GROUP_FULL -> GROUP_FULL
+            LeaderboardError.TOO_MANY_GROUPS -> TOO_MANY_GROUPS
+            LeaderboardError.ALREADY_MEMBER -> ALREADY_MEMBER
+            LeaderboardError.NAME_NEEDS_THREE -> NAME_NEEDS_THREE
             LeaderboardError.UNAUTHORIZED -> REMOVED
+            // NOT_MEMBER included: the repository already dropped that group from the switcher.
             else -> GENERIC
         }
 
@@ -52,26 +61,24 @@ enum class FriendsMessage(@StringRes val text: Int) {
 
 enum class BoardStatus { LOADING, READY, OFFLINE, FAILED }
 
-// Temporary shim until Task 7 rewrites this screen for several groups: the old single-group
-// view of the identity, showing its selected group (or the first one).
-data class GroupMembership(
-    val token: String,
-    val displayName: String,
-    val groupId: String,
-    val inviteCode: String,
-    val share: ShareSettings,
-)
+enum class FriendsSheet { SETTINGS, ADD }
 
 data class FriendsUiState(
     val loaded: Boolean = false,
-    val membership: GroupMembership? = null,
+    val identity: Identity? = null,
+    /** Always one of [identity]'s groups, or null when there are none. */
+    val selectedGroupId: String? = null,
+    val sheet: FriendsSheet? = null,
     val window: BoardWindow = BoardWindow.WEEK,
     val rows: List<BoardRow> = emptyList(),
     val boardStatus: BoardStatus = BoardStatus.LOADING,
     val busy: Boolean = false,
     val message: FriendsMessage? = null,
     val nowMillis: Long = System.currentTimeMillis(),
-)
+) {
+    val groups: List<GroupInfo> get() = identity?.groups.orEmpty()
+    val selectedGroup: GroupInfo? get() = groups.find { it.id == selectedGroupId }
+}
 
 @HiltViewModel
 class FriendsViewModel @Inject constructor(
@@ -86,33 +93,40 @@ class FriendsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            var key: Pair<String, String>? = null
-            // Task 7 shim: one membership derived from the identity and the selected group.
+            var token: String? = null
+            var groupId: String? = null
             combine(repository.observeIdentity(), repository.observeSelectedGroupId()) { identity, selected ->
-                val group = identity?.groups?.let { groups -> groups.find { it.id == selected } ?: groups.firstOrNull() }
-                if (identity == null || group == null) null
-                else GroupMembership(identity.token, identity.displayName, group.id, group.inviteCode, group.share)
-            }.collect { membership ->
-                // Renames and share changes update the sheet in place; only a different
-                // membership (join, restore, leave, removal) resets the board.
-                val switched = membership?.let { it.token to it.groupId } != key
-                key = membership?.let { it.token to it.groupId }
-                val answersRemoval = switched && membership != null
+                // A stored selection can lag the group list by a write; fall back to the first.
+                val groups = identity?.groups.orEmpty()
+                identity to (groups.find { it.id == selected } ?: groups.firstOrNull())?.id
+            }.collect { (identity, selected) ->
+                // Renames, share changes and member counts update in place; only a different
+                // group or identity (switch, join, restore, leave, removal) resets the board.
+                val appeared = identity != null && identity.token != token
+                val switched = identity?.token != token || selected != groupId
+                token = identity?.token
+                groupId = selected
+                if (switched) boardJob?.cancel()
                 state.update {
                     it.copy(
                         loaded = true,
-                        membership = membership,
+                        identity = identity,
+                        selectedGroupId = selected,
+                        sheet = if (selected == null) null else it.sheet,
                         rows = if (switched) emptyList() else it.rows,
-                        message = if (answersRemoval && it.message == FriendsMessage.REMOVED) null else it.message,
+                        boardStatus = if (switched) BoardStatus.LOADING else it.boardStatus,
+                        message = if (appeared && it.message == FriendsMessage.REMOVED) null else it.message,
                     )
                 }
-                if (switched && membership != null) {
-                    // The board shows this member's own row: upload it now instead of after the
-                    // debounce. The board fetches again once that lands (lastSyncedAt below).
-                    syncer.requestSync(immediate = true)
-                    refresh()
-                }
+                // The board shows this member's own row: upload it now instead of after the
+                // debounce. The board fetches again once that lands (lastSyncedAt below).
+                if (appeared) syncer.requestSync(immediate = true)
+                if (switched && selected != null) refresh()
             }
+        }
+        viewModelScope.launch {
+            // Names and member counts change as friends join; without an identity this is a no-op.
+            repository.refreshGroups()
         }
         viewModelScope.launch {
             // The background sync usually meets the 401 first, so a removal arrives as a notice.
@@ -127,7 +141,7 @@ class FriendsViewModel @Inject constructor(
         viewModelScope.launch {
             // The current value predates this screen; the first refresh() already covers it.
             syncer.lastSyncedAt.drop(1).filterNotNull().collect {
-                if (state.value.membership != null) refresh()
+                if (state.value.selectedGroupId != null) refresh()
             }
         }
         viewModelScope.launch {
@@ -144,22 +158,27 @@ class FriendsViewModel @Inject constructor(
         refresh()
     }
 
+    fun selectGroup(groupId: String) {
+        viewModelScope.launch { repository.selectGroup(groupId) }
+    }
+
     fun refresh() {
         // Only the latest request may land: a slow day board must not fill the week tab.
         boardJob?.cancel()
         boardJob = viewModelScope.launch {
             state.update { it.copy(boardStatus = if (it.rows.isEmpty()) BoardStatus.LOADING else it.boardStatus) }
             val window = state.value.window
-            val membership = state.value.membership ?: return@launch
-            val result = repository.board(membership.groupId, window, LocalDate.now())
+            val token = state.value.identity?.token ?: return@launch
+            val groupId = state.value.selectedGroupId ?: return@launch
+            val result = repository.board(groupId, window, LocalDate.now())
             // The blocking HTTP call can't be cancelled, so check what it was asked for as well.
-            val current = state.value.membership
-            if (state.value.window != window || current?.token != membership.token || current.groupId != membership.groupId) return@launch
+            val current = state.value
+            if (current.window != window || current.identity?.token != token || current.selectedGroupId != groupId) return@launch
             when (result) {
                 is LeaderboardResult.Ok -> state.update { it.copy(rows = result.value, boardStatus = BoardStatus.READY) }
                 is LeaderboardResult.Err -> state.update {
                     when {
-                        // The repository cleared the membership and left the removal notice.
+                        // The repository cleared the identity and left the removal notice.
                         result.error == LeaderboardError.UNAUTHORIZED -> it
                         it.rows.isNotEmpty() -> it.copy(boardStatus = BoardStatus.OFFLINE)
                         else -> it.copy(boardStatus = BoardStatus.FAILED)
@@ -169,36 +188,54 @@ class FriendsViewModel @Inject constructor(
         }
     }
 
-    fun create(displayName: String, share: ShareSettings) = submit { repository.createGroup(displayName, share) }
+    fun openSheet(sheet: FriendsSheet) = state.update { it.copy(sheet = sheet, message = null) }
 
-    fun join(inviteCode: String, displayName: String, share: ShareSettings) =
-        submit { repository.joinGroup(inviteCode, displayName, share) }
+    fun closeSheet() = state.update { it.copy(sheet = null) }
+
+    /** [displayName] matters only without an identity; the repository ignores it otherwise. */
+    fun create(displayName: String?, share: ShareSettings) =
+        submit(onOk = ::enteredGroup) { repository.createGroup(displayName, share) }
+
+    fun join(inviteCode: String, displayName: String?, share: ShareSettings) =
+        submit(onOk = ::enteredGroup) { repository.joinGroup(inviteCode, displayName, share) }
 
     fun restore(recoveryCode: String) = submit(FriendsMessage::ofRestore) { repository.restore(recoveryCode) }
 
     fun rename(displayName: String) = submit { repository.rename(displayName) }
 
-    fun updateShare(share: ShareSettings) = submit {
-        val groupId = state.value.membership?.groupId ?: return@submit LeaderboardResult.Ok(Unit)
-        repository.updateGroup(groupId, share = share).also {
-            if (it is LeaderboardResult.Ok) {
-                // Turning a signal back on needs an upload (the server nulled it when it was
-                // hidden); the board fetches again when it lands. A hidden one shows right away.
-                syncer.requestSync(immediate = true)
-                refresh()
-            }
-        }
+    /** An empty [name] clears it. */
+    fun renameGroup(name: String) = submit {
+        val groupId = state.value.selectedGroupId ?: return@submit LeaderboardResult.Ok(Unit)
+        repository.updateGroup(groupId, name = name)
     }
 
-    fun leave() = submit {
-        val groupId = state.value.membership?.groupId ?: return@submit LeaderboardResult.Ok(Unit)
-        repository.leaveGroup(groupId)
+    fun updateShare(share: ShareSettings) = submit(onOk = {
+        // Turning a signal back on needs an upload (the server nulled it when it was hidden);
+        // the board fetches again when it lands. A hidden one shows right away.
+        syncer.requestSync(immediate = true)
+        refresh()
+    }) {
+        val groupId = state.value.selectedGroupId ?: return@submit LeaderboardResult.Ok(Unit)
+        repository.updateGroup(groupId, share = share)
+    }
+
+    fun leaveSelectedGroup() {
+        val groupId = state.value.selectedGroupId ?: return
+        closeSheet()
+        submit { repository.leaveGroup(groupId) }
     }
 
     fun dismissMessage() = state.update { it.copy(message = null) }
 
+    private fun enteredGroup() {
+        if (state.value.sheet == FriendsSheet.ADD) closeSheet()
+        // A new group's share may widen what this member uploads: send it now for its board.
+        syncer.requestSync(immediate = true)
+    }
+
     private fun submit(
         toMessage: (LeaderboardError) -> FriendsMessage = FriendsMessage.Companion::of,
+        onOk: () -> Unit = {},
         action: suspend () -> LeaderboardResult<Unit>,
     ) {
         if (state.value.busy) return
@@ -206,7 +243,10 @@ class FriendsViewModel @Inject constructor(
             state.update { it.copy(busy = true, message = null) }
             var message: FriendsMessage? = null
             try {
-                message = (action() as? LeaderboardResult.Err)?.let { err -> toMessage(err.error) }
+                when (val result = action()) {
+                    is LeaderboardResult.Ok -> onOk()
+                    is LeaderboardResult.Err -> message = toMessage(result.error)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
