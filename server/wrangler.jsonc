@@ -1,0 +1,16 @@
+{
+  "name": "monolith-leaderboard",
+  "main": "src/index.ts",
+  // Must not be newer than the installed workerd; bump when upgrading wrangler.
+  "compatibility_date": "2025-09-01",
+  // No per-request logs: nothing about who synced when is retained.
+  "observability": { "enabled": false },
+  "d1_databases": [
+    {
+      "binding": "monolith_leaderboard",
+      "database_name": "monolith-leaderboard",
+      "database_id": "73dd5267-38f0-481d-bd7f-60a03e41be46",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
