@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -122,7 +124,11 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
     var inviteCode by rememberSaveable { mutableStateOf("") }
     var recoveryCode by rememberSaveable { mutableStateOf("") }
     var showRestore by rememberSaveable { mutableStateOf(false) }
-    var share by remember { mutableStateOf(ShareSettings(saved = true, streak = true, pauses = true)) }
+    // Saveable one by one: a rotation must not quietly turn back on a signal the member hid.
+    var shareSaved by rememberSaveable { mutableStateOf(true) }
+    var shareStreak by rememberSaveable { mutableStateOf(true) }
+    var sharePauses by rememberSaveable { mutableStateOf(true) }
+    val share = ShareSettings(saved = shareSaved, streak = shareStreak, pauses = sharePauses)
     val nameValid = name.trim().length in 1..24
 
     Text(stringResource(R.string.friends_intro), style = MaterialTheme.typography.bodyLarge)
@@ -133,7 +139,11 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    ShareToggles(share, enabled = !busy, onChange = { share = it })
+    ShareToggles(share, enabled = !busy, onChange = {
+        shareSaved = it.saved
+        shareStreak = it.streak
+        sharePauses = it.pauses
+    })
     Button(onClick = { viewModel.create(name, share) }, enabled = nameValid && !busy, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.friends_create))
     }
@@ -159,6 +169,8 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
             onValueChange = { recoveryCode = it },
             label = { Text(stringResource(R.string.friends_recovery_label)) },
             singleLine = true,
+            // The code is the account: keep it out of keyboard dictionaries and suggestions.
+            keyboardOptions = KeyboardOptions(autoCorrect = false, keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedButton(onClick = { viewModel.restore(recoveryCode) }, enabled = recoveryCode.isNotBlank() && !busy) {
@@ -267,7 +279,7 @@ private fun BoardRowItem(row: BoardRow, nowMillis: Long) {
             }
             if (row.streakVisible) {
                 val started = row.streakStartedAt
-                if (started != null) part(streakLabel, formatDuration(nowMillis - started)) else part(streakOff, null)
+                if (started != null) part(streakLabel, formatDuration((nowMillis - started).coerceAtLeast(0))) else part(streakOff, null)
             }
             row.bypassCount?.let { part(bypassesLabel, it.toString()) }
             row.unlockCount?.let { part(unlocksLabel, it.toString()) }

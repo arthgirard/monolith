@@ -1,5 +1,11 @@
 package com.monolith.app.ui.friends
 
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
+import android.os.PersistableBundle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -42,6 +49,7 @@ fun GroupSheet(
     onDismiss: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
     var name by rememberSaveable { mutableStateOf(membership.displayName) }
     var showRecovery by rememberSaveable { mutableStateOf(false) }
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
@@ -89,7 +97,7 @@ fun GroupSheet(
                 )
                 if (showRecovery) {
                     SelectionContainer { Text(membership.token, style = MaterialTheme.typography.bodyMedium.mono()) }
-                    TextButton(onClick = { clipboard.setText(AnnotatedString(membership.token)) }) {
+                    TextButton(onClick = { copyRecoveryCode(context, membership.token) }) {
                         Text(stringResource(R.string.friends_copy))
                     }
                 } else {
@@ -116,4 +124,20 @@ fun GroupSheet(
             },
         )
     }
+}
+
+/**
+ * Copies the recovery code marked sensitive, so Android 13+ hides it from the clipboard preview
+ * and keyboards don't offer it as a suggestion. The code is the account.
+ */
+private fun copyRecoveryCode(context: Context, token: String) {
+    val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return
+    val clip = ClipData.newPlainText(context.getString(R.string.friends_recovery_label), token)
+    val sensitiveKey = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ClipDescription.EXTRA_IS_SENSITIVE
+    } else {
+        "android.content.extra.IS_SENSITIVE"
+    }
+    clip.description.extras = PersistableBundle().apply { putBoolean(sensitiveKey, true) }
+    clipboard.setPrimaryClip(clip)
 }
