@@ -83,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Zeitpläne verwalten</string>
-    <string name="needs_tag_value">Erst Tag verknüpfen</string>
     <string name="schedules_title">Zeitpläne</string>
     <string name="schedules_subtitle">Zu diesen Zeiten schaltet sich Monolith selbst ein. Aus geht es nie von allein, dafür brauchen Sie weiter Ihren Tag.</string>
     <string name="schedules_empty">Noch keine Zeitpläne. Legen Sie einen an, damit Monolith von allein angeht.</string>

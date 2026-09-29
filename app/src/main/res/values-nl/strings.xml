@@ -83,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Schema\'s beheren</string>
-    <string name="needs_tag_value">Koppel een tag</string>
     <string name="schedules_title">Schema\'s</string>
     <string name="schedules_subtitle">Monolith gaat op deze tijden vanzelf aan. Het gaat nooit vanzelf uit, daar blijft uw tag voor nodig.</string>
     <string name="schedules_empty">Nog geen schema\'s. Voeg er een toe en Monolith start zonder u.</string>

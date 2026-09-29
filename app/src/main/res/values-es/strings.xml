@@ -83,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Gestionar horarios</string>
-    <string name="needs_tag_value">Vincule una etiqueta</string>
     <string name="schedules_title">Horarios</string>
     <string name="schedules_subtitle">Monolith se enciende solo a estas horas. Nunca se apaga solo, eso sigue exigiendo su etiqueta.</string>
     <string name="schedules_empty">Aún no hay horarios. Añada uno para que Monolith se active sin usted.</string>

@@ -85,7 +85,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Manage schedules</string>
-    <string name="needs_tag_value">Link a tag first</string>
     <string name="schedules_title">Schedules</string>
     <string name="schedules_subtitle">Monolith switches on by itself at these times. It never switches off on its own, that still takes your tag.</string>
     <string name="schedules_empty">No schedules yet. Add one to have Monolith come on without you.</string>

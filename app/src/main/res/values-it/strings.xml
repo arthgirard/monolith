@@ -83,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Gestisci orari</string>
-    <string name="needs_tag_value">Collega un tag</string>
     <string name="schedules_title">Orari</string>
     <string name="schedules_subtitle">Monolith si accende da solo a questi orari. Non si spegne mai da solo, per quello serve sempre il tag.</string>
     <string name="schedules_empty">Nessun orario. Ne aggiunga uno e Monolith parte da solo.</string>

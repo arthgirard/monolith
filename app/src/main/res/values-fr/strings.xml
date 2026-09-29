@@ -83,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Gérer les routines</string>
-    <string name="needs_tag_value">Associez un tag d\'abord</string>
     <string name="schedules_title">Routines</string>
     <string name="schedules_subtitle">Monolith s\'active tout seul à ces heures. Il ne se coupe jamais seul, cela demande toujours votre tag.</string>
     <string name="schedules_empty">Aucune routine. Ajoutez-en une pour que Monolith démarre sans vous.</string>

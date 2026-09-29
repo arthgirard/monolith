@@ -6,7 +6,6 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -145,23 +144,6 @@ fun SettingsScreen(
         snackbarHost = { MonolithSnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (uiState.isLocked) {
-                // One banner for the whole group rather than a reason on each greyed row: the
-                // rule is the same for all of them, and repeating it three times reads as three
-                // separate obstacles.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.errorContainer)
-                        .padding(12.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.settings_locked_banner),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
-            }
-
             Column(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
@@ -177,18 +159,18 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsRow(
+                        icon = Icons.Filled.Language,
+                        label = stringResource(R.string.settings_language),
+                        value = language?.displayName ?: stringResource(R.string.settings_language_system),
+                        onClick = { showLanguagePicker = true },
+                    )
+                    SettingsDivider()
+                    SettingsRow(
                         icon = Icons.Filled.Lock,
                         label = stringResource(R.string.strictness_title),
                         value = stringResource(uiState.strictness.labelRes),
                         enabled = !uiState.isLocked,
                         onClick = onEditStrictness,
-                    )
-                    SettingsDivider()
-                    SettingsRow(
-                        icon = Icons.Filled.Language,
-                        label = stringResource(R.string.settings_language),
-                        value = language?.displayName ?: stringResource(R.string.settings_language_system),
-                        onClick = { showLanguagePicker = true },
                     )
                     SettingsDivider()
                     SettingsRow(

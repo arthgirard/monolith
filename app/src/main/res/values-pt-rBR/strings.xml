@@ -83,7 +83,6 @@
 
     <!-- Schedules -->
     <string name="schedules_cta">Gerenciar horários</string>
-    <string name="needs_tag_value">Vincule uma tag</string>
     <string name="schedules_title">Horários</string>
     <string name="schedules_subtitle">O Monolith liga sozinho nesses horários. Nunca desliga sozinho, isso ainda exige sua tag.</string>
     <string name="schedules_empty">Nenhum horário ainda. Adicione um para o Monolith ligar sem você.</string>

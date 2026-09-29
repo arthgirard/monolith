@@ -217,10 +217,9 @@ fun HomeScreen(
                     icon = Icons.Filled.Schedule,
                     label = stringResource(R.string.schedules_cta),
                     // A schedule is a lock that arrives on its own. Without a tag it would arrive
-                    // with nothing to open it, and activation refuses it anyway, so the row says
-                    // what is missing rather than leading to schedules that would never fire.
+                    // with nothing to open it, and activation refuses it anyway, so the row stays
+                    // disabled rather than leading to schedules that would never fire.
                     enabled = uiState.linkedTag != null,
-                    value = stringResource(R.string.needs_tag_value).takeIf { uiState.linkedTag == null },
                     onClick = onManageSchedules,
                 )
             }
