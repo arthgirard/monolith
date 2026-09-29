@@ -111,10 +111,10 @@ export async function rotateToken(req: Request, env: Env, user: UserRow): Promis
 }
 
 export async function createGroup(req: Request, env: Env, now: number): Promise<Response> {
+  const user = await authenticate(req, env);
   const body = await readJson(req);
   const share = parseShare(body.share);
   const db = env.monolith_leaderboard;
-  const user = await authenticate(req, env);
   const nameUpdate = nameForFirstGroup(db, user, body);
   await assertRoomForAnotherGroup(db, user.id);
   // An invite code collision is astronomically unlikely, but it is a UNIQUE violation, not a crash.

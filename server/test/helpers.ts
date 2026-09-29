@@ -64,3 +64,13 @@ export async function join(inviteCode: string, displayName: string, s: Share = s
 }
 
 export const today = (offset = 0) => addDays(utcToday(Date.now()), offset);
+
+export async function callBytes(method: string, path: string, token: string, body?: Uint8Array) {
+  const res = await SELF.fetch(`https://leaderboard.test${path}`, {
+    method,
+    headers: { authorization: `Bearer ${token}`, ...(body ? { "content-type": "application/octet-stream" } : {}) },
+    body,
+  });
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  return { status: res.status, bytes, json: () => JSON.parse(new TextDecoder().decode(bytes)) };
+}

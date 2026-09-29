@@ -1,4 +1,5 @@
 import { authenticate } from "./auth";
+import { deleteBackup, getBackup, putBackup } from "./backup";
 import { board } from "./board";
 import { createGroup, createUser, getMe, joinGroup, leaveGroup, rotateToken, updateGroup, updateMe } from "./groups";
 import { HttpError, json } from "./http";
@@ -13,6 +14,9 @@ export const authedRoutes: Record<string, AuthedHandler> = {
   "POST /me": updateMe,
   "POST /me/token": rotateToken,
   "POST /sync": sync,
+  "PUT /backup": putBackup,
+  "GET /backup": getBackup,
+  "DELETE /backup": deleteBackup,
 };
 
 /** Keyed by method plus "" for /groups/:id or "/board" for /groups/:id/board. */

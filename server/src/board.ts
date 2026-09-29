@@ -61,7 +61,9 @@ async function removeStaleMembers(db: D1Database, groupId: string, viewerId: str
   const { results: stale } = await db
     .prepare(
       `SELECT u.id FROM memberships m JOIN users u ON u.id = m.user_id
-       WHERE m.group_id = ?1 AND u.id != ?2 AND COALESCE(u.last_sync_at, u.created_at) < ?3`,
+       LEFT JOIN backups b ON b.user_id = u.id
+       WHERE m.group_id = ?1 AND u.id != ?2
+         AND MAX(COALESCE(u.last_sync_at, u.created_at), COALESCE(b.updated_at, 0)) < ?3`,
     )
     .bind(groupId, viewerId, staleBefore)
     .all<{ id: string }>();
@@ -73,6 +75,7 @@ async function removeStaleMembers(db: D1Database, groupId: string, viewerId: str
     .bind(...userIds)
     .all<{ group_id: string }>();
   await db.batch([
+    db.prepare(`DELETE FROM backups WHERE user_id IN (${placeholders})`).bind(...userIds),
     db.prepare(`DELETE FROM memberships WHERE user_id IN (${placeholders})`).bind(...userIds),
     ...invariantStatements(db, userIds, touched.map((t) => t.group_id)),
   ]);
