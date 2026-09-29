@@ -124,8 +124,27 @@ private fun AppRow(app: SharedApp) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         AppIcon(app)
-        Text(app.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(appLabel(app), style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/**
+ * Lists uploaded before labels were checked can carry a bare package name; this phone's own name
+ * for the app replaces it when the app is installed here.
+ */
+@Composable
+private fun appLabel(app: SharedApp): String {
+    if (app.label != app.packageName) return app.label
+    val context = LocalContext.current
+    val local by produceState<String?>(null, app.packageName) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val pm = context.packageManager
+                pm.getApplicationLabel(pm.getApplicationInfo(app.packageName, 0)).toString().trim()
+            }.getOrNull()
+        }
+    }
+    return local?.takeIf { it.isNotEmpty() } ?: app.label
 }
 
 /** The icon from this phone when the app is installed here too, else its initial on a tile. */

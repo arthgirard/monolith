@@ -60,7 +60,7 @@ class SyncLeaderboardUseCaseTest {
     }
 
     @Test
-    fun `uploads the blocked apps by label, named as this phone names them`() = runBlocking {
+    fun `uploads the blocked apps by label, leaving out any this phone can't name`() = runBlocking {
         val apps = FakeAppRepository(
             blocked = setOf("com.example.video", "com.example.chat", "com.example.gone"),
             labels = mapOf("com.example.video" to " Video ", "com.example.chat" to "chat"),
@@ -72,7 +72,6 @@ class SyncLeaderboardUseCaseTest {
         assertEquals(
             listOf(
                 SharedApp("com.example.chat", "chat"),
-                SharedApp("com.example.gone", "com.example.gone"),
                 SharedApp("com.example.video", "Video"),
             ),
             leaderboard.syncedApps.single(),

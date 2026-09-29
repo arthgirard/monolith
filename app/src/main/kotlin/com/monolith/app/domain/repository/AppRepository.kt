@@ -18,6 +18,12 @@ interface AppRepository {
     /** The launcher-visible label for [packageName], or the package name itself if unresolvable. */
     suspend fun getAppLabel(packageName: String): String
 
+    /**
+     * The label for [packageName], or null when this phone has no name for it: not installed
+     * here, or an app that declares no label.
+     */
+    suspend fun findAppLabel(packageName: String): String?
+
     /** The launcher icon for [packageName] at [sizeDp], or null if the app is no longer installed. */
     suspend fun getAppIcon(packageName: String, sizeDp: Int): Bitmap?
 }

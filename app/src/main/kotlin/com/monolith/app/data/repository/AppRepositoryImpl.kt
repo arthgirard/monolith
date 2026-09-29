@@ -54,10 +54,16 @@ class AppRepositoryImpl @Inject constructor(
         preferences.setBlockedPackages(packages)
     }
 
-    override suspend fun getAppLabel(packageName: String): String = withContext(Dispatchers.IO) {
+    override suspend fun getAppLabel(packageName: String): String = findAppLabel(packageName) ?: packageName
+
+    // A disabled app, or one uninstalled with its data kept, still has a name worth showing.
+    override suspend fun findAppLabel(packageName: String): String? = withContext(Dispatchers.IO) {
         val pm = context.packageManager
-        runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }
-            .getOrDefault(packageName)
+        val flags = PackageManager.MATCH_UNINSTALLED_PACKAGES or PackageManager.MATCH_DISABLED_COMPONENTS
+        runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, flags)).toString().trim() }
+            .getOrNull()
+            // getApplicationLabel falls back to the package name for an app with no label.
+            ?.takeIf { it.isNotEmpty() && it != packageName }
     }
 
     override suspend fun getAppIcon(packageName: String, sizeDp: Int): Bitmap? = withContext(Dispatchers.IO) {

@@ -130,7 +130,7 @@ class FakeAppUnlockRepository : AppUnlockRepository {
     }
 }
 
-/** Labels come from [labels], falling back to the package name like the real one. */
+/** Labels come from [labels]; a package missing there is one this phone can't name. */
 class FakeAppRepository(
     blocked: Set<String> = emptySet(),
     private val labels: Map<String, String> = emptyMap(),
@@ -142,6 +142,7 @@ class FakeAppRepository(
     override suspend fun setBlockedPackages(packages: Set<String>) { blocked.value = packages }
     override suspend fun getEssentialPackages(): Set<String> = emptySet()
     override suspend fun getAppLabel(packageName: String): String = labels[packageName] ?: packageName
+    override suspend fun findAppLabel(packageName: String): String? = labels[packageName]?.trim()
     override suspend fun getAppIcon(packageName: String, sizeDp: Int): Bitmap? = null
 }
 

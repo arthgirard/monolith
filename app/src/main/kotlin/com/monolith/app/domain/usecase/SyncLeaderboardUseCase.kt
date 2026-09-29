@@ -46,12 +46,14 @@ class SyncLeaderboardUseCase @Inject constructor(
         )
     }
 
-    /** Named as this phone names them, within what the server takes. */
+    /**
+     * Named as this phone names them, within what the server takes. A package this phone can't
+     * name (uninstalled since, or restored from another phone) blocks nothing here and stays out.
+     */
     private suspend fun blockedApps(): List<SharedApp> =
         appRepository.observeBlockedPackages().first()
-            .map { packageName ->
-                val label = appRepository.getAppLabel(packageName).trim().take(MAX_LABEL_LENGTH)
-                SharedApp(packageName, label.ifBlank { packageName.takeLast(MAX_LABEL_LENGTH) })
+            .mapNotNull { packageName ->
+                appRepository.findAppLabel(packageName)?.let { SharedApp(packageName, it.take(MAX_LABEL_LENGTH)) }
             }
             .sortedBy { it.label.lowercase() }
             .take(MAX_SHARED_APPS)
