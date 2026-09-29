@@ -75,3 +75,23 @@ export async function leave(_req: Request, env: Env, member: MemberRow): Promise
   ]);
   return empty();
 }
+
+export async function updateMe(req: Request, env: Env, member: MemberRow): Promise<Response> {
+  const body = await readJson(req);
+  const name = body.displayName === undefined ? member.display_name : parseDisplayName(body.displayName);
+  const share = body.share === undefined ? shareOf(member) : parseShare(body.share);
+  const db = env.monolith_leaderboard;
+  const statements = [
+    db
+      .prepare("UPDATE members SET display_name = ?2, share_saved = ?3, share_streak = ?4, share_pauses = ?5 WHERE id = ?1")
+      .bind(member.id, name, +share.saved, +share.streak, +share.pauses),
+  ];
+  // Hiding a signal deletes it: the server never holds what the member chose not to share.
+  if (!share.saved) statements.push(db.prepare("UPDATE days SET saved_ms = NULL WHERE member_id = ?1").bind(member.id));
+  if (!share.streak) statements.push(db.prepare("UPDATE members SET streak_started_at = NULL WHERE id = ?1").bind(member.id));
+  if (!share.pauses) {
+    statements.push(db.prepare("UPDATE days SET bypass_count = NULL, unlock_count = NULL WHERE member_id = ?1").bind(member.id));
+  }
+  await db.batch(statements);
+  return json(meBody(name, share, member.invite_code));
+}

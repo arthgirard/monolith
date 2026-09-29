@@ -1,5 +1,5 @@
 import { authenticate } from "./auth";
-import { createGroup, getMe, joinGroup, leave } from "./groups";
+import { createGroup, getMe, joinGroup, leave, updateMe } from "./groups";
 import { HttpError, json } from "./http";
 import type { Env, MemberRow } from "./types";
 
@@ -7,6 +7,7 @@ type AuthedHandler = (req: Request, env: Env, member: MemberRow, now: number) =>
 
 export const authedRoutes: Record<string, AuthedHandler> = {
   "GET /me": getMe,
+  "POST /me": updateMe,
   "DELETE /me": leave,
 };
 
