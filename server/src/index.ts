@@ -1,6 +1,8 @@
 import { authenticate } from "./auth";
+import { board } from "./board";
 import { createGroup, getMe, joinGroup, leaveGroup, updateGroup, updateMe } from "./groups";
 import { HttpError, json } from "./http";
+import { sync } from "./sync";
 import type { Env, UserRow } from "./types";
 
 type AuthedHandler = (req: Request, env: Env, user: UserRow, now: number) => Promise<Response>;
@@ -9,12 +11,14 @@ type GroupHandler = (req: Request, env: Env, user: UserRow, now: number, groupId
 export const authedRoutes: Record<string, AuthedHandler> = {
   "GET /me": getMe,
   "POST /me": updateMe,
+  "POST /sync": sync,
 };
 
 /** Keyed by method plus "" for /groups/:id or "/board" for /groups/:id/board. */
 export const groupRoutes: Record<string, GroupHandler> = {
   "POST ": updateGroup,
   "DELETE ": leaveGroup,
+  "GET /board": board,
 };
 
 const GROUP_PATH = /^\/groups\/([^/]+)(\/board)?$/;

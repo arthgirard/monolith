@@ -1,6 +1,7 @@
 import { isIsoDate, windowRange, type BoardWindow } from "./dates";
 import { HttpError, json } from "./http";
-import { DAY_MS, INACTIVE_DAYS, shareOf, type Env, type UserRow, type Share } from "./types";
+import { invariantStatements } from "./invariants";
+import { DAY_MS, INACTIVE_DAYS, shareOf, type Env, type Share, type ShareColumns, type UserRow } from "./types";
 
 export interface BoardQueryRow {
   id: string;
@@ -51,7 +52,40 @@ export function rankRows(rows: BoardQueryRow[], meId: string, viewer: Share): Bo
   return [...ranked, ...unranked];
 }
 
-export async function board(req: Request, env: Env, member: UserRow, now: number): Promise<Response> {
+/**
+ * Lazy cleanup instead of a cron: a flat group has no admin, so this is what frees seats.
+ * A stale user is deleted outright, which removes them from every group they were in.
+ */
+async function removeStaleMembers(db: D1Database, groupId: string, viewerId: string, now: number) {
+  const staleBefore = now - INACTIVE_DAYS * DAY_MS;
+  const { results: stale } = await db
+    .prepare(
+      `SELECT u.id FROM memberships m JOIN users u ON u.id = m.user_id
+       WHERE m.group_id = ?1 AND u.id != ?2 AND COALESCE(u.last_sync_at, u.created_at) < ?3`,
+    )
+    .bind(groupId, viewerId, staleBefore)
+    .all<{ id: string }>();
+  if (stale.length === 0) return;
+  const userIds = stale.map((s) => s.id);
+  const placeholders = userIds.map((_, i) => `?${i + 1}`).join(", ");
+  const { results: touched } = await db
+    .prepare(`SELECT DISTINCT group_id FROM memberships WHERE user_id IN (${placeholders})`)
+    .bind(...userIds)
+    .all<{ group_id: string }>();
+  await db.batch([
+    db.prepare(`DELETE FROM memberships WHERE user_id IN (${placeholders})`).bind(...userIds),
+    ...invariantStatements(db, userIds, touched.map((t) => t.group_id)),
+  ]);
+}
+
+export async function board(req: Request, env: Env, user: UserRow, now: number, groupId: string): Promise<Response> {
+  const db = env.monolith_leaderboard;
+  const viewer = await db
+    .prepare("SELECT share_saved, share_streak, share_pauses FROM memberships WHERE user_id = ?1 AND group_id = ?2")
+    .bind(user.id, groupId)
+    .first<ShareColumns>();
+  if (!viewer) throw new HttpError(404, "not_member");
+
   const params = new URL(req.url).searchParams;
   const window = params.get("window");
   const date = params.get("date");
@@ -59,28 +93,21 @@ export async function board(req: Request, env: Env, member: UserRow, now: number
     throw new HttpError(400, "invalid_body");
   }
   const { from, to } = windowRange(window as BoardWindow, date);
-  const db = env.monolith_leaderboard;
-  const staleBefore = now - INACTIVE_DAYS * DAY_MS;
 
-  // Lazy cleanup instead of a cron: a flat group has no admin, so this is what frees seats.
-  // The viewer is excluded; they are clearly not inactive.
-  const stale = "SELECT id FROM members WHERE group_id = ?1 AND id != ?2 AND COALESCE(last_sync_at, created_at) < ?3";
-  await db.batch([
-    db.prepare(`DELETE FROM days WHERE member_id IN (${stale})`).bind((member as never as { group_id: string }).group_id, member.id, staleBefore),
-    db.prepare(`DELETE FROM members WHERE id IN (${stale})`).bind((member as never as { group_id: string }).group_id, member.id, staleBefore),
-  ]);
+  await removeStaleMembers(db, groupId, user.id, now);
 
   const { results } = await db
     .prepare(
-      `SELECT m.id, m.display_name, m.share_saved, m.share_streak, m.share_pauses, m.streak_started_at, m.last_sync_at,
+      `SELECT u.id, u.display_name, m.share_saved, m.share_streak, m.share_pauses, u.streak_started_at, u.last_sync_at,
               SUM(d.saved_ms) AS saved, SUM(d.bypass_count) AS bypass, SUM(d.unlock_count) AS unlock
-       FROM members m
-       LEFT JOIN days d ON d.member_id = m.id AND d.date BETWEEN ?2 AND ?3
+       FROM memberships m
+       JOIN users u ON u.id = m.user_id
+       LEFT JOIN days d ON d.user_id = u.id AND d.date BETWEEN ?2 AND ?3
        WHERE m.group_id = ?1
-       GROUP BY m.id`,
+       GROUP BY u.id`,
     )
-    .bind((member as never as { group_id: string }).group_id, from, to)
+    .bind(groupId, from, to)
     .all<BoardQueryRow>();
 
-  return json({ rows: rankRows(results, member.id, shareOf(member as never)) });
+  return json({ rows: rankRows(results, user.id, shareOf(viewer) as Share) });
 }
