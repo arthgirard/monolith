@@ -1,9 +1,11 @@
 package com.monolith.app.ui.friends
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,7 +28,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -40,18 +41,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
 import com.monolith.app.domain.model.ShareSettings
-import com.monolith.app.ui.theme.MonolithMonoFamily
+import com.monolith.app.ui.components.SettingsDivider
+import com.monolith.app.ui.components.SettingsGroup
+import com.monolith.app.ui.components.SettingsToggleRow
 import com.monolith.app.ui.theme.mono
 import com.monolith.app.util.formatDuration
 
@@ -147,7 +149,15 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
     Button(onClick = { viewModel.create(name, share) }, enabled = nameValid && !busy, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.friends_create))
     }
-    HorizontalDivider()
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        HorizontalDivider(modifier = Modifier.weight(1f))
+        Text(
+            stringResource(R.string.friends_join_divider),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        HorizontalDivider(modifier = Modifier.weight(1f))
+    }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = inviteCode,
@@ -181,24 +191,24 @@ private fun JoinContent(busy: Boolean, viewModel: FriendsViewModel) {
 
 @Composable
 internal fun ShareToggles(share: ShareSettings, enabled: Boolean, onChange: (ShareSettings) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(R.string.friends_share_heading), style = MaterialTheme.typography.titleSmall)
-        ToggleRow(R.string.friends_share_saved, share.saved, enabled) { onChange(share.copy(saved = it)) }
-        ToggleRow(R.string.friends_share_streak, share.streak, enabled) { onChange(share.copy(streak = it)) }
-        ToggleRow(R.string.friends_share_pauses, share.pauses, enabled) { onChange(share.copy(pauses = it)) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            stringResource(R.string.friends_share_reciprocity),
+            stringResource(R.string.friends_share_heading),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SettingsGroup {
+            SettingsToggleRow(stringResource(R.string.friends_share_saved), share.saved, { onChange(share.copy(saved = it)) }, enabled)
+            SettingsDivider()
+            SettingsToggleRow(stringResource(R.string.friends_share_streak), share.streak, { onChange(share.copy(streak = it)) }, enabled)
+            SettingsDivider()
+            SettingsToggleRow(stringResource(R.string.friends_share_pauses), share.pauses, { onChange(share.copy(pauses = it)) }, enabled)
+        }
+        Text(
+            stringResource(R.string.friends_share_caption),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun ToggleRow(label: Int, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(label), modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }
 
@@ -233,68 +243,81 @@ private fun BoardContent(uiState: FriendsUiState, viewModel: FriendsViewModel) {
         }
         else -> Unit
     }
-    uiState.rows.forEach { row ->
-        BoardRowItem(row, uiState.nowMillis)
-        HorizontalDivider()
+    SettingsGroup {
+        uiState.rows.forEachIndexed { index, row ->
+            if (index > 0) SettingsDivider()
+            BoardRowItem(row, uiState.nowMillis)
+        }
     }
 }
+
+private val RankWidth = 28.dp
 
 @Composable
 private fun BoardRowItem(row: BoardRow, nowMillis: Long) {
     val hidden = stringResource(R.string.friends_hidden)
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // The viewer's own row is tinted rather than suffixed, so the name stays just the name.
+    val tint = if (row.isMe) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f) else Color.Transparent
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(tint)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 row.rank?.toString() ?: hidden,
                 style = MaterialTheme.typography.titleMedium.mono(),
-                modifier = Modifier.width(32.dp),
+                color = muted,
+                modifier = Modifier.width(RankWidth),
             )
-            Text(
-                if (row.isMe) stringResource(R.string.friends_you, row.name) else row.name,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                row.savedMillis?.let(::formatDuration) ?: hidden,
-                style = MaterialTheme.typography.titleMedium.mono(),
-            )
-        }
-        val detailStyle = MaterialTheme.typography.bodySmall
-        val streakLabel = stringResource(R.string.friends_row_streak_label)
-        val streakOff = stringResource(R.string.friends_row_streak_off)
-        val bypassesLabel = stringResource(R.string.friends_row_bypasses_label)
-        val unlocksLabel = stringResource(R.string.friends_row_unlocks_label)
-        val syncedLabel = stringResource(R.string.friends_row_synced_label)
-        val neverSynced = stringResource(R.string.friends_row_never_synced)
-        val monoValue = SpanStyle(fontFamily = MonolithMonoFamily)
-        // Labels stay in the body face; only the figures are set in mono.
-        val details = buildAnnotatedString {
-            fun part(label: String, value: String?) {
-                if (length > 0) append("  \u00B7  ")
-                append(label)
-                if (value != null) {
-                    append(" ")
-                    withStyle(monoValue) { append(value) }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    row.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (showSyncAge(row.lastSyncAt, nowMillis)) {
+                    Text(
+                        row.lastSyncAt?.let { DateUtils.getRelativeTimeSpanString(it, nowMillis, DateUtils.MINUTE_IN_MILLIS).toString() }
+                            ?: stringResource(R.string.friends_row_never_synced),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = muted,
+                    )
                 }
             }
-            if (row.streakVisible) {
-                val started = row.streakStartedAt
-                if (started != null) part(streakLabel, formatDuration((nowMillis - started).coerceAtLeast(0))) else part(streakOff, null)
-            }
-            row.bypassCount?.let { part(bypassesLabel, it.toString()) }
-            row.unlockCount?.let { part(unlocksLabel, it.toString()) }
-            val synced = row.lastSyncAt
-            if (synced != null) {
-                part(syncedLabel, DateUtils.getRelativeTimeSpanString(synced, nowMillis, DateUtils.MINUTE_IN_MILLIS).toString())
-            } else {
-                part(neverSynced, null)
+            Spacer(Modifier.width(12.dp))
+            Text(
+                row.savedMillis?.let(::formatDuration) ?: hidden,
+                style = MaterialTheme.typography.titleLarge.mono(),
+            )
+        }
+        if (row.streakVisible || row.bypassCount != null || row.unlockCount != null) {
+            Row(
+                modifier = Modifier.padding(start = RankWidth),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                if (row.streakVisible) {
+                    val started = row.streakStartedAt
+                    MiniReadout(
+                        stringResource(R.string.friends_row_streak_label),
+                        if (started != null) formatDuration((nowMillis - started).coerceAtLeast(0)) else hidden,
+                    )
+                }
+                row.bypassCount?.let { MiniReadout(stringResource(R.string.friends_row_bypasses_label), it.toString()) }
+                row.unlockCount?.let { MiniReadout(stringResource(R.string.friends_row_unlocks_label), it.toString()) }
             }
         }
-        Text(
-            details,
-            style = detailStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 32.dp),
-        )
+    }
+}
+
+@Composable
+private fun MiniReadout(caption: String, value: String) {
+    Column {
+        Text(value, style = MaterialTheme.typography.bodyMedium.mono())
+        Text(caption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

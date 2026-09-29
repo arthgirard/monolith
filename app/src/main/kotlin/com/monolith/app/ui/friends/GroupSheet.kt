@@ -6,14 +6,20 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
 import android.os.PersistableBundle
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -35,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.monolith.app.R
 import com.monolith.app.domain.model.GroupMembership
 import com.monolith.app.domain.model.ShareSettings
+import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.theme.mono
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,13 +69,22 @@ fun GroupSheet(
             message?.let {
                 Text(stringResource(it.text), color = MaterialTheme.colorScheme.error)
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.friends_invite_label), style = MaterialTheme.typography.labelMedium)
-                    Text(membership.inviteCode, style = MaterialTheme.typography.headlineSmall.mono())
-                }
-                TextButton(onClick = { clipboard.setText(AnnotatedString(membership.inviteCode)) }) {
-                    Text(stringResource(R.string.friends_copy))
+            SettingsGroup {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.friends_invite_label),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(membership.inviteCode, style = MaterialTheme.typography.headlineSmall.mono())
+                    }
+                    IconButton(onClick = { clipboard.setText(AnnotatedString(membership.inviteCode)) }) {
+                        Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.friends_copy))
+                    }
                 }
             }
 
@@ -88,24 +104,45 @@ fun GroupSheet(
 
             ShareToggles(membership.share, enabled = !busy, onChange = onShareChange)
 
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.friends_recovery_label), style = MaterialTheme.typography.titleSmall)
-                Text(
-                    stringResource(R.string.friends_recovery_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            SettingsGroup {
                 if (showRecovery) {
-                    SelectionContainer { Text(membership.token, style = MaterialTheme.typography.bodyMedium.mono()) }
-                    TextButton(onClick = { copyRecoveryCode(context, membership.token) }) {
-                        Text(stringResource(R.string.friends_copy))
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.friends_recovery_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 12.dp),
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            SelectionContainer(modifier = Modifier.weight(1f)) {
+                                Text(membership.token, style = MaterialTheme.typography.bodyMedium.mono())
+                            }
+                            IconButton(onClick = { copyRecoveryCode(context, membership.token) }) {
+                                Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.friends_copy))
+                            }
+                        }
                     }
                 } else {
-                    TextButton(onClick = { showRecovery = true }) { Text(stringResource(R.string.friends_recovery_show)) }
+                    Text(
+                        stringResource(R.string.friends_recovery_show),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showRecovery = true }
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                    )
                 }
             }
 
-            OutlinedButton(onClick = { confirmLeave = true }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            TextButton(
+                onClick = { confirmLeave = true },
+                enabled = !busy,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
                 Text(stringResource(R.string.friends_leave))
             }
         }
