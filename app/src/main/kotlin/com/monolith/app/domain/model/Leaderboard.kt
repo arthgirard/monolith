@@ -1,0 +1,58 @@
+package com.monolith.app.domain.model
+
+import java.time.LocalDate
+
+/** Which signals this member shares. Hiding one also hides it on everyone else's row. */
+data class ShareSettings(val saved: Boolean, val streak: Boolean, val pauses: Boolean)
+
+/** The membership is the identity: [token] is also the recovery code. */
+data class GroupMembership(
+    val token: String,
+    val displayName: String,
+    val inviteCode: String,
+    val share: ShareSettings,
+)
+
+enum class BoardWindow(val apiName: String) { DAY("day"), WEEK("week"), MONTH("month") }
+
+/**
+ * One member on the board. A null value means that signal is hidden for this viewer.
+ * [streakVisible] separates "hidden" from "visible but not enforcing" ([streakStartedAt] null).
+ */
+data class BoardRow(
+    val name: String,
+    val isMe: Boolean,
+    val rank: Int?,
+    val savedMillis: Long?,
+    val streakVisible: Boolean,
+    val streakStartedAt: Long?,
+    val bypassCount: Int?,
+    val unlockCount: Int?,
+    val lastSyncAt: Long?,
+)
+
+/** One local day as uploaded to the leaderboard. */
+data class DayAggregate(
+    val date: LocalDate,
+    val savedMillis: Long,
+    val bypassCount: Int,
+    val unlockCount: Int,
+)
+
+enum class LeaderboardError { NETWORK, UNAUTHORIZED, INVITE_NOT_FOUND, GROUP_FULL, HIDDEN_SIGNAL, INVALID, SERVER }
+
+sealed interface LeaderboardResult<out T> {
+    data class Ok<T>(val value: T) : LeaderboardResult<T>
+    data class Err(val error: LeaderboardError) : LeaderboardResult<Nothing>
+}
+
+inline fun <T, R> LeaderboardResult<T>.map(transform: (T) -> R): LeaderboardResult<R> = when (this) {
+    is LeaderboardResult.Ok -> LeaderboardResult.Ok(transform(value))
+    is LeaderboardResult.Err -> this
+}
+
+/** Runs [action] on success and drops the value. Inline, so [action] may suspend. */
+inline fun <T> LeaderboardResult<T>.andThen(action: (T) -> Unit): LeaderboardResult<Unit> = when (this) {
+    is LeaderboardResult.Ok -> { action(value); LeaderboardResult.Ok(Unit) }
+    is LeaderboardResult.Err -> this
+}
