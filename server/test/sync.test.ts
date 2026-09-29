@@ -60,6 +60,18 @@ describe("POST /sync", () => {
     expect(await days()).toEqual([]);
   });
 
+  it("clamps a streak start ahead of the server clock to now", async () => {
+    const { token } = await createGroup();
+    const before = Date.now();
+    const res = await call("POST", "/sync", { days: [], streakStartedAt: Date.now() + 3600000 }, token);
+    expect(res.status).toBe(204);
+    const m = await env.monolith_leaderboard
+      .prepare("SELECT streak_started_at FROM members")
+      .first<{ streak_started_at: number }>();
+    expect(m?.streak_started_at).toBeGreaterThanOrEqual(before);
+    expect(m?.streak_started_at).toBeLessThanOrEqual(Date.now());
+  });
+
   it("rejects out-of-range values", async () => {
     const { token } = await createGroup();
     const bad = [
@@ -72,7 +84,8 @@ describe("POST /sync", () => {
       { days: [{ date: today() }, { date: today() }] },
       { days: Array.from({ length: 41 }, (_, i) => ({ date: today(-i % 30) })) },
       { days: "nope" },
-      { days: [], streakStartedAt: Date.now() + 3600000 },
+      { days: [], streakStartedAt: 0 },
+      { days: [], streakStartedAt: 1.5 },
     ];
     for (const body of bad) expect(await call("POST", "/sync", body, token)).toEqual({ status: 400, body: { error: "invalid_body" } });
   });

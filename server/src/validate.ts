@@ -63,7 +63,9 @@ export function parseSync(body: Record<string, unknown>, share: Share, now: numb
     return day;
   });
 
-  const streakStartedAt = optionalInt(body.streakStartedAt, 1, now + 60_000);
+  // A phone clock slightly ahead of ours is not an error: clamp instead of dropping the sync.
+  const rawStreak = optionalInt(body.streakStartedAt, 1, Number.MAX_SAFE_INTEGER);
+  const streakStartedAt = rawStreak === null ? null : Math.min(rawStreak, now);
   if (!share.streak && streakStartedAt !== null) throw hidden();
   return { days, streakStartedAt };
 }
