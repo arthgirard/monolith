@@ -99,4 +99,15 @@ class DailyAggregatesTest {
         assertNull(DailyAggregates.pauseEndsAt(BlockState(isActive = true), now - 10, now))
         assertNull(DailyAggregates.pauseEndsAt(BlockState(isActive = false), now + 900, now))
     }
+
+    @Test
+    fun `credit resumes now while enforcing, at a pause's end, never while off`() {
+        val now = 1_000_000L
+
+        assertEquals(0L, DailyAggregates.resumesIn(BlockState(isActive = true), now - 10, now))
+        assertEquals(900L, DailyAggregates.resumesIn(BlockState(isActive = true), now + 900, now))
+        assertEquals(500L, DailyAggregates.resumesIn(BlockState(isActive = true, bypassExpiresAtMillis = now + 500), now - 10, now))
+        assertNull(DailyAggregates.resumesIn(BlockState(isActive = false), now - 10, now))
+        assertNull(DailyAggregates.resumesIn(BlockState(isActive = true), null, now))
+    }
 }

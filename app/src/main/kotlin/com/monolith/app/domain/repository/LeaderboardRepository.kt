@@ -1,5 +1,6 @@
 package com.monolith.app.domain.repository
 
+import com.monolith.app.domain.model.Accrual
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
 import com.monolith.app.domain.model.DayAggregate
@@ -38,6 +39,11 @@ interface LeaderboardRepository {
     /** Null leaves a field alone; an empty [name] clears it. */
     suspend fun updateGroup(groupId: String, share: ShareSettings? = null, name: String? = null): LeaderboardResult<Unit>
     suspend fun leaveGroup(groupId: String): LeaderboardResult<Unit>
-    suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?, blockedApps: List<SharedApp>): LeaderboardResult<Unit>
+    suspend fun sync(
+        days: List<DayAggregate>,
+        streakStartedAt: Long?,
+        blockedApps: List<SharedApp>,
+        accrual: Accrual? = null,
+    ): LeaderboardResult<Unit>
     suspend fun board(groupId: String, window: BoardWindow, today: LocalDate): LeaderboardResult<List<BoardRow>>
 }

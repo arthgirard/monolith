@@ -53,6 +53,15 @@ object DailyAggregates {
     }
 
     /**
+     * How long until credit accrues again: 0 while a block runs, the rest of a running pause, or
+     * null while Monolith is off. Every change to this uploads, so friends' boards project from it.
+     */
+    fun resumesIn(blockState: BlockState, activeSessionStart: Long?, now: Long): Long? {
+        if (!blockState.isActive || activeSessionStart == null) return null
+        return (pauseEndsAt(blockState, activeSessionStart, now) ?: now) - now
+    }
+
+    /**
      * When a running pause ends, if one is running. Nothing in DataStore changes at that moment,
      * so the syncer schedules its own upload for it; otherwise friends would see the streak stuck
      * at "off" until the next session event.

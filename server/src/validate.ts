@@ -55,6 +55,13 @@ export interface SyncBody {
   days: SyncDay[];
   streakStartedAt: number | null;
   apps: BlockedApp[] | null | undefined;
+  /**
+   * When credit starts accruing again without another upload: now while a block runs, the end of
+   * a running pause, or null while Monolith is off. Absent (null) from an older client.
+   */
+  accruingSince: number | null;
+  /** The phone's offset from UTC, to split projected time into its local days. */
+  utcOffsetMinutes: number | null;
 }
 
 const PACKAGE_NAME = /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*$/;
@@ -75,6 +82,8 @@ function parseBlockedApps(v: unknown): BlockedApp[] | null | undefined {
     return { packageName: a.packageName, label };
   });
 }
+
+const MAX_RESUMES_IN_MS = 30 * 24 * 60 * 60 * 1000;
 
 const hidden = () => new HttpError(422, "hidden_signal");
 
@@ -114,5 +123,10 @@ export function parseSync(body: Record<string, unknown>, share: Share, now: numb
   if (!share.streak && streakStartedAt !== null) throw hidden();
   const apps = parseBlockedApps(body.apps);
   if (!share.apps && apps) throw hidden();
-  return { days, streakStartedAt, apps };
+  // Relative to the upload, so a phone clock off from ours doesn't shift the projection.
+  const resumesInMs = optionalInt(body.resumesInMs, 0, MAX_RESUMES_IN_MS);
+  const utcOffsetMinutes = optionalInt(body.utcOffsetMinutes, -840, 840);
+  if (!share.saved && !share.streak && (resumesInMs !== null || utcOffsetMinutes !== null)) throw hidden();
+  const accruingSince = resumesInMs === null ? null : now + resumesInMs;
+  return { days, streakStartedAt, apps, accruingSince, utcOffsetMinutes };
 }

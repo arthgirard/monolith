@@ -1,5 +1,6 @@
 package com.monolith.app.data.leaderboard
 
+import com.monolith.app.domain.model.Accrual
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.DayAggregate
 import com.monolith.app.domain.model.GroupInfo
@@ -53,7 +54,14 @@ data class GroupDto(
 /** An empty [name] clears the group's name. */
 @Serializable data class UpdateGroupRequest(val share: ShareDto? = null, val name: String? = null)
 @Serializable data class SyncDayDto(val date: String, val savedMs: Long? = null, val bypassCount: Int? = null, val unlockCount: Int? = null)
-@Serializable data class SyncRequest(val days: List<SyncDayDto>, val streakStartedAt: Long? = null, val apps: List<SharedAppDto>? = null)
+@Serializable
+data class SyncRequest(
+    val days: List<SyncDayDto>,
+    val streakStartedAt: Long? = null,
+    val apps: List<SharedAppDto>? = null,
+    val resumesInMs: Long? = null,
+    val utcOffsetMinutes: Int? = null,
+)
 @Serializable data class StreakDto(val startedAt: Long? = null)
 
 @Serializable
@@ -93,18 +101,30 @@ fun BoardRowDto.toDomain() = BoardRow(
 )
 
 /** The upload body, with every signal [share] hides left out before it reaches the network. */
-fun syncRequestOf(days: List<DayAggregate>, streakStartedAt: Long?, blockedApps: List<SharedApp>, share: ShareSettings) = SyncRequest(
-    days = days.map {
-        SyncDayDto(
-            date = it.date.toString(),
-            savedMs = it.savedMillis.takeIf { share.saved },
-            bypassCount = it.bypassCount.takeIf { share.pauses },
-            unlockCount = it.unlockCount.takeIf { share.pauses },
-        )
-    },
-    streakStartedAt = streakStartedAt.takeIf { share.streak },
-    apps = blockedApps.map(SharedApp::toDto).takeIf { share.apps },
-)
+fun syncRequestOf(
+    days: List<DayAggregate>,
+    streakStartedAt: Long?,
+    blockedApps: List<SharedApp>,
+    accrual: Accrual?,
+    share: ShareSettings,
+): SyncRequest {
+    // Projection moves time gained and restarts the streak, so either one lets it through.
+    val sharedAccrual = accrual.takeIf { share.saved || share.streak }
+    return SyncRequest(
+        days = days.map {
+            SyncDayDto(
+                date = it.date.toString(),
+                savedMs = it.savedMillis.takeIf { share.saved },
+                bypassCount = it.bypassCount.takeIf { share.pauses },
+                unlockCount = it.unlockCount.takeIf { share.pauses },
+            )
+        },
+        streakStartedAt = streakStartedAt.takeIf { share.streak },
+        apps = blockedApps.map(SharedApp::toDto).takeIf { share.apps },
+        resumesInMs = sharedAccrual?.resumesInMillis,
+        utcOffsetMinutes = sharedAccrual?.utcOffsetMinutes,
+    )
+}
 
 fun errorOf(code: String?): LeaderboardError = when (code) {
     "unauthorized" -> LeaderboardError.UNAUTHORIZED

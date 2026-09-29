@@ -53,6 +53,28 @@ describe("POST /sync", () => {
     expect(u!.streak_started_at).toBeLessThanOrEqual(Date.now());
   });
 
+  it("stores when credit accrues again, relative to our clock, and the phone's offset", async () => {
+    const ana = await newUser();
+    const accrual = () =>
+      env.monolith_leaderboard.prepare("SELECT accruing_since, utc_offset_min, last_sync_at FROM users")
+        .first<{ accruing_since: number | null; utc_offset_min: number | null; last_sync_at: number }>();
+    await call("POST", "/sync", { days: [], resumesInMs: 60000, utcOffsetMinutes: -240 }, ana.token);
+    const paused = await accrual();
+    expect(paused!.accruing_since).toBe(paused!.last_sync_at + 60000);
+    expect(paused!.utc_offset_min).toBe(-240);
+    // An older client sends neither: nothing accrues, the offset stays.
+    await call("POST", "/sync", { days: [] }, ana.token);
+    expect(await accrual()).toMatchObject({ accruing_since: null, utc_offset_min: -240 });
+  });
+
+  it("accrual needs time gained or streak shared", async () => {
+    const ana = await newUser("Ana", share(false, true, false));
+    expect((await call("POST", "/sync", { days: [], resumesInMs: 0, utcOffsetMinutes: 0 }, ana.token)).status).toBe(204);
+    await call("POST", `/groups/${ana.group.id}`, { share: share(false, false, true) }, ana.token);
+    expect(await call("POST", "/sync", { days: [], resumesInMs: 0 }, ana.token))
+      .toEqual({ status: 422, body: { error: "hidden_signal" } });
+  });
+
   it("rejects out-of-range bodies", async () => {
     const ana = await newUser();
     for (const body of [
@@ -60,6 +82,8 @@ describe("POST /sync", () => {
       { days: [{ date: today(), savedMs: 86400001 }] },
       { days: [{ date: today() }, { date: today() }] },
       { days: "nope" },
+      { days: [], resumesInMs: -1 },
+      { days: [], utcOffsetMinutes: 900 },
     ]) {
       expect((await call("POST", "/sync", body, ana.token)).status).toBe(400);
     }

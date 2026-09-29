@@ -1,5 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+import { PROJECTION_MAX_MS, project, type BoardQueryRow } from "../src/board";
 import { anotherGroup, call, join, newUser, share, today } from "./helpers";
 
 async function syncDay(token: string, savedMs: number, bypassCount = 0, unlockCount = 0, streakStartedAt?: number) {
@@ -90,5 +91,58 @@ describe("GET /groups/:id/board", () => {
     const ana = await newUser();
     expect((await call("GET", `/groups/${ana.group.id}/board?window=year&date=${today()}`, undefined, ana.token)).status).toBe(400);
     expect((await call("GET", `/groups/${ana.group.id}/board?window=day&date=2026-13-01`, undefined, ana.token)).status).toBe(400);
+  });
+});
+
+describe("project", () => {
+  const HOUR = 3_600_000;
+  // 2026-09-29 10:00 UTC.
+  const t0 = Date.parse("2026-09-29T10:00:00Z");
+  const row = (over: Partial<BoardQueryRow>): BoardQueryRow => ({
+    id: "u", display_name: "Ana", share_saved: 1, share_streak: 1, share_pauses: 1, share_apps: 1, blocked_apps: null,
+    streak_started_at: t0 - HOUR, last_sync_at: t0, accruing_since: t0, utc_offset_min: 0,
+    saved: 1000, bypass: 0, unlock: 0, ...over,
+  });
+  const day = (r: BoardQueryRow, now: number, date = "2026-09-29") => project([r], date, date, now)[0];
+
+  it("keeps gaining from the last upload while a block runs", () => {
+    expect(day(row({}), t0 + 2 * HOUR).saved).toBe(1000 + 2 * HOUR);
+    expect(day(row({ saved: null }), t0 + HOUR).saved).toBe(HOUR);
+  });
+
+  it("leaves a member with nothing accruing, or an older app, alone", () => {
+    const off = row({ accruing_since: null, streak_started_at: null });
+    expect(day(off, t0 + HOUR)).toEqual(off);
+  });
+
+  it("splits at the member's own midnight", () => {
+    // UTC-4: the member's 2026-09-29 ends at 2026-09-30 04:00 UTC.
+    const r = row({ utc_offset_min: -240 });
+    const now = Date.parse("2026-09-30T06:00:00Z");
+    expect(day(r, now).saved).toBe(1000 + 18 * HOUR);
+    expect(day(r, now, "2026-09-30").saved).toBe(1000 + 2 * HOUR);
+    expect(project([r], "2026-09-28", "2026-10-04", now)[0].saved).toBe(1000 + 20 * HOUR);
+  });
+
+  it("resumes when a pause runs out unseen, streak included", () => {
+    const paused = row({ streak_started_at: null, accruing_since: t0 + HOUR });
+    const during = day(paused, t0 + HOUR / 2);
+    expect(during.saved).toBe(1000);
+    expect(during.streak_started_at).toBeNull();
+    const after = day(paused, t0 + 3 * HOUR);
+    expect(after.saved).toBe(1000 + 2 * HOUR);
+    expect(after.streak_started_at).toBe(t0 + HOUR);
+  });
+
+  it("keeps a running streak's own start", () => {
+    expect(day(row({}), t0 + HOUR).streak_started_at).toBe(t0 - HOUR);
+  });
+
+  it("stops 48h after the last upload", () => {
+    const r = row({});
+    const later = project([r], "2026-09-01", "2026-10-31", t0 + 100 * HOUR)[0];
+    expect(later.saved).toBe(1000 + PROJECTION_MAX_MS);
+    const pausedTooLong = row({ streak_started_at: null, accruing_since: t0 + 49 * HOUR });
+    expect(day(pausedTooLong, t0 + 50 * HOUR).streak_started_at).toBeNull();
   });
 });

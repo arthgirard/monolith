@@ -14,6 +14,7 @@ import com.monolith.app.data.leaderboard.UpdateMeRequest
 import com.monolith.app.data.leaderboard.syncRequestOf
 import com.monolith.app.data.leaderboard.toDomain
 import com.monolith.app.data.leaderboard.toDto
+import com.monolith.app.domain.model.Accrual
 import com.monolith.app.domain.model.BoardRow
 import com.monolith.app.domain.model.BoardWindow
 import com.monolith.app.domain.model.DayAggregate
@@ -142,18 +143,19 @@ class LeaderboardRepositoryImpl @Inject constructor(
         days: List<DayAggregate>,
         streakStartedAt: Long?,
         blockedApps: List<SharedApp>,
+        accrual: Accrual?,
     ): LeaderboardResult<Unit> = authed { identity ->
         // With no group cached the share union is all off, and uploading it would wipe the
         // server's values with nulls. Nobody could see them anyway.
         if (identity.groups.isEmpty()) return@authed LeaderboardResult.Ok(Unit)
-        val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, shareUnion(identity.groups)))
+        val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, accrual, shareUnion(identity.groups)))
         // The cached share flags are older than the server's (a change on another phone, or an
         // update that raced this upload). Take the server's, then retry once with their union.
         if (first is LeaderboardResult.Err && first.error == LeaderboardError.HIDDEN_SIGNAL) {
             val refreshed = refreshGroups()
             if (refreshed is LeaderboardResult.Err) return@authed refreshed
             val current = store.identity.first()?.takeIf { it.token == identity.token } ?: return@authed first
-            api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, shareUnion(current.groups)))
+            api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, accrual, shareUnion(current.groups)))
         } else {
             first
         }

@@ -1,5 +1,6 @@
 package com.monolith.app.domain.usecase
 
+import com.monolith.app.domain.model.Accrual
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.SharedApp
 import com.monolith.app.domain.repository.AppRepository
@@ -39,6 +40,9 @@ class SyncLeaderboardUseCase @Inject constructor(
             days = DailyAggregates.build(sessions, ongoing, pauses, today, zone),
             streakStartedAt = DailyAggregates.streakStartedAt(ongoing, now),
             blockedApps = blockedApps(),
+            accrual = DailyAggregates.resumesIn(blockState, activeSessionStart, now)?.let {
+                Accrual(it, zone.rules.getOffset(Instant.ofEpochMilli(now)).totalSeconds / 60)
+            },
         )
         return SyncOutcome(
             synced = result is LeaderboardResult.Ok,

@@ -28,7 +28,12 @@ export async function sync(req: Request, env: Env, user: UserRow, now: number): 
       .bind(user.id, d.date, d.savedMs, d.bypassCount, d.unlockCount),
   );
   statements.push(
-    db.prepare("UPDATE users SET streak_started_at = ?2, last_sync_at = ?3 WHERE id = ?1").bind(user.id, body.streakStartedAt, now),
+    db
+      .prepare(
+        `UPDATE users SET streak_started_at = ?2, last_sync_at = ?3, accruing_since = ?4,
+           utc_offset_min = COALESCE(?5, utc_offset_min) WHERE id = ?1`,
+      )
+      .bind(user.id, body.streakStartedAt, now, body.accruingSince, body.utcOffsetMinutes),
     // Same edge as parseSync's earliest accepted date, so nothing accepted is pruned right away.
     db.prepare("DELETE FROM days WHERE user_id = ?1 AND date < ?2").bind(user.id, addDays(utcToday(now), -(RETENTION_DAYS + 1))),
   );

@@ -5,6 +5,13 @@ import java.time.LocalDate
 /** Which signals this member shares. Hiding one also hides it on everyone else's row. */
 data class ShareSettings(val saved: Boolean, val streak: Boolean, val pauses: Boolean, val apps: Boolean)
 
+/**
+ * Lets friends' boards keep crediting this member between uploads. [resumesInMillis] is 0 while a
+ * block runs, or how long until a running pause ends; [utcOffsetMinutes] places that time in this
+ * member's own days.
+ */
+data class Accrual(val resumesInMillis: Long, val utcOffsetMinutes: Int)
+
 /** One app a member blocks, as named on their phone. */
 data class SharedApp(val packageName: String, val label: String)
 

@@ -1,4 +1,4 @@
-import { isIsoDate, windowRange, type BoardWindow } from "./dates";
+import { addDays, isIsoDate, windowRange, type BoardWindow } from "./dates";
 import { HttpError, json } from "./http";
 import { invariantStatements } from "./invariants";
 import { DAY_MS, INACTIVE_DAYS, shareOf, type Env, type Share, type ShareColumns, type UserRow } from "./types";
@@ -14,6 +14,8 @@ export interface BoardQueryRow {
   blocked_apps: string | null;
   streak_started_at: number | null;
   last_sync_at: number | null;
+  accruing_since: number | null;
+  utc_offset_min: number | null;
   saved: number | null;
   bypass: number | null;
   unlock: number | null;
@@ -29,6 +31,35 @@ export interface BoardRow {
   unlockCount?: number;
   apps?: BlockedApp[];
   lastSyncAt: number | null;
+}
+
+/** How long after its last upload a phone is still trusted to be blocking: past this it may be dead. */
+export const PROJECTION_MAX_MS = 48 * 60 * 60 * 1000;
+
+const MINUTE_MS = 60 * 1000;
+
+/**
+ * Time gained stops moving between uploads, yet a phone left alone is the goal. Every way to stop
+ * crediting (a pause, turning Monolith off) uploads, so until the next upload the member keeps
+ * gaining in real time from [accruing_since]. That can sit in the future: the end of a pause,
+ * which may run out while the phone is asleep and can't say so. The same moment restarts the streak.
+ */
+export function project(rows: BoardQueryRow[], from: string, to: string, now: number): BoardQueryRow[] {
+  return rows.map((r) => {
+    if (r.accruing_since === null || r.last_sync_at === null) return r;
+    const until = Math.min(now, r.last_sync_at + PROJECTION_MAX_MS);
+    if (r.accruing_since > until) return r;
+    // The window's dates are the member's local days.
+    const offset = (r.utc_offset_min ?? 0) * MINUTE_MS;
+    const windowStart = Date.parse(`${from}T00:00:00Z`) - offset;
+    const windowEnd = Date.parse(`${addDays(to, 1)}T00:00:00Z`) - offset;
+    const gained = Math.max(0, Math.min(until, windowEnd) - Math.max(r.accruing_since, windowStart));
+    return {
+      ...r,
+      saved: gained > 0 ? (r.saved ?? 0) + gained : r.saved,
+      streak_started_at: r.streak_started_at ?? r.accruing_since,
+    };
+  });
 }
 
 /**
@@ -108,7 +139,7 @@ export async function board(req: Request, env: Env, user: UserRow, now: number, 
   const { results } = await db
     .prepare(
       `SELECT u.id, u.display_name, m.share_saved, m.share_streak, m.share_pauses, m.share_apps, u.blocked_apps,
-              u.streak_started_at, u.last_sync_at,
+              u.streak_started_at, u.last_sync_at, u.accruing_since, u.utc_offset_min,
               SUM(d.saved_ms) AS saved, SUM(d.bypass_count) AS bypass, SUM(d.unlock_count) AS unlock
        FROM memberships m
        JOIN users u ON u.id = m.user_id
@@ -119,5 +150,5 @@ export async function board(req: Request, env: Env, user: UserRow, now: number, 
     .bind(groupId, from, to)
     .all<BoardQueryRow>();
 
-  return json({ rows: rankRows(results, user.id, shareOf(viewer)) });
+  return json({ rows: rankRows(project(results, from, to, now), user.id, shareOf(viewer)) });
 }

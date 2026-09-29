@@ -1,5 +1,6 @@
 package com.monolith.app.domain.usecase
 
+import com.monolith.app.domain.model.Accrual
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.Pause
@@ -35,6 +36,7 @@ class SyncLeaderboardUseCaseTest {
         assertEquals(now - hour, streakStartedAt)
         assertEquals(1, days.sumOf { it.unlockCount })
         assertEquals(SyncOutcome(synced = true, pauseEndsAt = null), outcome)
+        assertEquals(0L, leaderboard.syncedAccruals.single()?.resumesInMillis)
     }
 
     @Test
@@ -48,6 +50,21 @@ class SyncLeaderboardUseCaseTest {
 
         assertNull(leaderboard.syncCalls.single().second)
         assertEquals(now + 5 * 60_000, outcome.pauseEndsAt)
+        // Friends' boards resume on their own if the unlock runs out with the phone asleep.
+        assertEquals(5 * 60_000L, leaderboard.syncedAccruals.single()?.resumesInMillis)
+    }
+
+    @Test
+    fun `accrual carries the zone's offset and nothing while Monolith is off`() = runBlocking {
+        val now = Instant.parse("2026-09-29T12:00:00Z").toEpochMilli()
+        val montreal = ZoneId.of("America/Montreal")
+        val on = FakeBlockRepository(initiallyActive = true).apply { setActiveSessionStart(now - hour) }
+        val leaderboard = FakeLeaderboardRepository()
+
+        SyncLeaderboardUseCase(on, leaderboard, FakeAppRepository())(now, montreal)
+        SyncLeaderboardUseCase(FakeBlockRepository(), leaderboard, FakeAppRepository())(now, montreal)
+
+        assertEquals(listOf(Accrual(0, -240), null), leaderboard.syncedAccruals)
     }
 
     @Test

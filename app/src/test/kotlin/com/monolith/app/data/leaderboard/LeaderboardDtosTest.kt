@@ -1,5 +1,6 @@
 package com.monolith.app.data.leaderboard
 
+import com.monolith.app.domain.model.Accrual
 import com.monolith.app.domain.model.DayAggregate
 import com.monolith.app.domain.model.GroupInfo
 import com.monolith.app.domain.model.LeaderboardError
@@ -16,23 +17,31 @@ class LeaderboardDtosTest {
 
     private val day = DayAggregate(LocalDate.of(2026, 9, 28), savedMillis = 60_000, bypassCount = 1, unlockCount = 2)
     private val apps = listOf(SharedApp("com.example.video", "Video"))
+    private val accrual = Accrual(resumesInMillis = 0, utcOffsetMinutes = -240)
 
     @Test
     fun `everything shared goes on the wire`() {
-        val body = LeaderboardJson.encodeToString(syncRequestOf(listOf(day), 42L, apps, ShareSettings(true, true, true, true)))
+        val body = LeaderboardJson.encodeToString(syncRequestOf(listOf(day), 42L, apps, accrual, ShareSettings(true, true, true, true)))
 
         assertEquals(
             """{"days":[{"date":"2026-09-28","savedMs":60000,"bypassCount":1,"unlockCount":2}],"streakStartedAt":42,""" +
-                """"apps":[{"packageName":"com.example.video","label":"Video"}]}""",
+                """"apps":[{"packageName":"com.example.video","label":"Video"}],"resumesInMs":0,"utcOffsetMinutes":-240}""",
             body,
         )
     }
 
     @Test
     fun `hidden signals never leave the phone`() {
-        val body = LeaderboardJson.encodeToString(syncRequestOf(listOf(day), 42L, apps, ShareSettings(false, false, false, false)))
+        val body = LeaderboardJson.encodeToString(syncRequestOf(listOf(day), 42L, apps, accrual, ShareSettings(false, false, false, false)))
 
         assertEquals("""{"days":[{"date":"2026-09-28"}]}""", body)
+    }
+
+    @Test
+    fun `accrual goes out with the streak alone`() {
+        val body = LeaderboardJson.encodeToString(syncRequestOf(emptyList(), 42L, apps, accrual, ShareSettings(false, true, false, false)))
+
+        assertEquals("""{"days":[],"streakStartedAt":42,"resumesInMs":0,"utcOffsetMinutes":-240}""", body)
     }
 
     @Test
