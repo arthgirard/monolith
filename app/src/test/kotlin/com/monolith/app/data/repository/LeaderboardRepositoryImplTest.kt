@@ -207,8 +207,9 @@ class LeaderboardRepositoryImplTest {
 
     @Test
     fun `leaving the last group clears without a notice`() = runBlocking {
-        val api = FakeLeaderboardApi()
-        val store = FakeIdentityStore(ana(g1), selected = "g1")
+        // The server deletes a user who leaves their last group, so the refresh after it is a 401.
+        val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED) }
+        val store = FakeIdentityStore(ana(g1, g2), selected = "g1")
 
         val result = LeaderboardRepositoryImpl(api, store).leaveGroup("g1")
 
@@ -216,6 +217,44 @@ class LeaderboardRepositoryImplTest {
         assertEquals(listOf("g1"), api.leftGroups)
         assertNull(store.identity.value)
         assertFalse(store.removedNotice.value)
+    }
+
+    @Test
+    fun `leaving what the cache thinks is the last group keeps a group joined elsewhere`() = runBlocking {
+        val api = FakeLeaderboardApi().apply { meResult = LeaderboardResult.Ok(MeResponse("Ana", listOf(g2))) }
+        val store = FakeIdentityStore(ana(g1), selected = "g1")
+
+        val result = LeaderboardRepositoryImpl(api, store).leaveGroup("g1")
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
+        assertEquals(ana(g2), store.identity.value)
+        assertEquals("g2", store.selectedGroupId.value)
+        assertFalse(store.removedNotice.value)
+    }
+
+    @Test
+    fun `sync without any cached group uploads nothing`() = runBlocking {
+        val api = FakeLeaderboardApi()
+        val store = FakeIdentityStore(ana())
+
+        val result = LeaderboardRepositoryImpl(api, store).sync(listOf(day), streakStartedAt = 5)
+
+        assertEquals(LeaderboardResult.Ok(Unit), result)
+        assertTrue(api.syncRequests.isEmpty())
+    }
+
+    @Test
+    fun `a group entered by a dead token selects nothing`() = runBlocking {
+        val api = FakeLeaderboardApi().apply {
+            createResult = LeaderboardResult.Ok(GroupResponse(group = g2))
+            meResult = LeaderboardResult.Err(LeaderboardError.UNAUTHORIZED)
+        }
+        val store = FakeIdentityStore(ana(g1), selected = "g1")
+
+        LeaderboardRepositoryImpl(api, store).createGroup(null, share)
+
+        assertNull(store.identity.value)
+        assertNull(store.selectedGroupId.value)
     }
 
     @Test

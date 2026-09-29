@@ -88,19 +88,26 @@ class LeaderboardRepositoryImpl @Inject constructor(
     override suspend fun leaveGroup(groupId: String): LeaderboardResult<Unit> = authed { identity ->
         api.leaveGroup(identity.token, groupId)
             .andThen {
-                // The server deletes a user who leaves their last group: nothing is left to keep.
-                if (identity.groups.singleOrNull()?.id == groupId) {
-                    store.clear()
-                } else {
-                    // Drop it now so an offline refresh can't leave it on screen.
-                    cacheGroups(identity.token, identity.groups.filter { it.id != groupId })
-                    refreshGroups()
+                // Drop it now so an offline refresh can't leave it on screen.
+                cacheGroups(identity.token, identity.groups.filter { it.id != groupId })
+                // Ask the server rather than the cache whether that was the last group: one joined
+                // on another phone may not be cached yet. The server deletes a user who leaves
+                // their last group, so a 401 here is that leave, not a removal: no notice.
+                when (val me = api.me(identity.token)) {
+                    is LeaderboardResult.Ok -> cacheGroups(identity.token, me.value.groups.map(GroupDto::toDomain))
+                    is LeaderboardResult.Err ->
+                        if (me.error == LeaderboardError.UNAUTHORIZED && store.identity.first()?.token == identity.token) {
+                            store.clear()
+                        }
                 }
             }
             .alsoDropIfNotMember()
     }
 
     override suspend fun sync(days: List<DayAggregate>, streakStartedAt: Long?): LeaderboardResult<Unit> = authed { identity ->
+        // With no group cached the share union is all off, and uploading it would wipe the
+        // server's values with nulls. Nobody could see them anyway.
+        if (identity.groups.isEmpty()) return@authed LeaderboardResult.Ok(Unit)
         val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, shareUnion(identity.groups)))
         // The cached share flags are older than the server's (a change on another phone, or an
         // update that raced this upload). Take the server's, then retry once with their union.
@@ -142,7 +149,9 @@ class LeaderboardRepositoryImpl @Inject constructor(
                 cacheGroups(identity.token, identity.groups.filter { it.id != group.id } + group)
             }
             refreshGroups()
-            store.select(group.id)
+            // That refresh may have met a 401 and cleared the store: select nothing into it.
+            val entered = token ?: identity?.token
+            if (entered != null && store.identity.first()?.token == entered) store.select(group.id)
         }
     }
 
