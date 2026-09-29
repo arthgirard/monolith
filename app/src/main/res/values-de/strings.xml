@@ -302,7 +302,7 @@
     <string name="friends_section_you">Sie, in allen Gruppen</string>
     <string name="friends_group_name_label">Gruppenname</string>
     <string name="friends_group_name_hint">Eine Zweiergruppe trägt den Namen der anderen Person.</string>
-    <string name="friends_leave_group">Gruppe verlassen</string>
+    <string name="friends_leave_group">Diese Gruppe verlassen</string>
     <string name="friends_leave_group_confirm_title">Diese Gruppe verlassen?</string>
     <string name="friends_leave_group_confirm_body">Sie sehen diese Rangliste dann nicht mehr. Mit dem Einladungscode können Sie wieder beitreten.</string>
     <string name="friends_error_too_many">Sie sind bereits in 10 Gruppen.</string>
