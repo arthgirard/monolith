@@ -252,6 +252,11 @@
     <string name="missed_notification_channel_description">Meldingen die Monolith tegenhield tijdens het blok, bezorgd zodra het stopt.</string>
     <string name="missed_notification_subtext">Gemist terwijl Monolith aan stond · %1$s</string>
     <string name="missed_notification_summary">%1$d gemist terwijl Monolith aan stond</string>
+    <string name="missed_notification_more">+%1$d meer</string>
+    <plurals name="missed_notification_other_apps">
+        <item quantity="one">%1$d andere app</item>
+        <item quantity="other">%1$d andere apps</item>
+    </plurals>
 
     <!-- Home-screen widget -->
     <string name="widget_time_saved_name">Bespaarde tijd</string>

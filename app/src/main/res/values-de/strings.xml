@@ -252,6 +252,11 @@
     <string name="missed_notification_channel_description">Benachrichtigungen, die zurückgehalten wurden, während Monolith blockierte, und danach neu zugestellt werden.</string>
     <string name="missed_notification_subtext">Verpasst, als Monolith an war · %1$s</string>
     <string name="missed_notification_summary">%1$d verpasst, als Monolith an war</string>
+    <string name="missed_notification_more">+%1$d weitere</string>
+    <plurals name="missed_notification_other_apps">
+        <item quantity="one">%1$d weitere App</item>
+        <item quantity="other">%1$d weitere Apps</item>
+    </plurals>
 
     <!-- Home-screen widget -->
     <string name="widget_time_saved_name">Heute gespart</string>

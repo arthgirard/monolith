@@ -252,6 +252,12 @@
     <string name="missed_notification_channel_description">Notifiche trattenute mentre Monolith bloccava, consegnate quando si ferma.</string>
     <string name="missed_notification_subtext">Persa con Monolith attivo · %1$s</string>
     <string name="missed_notification_summary">%1$d perse con Monolith attivo</string>
+    <string name="missed_notification_more">+%1$d altre</string>
+    <plurals name="missed_notification_other_apps">
+        <item quantity="one">%1$d altra app</item>
+        <item quantity="many">%1$d altre app</item>
+        <item quantity="other">%1$d altre app</item>
+    </plurals>
 
     <!-- Home-screen widget -->
     <string name="widget_time_saved_name">Tempo risparmiato</string>

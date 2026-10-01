@@ -6,7 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.os.Build
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
@@ -28,7 +30,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentLinkedQueue
 import javax.inject.Inject
 
 /**
@@ -42,8 +43,13 @@ import javax.inject.Inject
  * Monolith-authored stand-in, since the OS doesn't let a listener repost another app's
  * notification under its own identity) the moment it stops being held back — Monolith turning
  * off, an emergency bypass starting, or that one app individually being unlocked — so nothing is
- * silently lost. The held queue is memory-only: a process death mid-block drops it, same as the
- * notifications themselves would have been dropped by the block.
+ * silently lost. The backlog is memory-only and bounded ([HeldBacklog]): a process death mid-block
+ * drops it, same as the notifications themselves would have been dropped by the block.
+ *
+ * A catch-up posts one stand-in per app, not one per notification: Android keeps at most 50 of a
+ * package's notifications and silently drops the rest, and a days-long block over dozens of apps
+ * holds far more than that. Past [MAX_RESTORED_APPS] apps, the least recent fold into a single
+ * "other apps" stand-in. Only the summary alerts, once.
  *
  * A stand-in can't be dismissed by its source app the way the original could (the app cancels
  * an original that's already gone), so [clearRestored] does it instead once the user has been
@@ -63,7 +69,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
     @Volatile private var blockedPackages: Set<String> = emptySet()
     @Volatile private var importantPeople: List<ImportantPerson> = emptyList()
     @Volatile private var unlockedPackages: Map<String, Long> = emptyMap()
-    private val heldNotifications = ConcurrentLinkedQueue<StatusBarNotification>()
+    private val held = HeldBacklog<HeldNotification>()
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLocale.wrap(newBase))
@@ -113,9 +119,38 @@ class NotificationBlockListenerService : NotificationListenerService() {
         if (sbn.packageName !in blockedPackages) return
         if (isCurrentlyUnlocked(sbn.packageName, now)) return
         if (isFromImportantPerson(sbn)) return
-        heldNotifications.add(sbn)
+        hold(sbn)
+    }
+
+    /**
+     * Keeps only what a stand-in shows. An app's own group summary is cancelled but not kept: it
+     * repeats its children, and would read as one more missed notification.
+     */
+    private fun hold(sbn: StatusBarNotification) {
+        val notification = sbn.notification
+        if (notification.flags and Notification.FLAG_GROUP_SUMMARY == 0) {
+            val extras = notification.extras
+            held.add(
+                sbn.packageName,
+                sbn.key,
+                HeldNotification(
+                    title = extras.getCharSequence(Notification.EXTRA_TITLE),
+                    text = extras.getCharSequence(Notification.EXTRA_TEXT),
+                    contentIntent = notification.contentIntent,
+                    smallIcon = notification.smallIcon,
+                ),
+                sbn.postTime,
+            )
+        }
         cancelNotification(sbn.key)
     }
+
+    private class HeldNotification(
+        val title: CharSequence?,
+        val text: CharSequence?,
+        val contentIntent: PendingIntent?,
+        val smallIcon: Icon?,
+    )
 
     private data class Snapshot(
         val blockState: BlockState,
@@ -149,10 +184,7 @@ class NotificationBlockListenerService : NotificationListenerService() {
                     !isCurrentlyUnlocked(it.packageName, now) &&
                     !isFromImportantPerson(it)
             }
-            .forEach { sbn ->
-                heldNotifications.add(sbn)
-                cancelNotification(sbn.key)
-            }
+            .forEach(::hold)
     }
 
     /**
@@ -160,68 +192,138 @@ class NotificationBlockListenerService : NotificationListenerService() {
      * stopping entirely -- off or bypassed) so the user can catch up.
      */
     private fun restoreHeldNotifications(onlyPackage: String? = null) {
-        val toRestore = if (onlyPackage == null) {
-            generateSequence { heldNotifications.poll() }.toList()
-        } else {
-            heldNotifications.filter { it.packageName == onlyPackage }.also { heldNotifications.removeAll(it) }
-        }
-        if (toRestore.isEmpty()) return
+        val apps = held.drain(onlyPackage)
+        if (apps.isEmpty()) return
 
         ensureMissedChannel()
         val notificationManager = getSystemService(NotificationManager::class.java)
-        // Posting is asynchronous, so the shade is read before this batch goes in. The summary
-        // covers both: an earlier catch-up may still be sitting there. A notification restored
-        // twice (updated while held) replaces its own stand-in, hence the set.
-        val inShade = restoredInShade(notificationManager).map { it.tag to it.id }.toSet()
-        val pm = packageManager
+        // Posting is asynchronous, so the shade is read before this batch goes in. An earlier
+        // catch-up may still be sitting there: its stand-ins are merged into, not stacked beside.
+        val inShade = restoredInShade(notificationManager).groupBy { it.tag!! }
+        val counts = inShade.mapValues { (_, standIns) -> standIns.sumOf(::missedCount) }.toMutableMap()
 
-        toRestore.forEach { sbn ->
-            val extras = sbn.notification.extras
-            val title = extras.getCharSequence(Notification.EXTRA_TITLE)
-            val text = extras.getCharSequence(Notification.EXTRA_TEXT)
-            val appLabel = runCatching {
-                pm.getApplicationLabel(pm.getApplicationInfo(sbn.packageName, 0))
-            }.getOrDefault(sbn.packageName)
-            val appIcon = runCatching {
-                pm.getApplicationIcon(sbn.packageName).toBitmap()
-            }.getOrNull()
-            // The original app's own status-bar icon (not its launcher icon): reusing it keeps
-            // the restored notification looking like it came from that app, not from Monolith.
-            val smallIcon = runCatching {
-                sbn.notification.smallIcon?.loadDrawable(this)?.toBitmap()
-            }.getOrNull()?.let { IconCompat.createWithBitmap(it) }
-                ?: IconCompat.createWithResource(this, R.drawable.ic_monolith_mark)
+        // Most recent first, so the apps that fold into "other apps" are the least recent.
+        var free = MAX_RESTORED_APPS - (inShade.keys - OTHERS_TAG).size
+        val (own, others) = apps.partition { it.packageName in inShade || free-- > 0 }
+        own.forEach { app ->
+            counts[app.packageName] = postStandIn(notificationManager, app, inShade[app.packageName].orEmpty())
+        }
+        if (others.isNotEmpty()) {
+            counts[OTHERS_TAG] = postOthers(notificationManager, others, inShade[OTHERS_TAG].orEmpty())
+        }
+        postMissedSummary(this, notificationManager, counts.values.sum())
+    }
 
-            // Reuse the original notification's own PendingIntent where possible: it opens the
-            // exact screen the source app intended (e.g. a specific chat), not just its launcher.
-            val pendingIntent = sbn.notification.contentIntent
-                ?: pm.getLaunchIntentForPackage(sbn.packageName)?.let { launchIntent ->
-                    PendingIntent.getActivity(
-                        this,
-                        sbn.key.hashCode(),
-                        launchIntent,
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                    )
-                }
+    /** One app's catch-up, merged with what an earlier one left in the shade. Returns its count. */
+    private fun postStandIn(
+        notificationManager: NotificationManager,
+        app: HeldBacklog.App<HeldNotification>,
+        previous: List<StatusBarNotification>,
+    ): Int {
+        val latest = app.newestFirst.first()
+        val appLabel = labelOf(app.packageName)
+        val count = app.count + previous.sumOf(::missedCount)
+        val lines = (app.newestFirst.map { lineOf(it.title, it.text) } + previous.flatMap(::linesOf))
+            .take(HeldBacklog.PER_APP)
 
-            val restored = NotificationCompat.Builder(this, MISSED_CHANNEL_ID)
-                .setSmallIcon(smallIcon)
-                .setContentTitle(title ?: appLabel)
-                .setContentText(text)
-                .setSubText(getString(R.string.missed_notification_subtext, appLabel))
-                .setLargeIcon(appIcon)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true)
-                .setGroup(MISSED_GROUP_KEY)
-                .build()
+        // The original app's own status-bar icon (not its launcher icon): reusing it keeps the
+        // restored notification looking like it came from that app, not from Monolith.
+        val smallIcon = runCatching { latest.smallIcon?.loadDrawable(this)?.toBitmap() }
+            .getOrNull()?.let { IconCompat.createWithBitmap(it) }
+            ?: IconCompat.createWithResource(this, R.drawable.ic_monolith_mark)
 
-            // Tagged with the source package so clearRestored can find this app's stand-ins.
-            notificationManager.notify(sbn.packageName, sbn.key.hashCode(), restored)
+        // Reuse the newest notification's own PendingIntent where possible: it opens the exact
+        // screen the source app intended (e.g. a specific chat), not just its launcher.
+        val pendingIntent = latest.contentIntent
+            ?: packageManager.getLaunchIntentForPackage(app.packageName)?.let { launchIntent ->
+                PendingIntent.getActivity(
+                    this,
+                    app.packageName.hashCode(),
+                    launchIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+            }
+
+        val builder = standInBuilder(count, lines)
+            .setSmallIcon(smallIcon)
+            .setContentTitle(latest.title ?: appLabel)
+            .setContentText(latest.text)
+            .setSubText(getString(R.string.missed_notification_subtext, appLabel))
+            .setLargeIcon(runCatching { packageManager.getApplicationIcon(app.packageName).toBitmap() }.getOrNull())
+            .setContentIntent(pendingIntent)
+        if (count > 1) {
+            builder.setStyle(
+                NotificationCompat.InboxStyle()
+                    .setBigContentTitle(appLabel)
+                    .also { style -> lines.forEach(style::addLine) }
+                    .also { style ->
+                        if (count > lines.size) style.setSummaryText(getString(R.string.missed_notification_more, count - lines.size))
+                    },
+            )
         }
 
-        val justPosted = toRestore.map { it.packageName to it.key.hashCode() }
-        postMissedSummary(this, notificationManager, (inShade + justPosted).size)
+        // Tagged with the source package so clearRestored can find this app's stand-in. One id
+        // per app, so a later catch-up replaces it; any other id is one per notification, from
+        // before stand-ins were merged.
+        notificationManager.notify(app.packageName, STAND_IN_ID, builder.build())
+        previous.filter { it.id != STAND_IN_ID }.forEach { notificationManager.cancel(it.tag, it.id) }
+        return count
     }
+
+    /** The apps past [MAX_RESTORED_APPS], one line each. Returns how many notifications it covers. */
+    private fun postOthers(
+        notificationManager: NotificationManager,
+        apps: List<HeldBacklog.App<HeldNotification>>,
+        previous: List<StatusBarNotification>,
+    ): Int {
+        val perApp = LinkedHashMap<String, Int>()
+        apps.forEach { perApp[it.packageName] = it.count }
+        previous.forEach { standIn ->
+            val extras = standIn.notification.extras
+            val packages = extras.getStringArray(EXTRA_OTHER_PACKAGES) ?: return@forEach
+            val counts = extras.getIntArray(EXTRA_OTHER_COUNTS) ?: return@forEach
+            packages.zip(counts.toList()).forEach { (pkg, n) -> perApp[pkg] = (perApp[pkg] ?: 0) + n }
+        }
+        val count = perApp.values.sum()
+        val lines = perApp.map { (pkg, n) -> "${labelOf(pkg)} · $n" }
+        val title = resources.getQuantityString(R.plurals.missed_notification_other_apps, perApp.size, perApp.size)
+
+        val builder = standInBuilder(count, lines)
+            .setSmallIcon(R.drawable.ic_monolith_mark)
+            .setContentTitle(title)
+            .setContentText(lines.joinToString(", "))
+            .setStyle(
+                NotificationCompat.InboxStyle()
+                    .setBigContentTitle(title)
+                    .also { style -> lines.forEach(style::addLine) },
+            )
+            .addExtras(
+                Bundle().apply {
+                    putStringArray(EXTRA_OTHER_PACKAGES, perApp.keys.toTypedArray())
+                    putIntArray(EXTRA_OTHER_COUNTS, perApp.values.toIntArray())
+                },
+            )
+        notificationManager.notify(OTHERS_TAG, STAND_IN_ID, builder.build())
+        return count
+    }
+
+    /** What every stand-in shares: grouped, silent under the summary, and carrying its count. */
+    private fun standInBuilder(count: Int, lines: List<CharSequence>) =
+        NotificationCompat.Builder(this, MISSED_CHANNEL_ID)
+            .setAutoCancel(true)
+            .setGroup(MISSED_GROUP_KEY)
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
+            .setNumber(count)
+            .addExtras(
+                Bundle().apply {
+                    putInt(EXTRA_MISSED_COUNT, count)
+                    putCharSequenceArray(EXTRA_MISSED_LINES, lines.toTypedArray())
+                },
+            )
+
+    private fun labelOf(packageName: String): CharSequence = runCatching {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0))
+    }.getOrDefault(packageName)
 
     private fun ensureMissedChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -248,6 +350,34 @@ class NotificationBlockListenerService : NotificationListenerService() {
         // restored notifications, which key off the original notification's own hash.
         private const val MISSED_SUMMARY_ID = 2003
 
+        // Tagged ids live apart from untagged ones, so this only has to be one value.
+        private const val STAND_IN_ID = 2004
+
+        // Not a valid package name (no dot), so it can't collide with an app's stand-in.
+        private const val OTHERS_TAG = "monolith-other-apps"
+
+        // Beside this, the summary and Monolith's own status notifications, well under the 50
+        // Android keeps per package.
+        private const val MAX_RESTORED_APPS = 20
+
+        private const val EXTRA_MISSED_COUNT = "com.monolith.app.MISSED_COUNT"
+        private const val EXTRA_MISSED_LINES = "com.monolith.app.MISSED_LINES"
+        private const val EXTRA_OTHER_PACKAGES = "com.monolith.app.OTHER_PACKAGES"
+        private const val EXTRA_OTHER_COUNTS = "com.monolith.app.OTHER_COUNTS"
+
+        // A stand-in from before counts were stored stands for one notification.
+        private fun missedCount(standIn: StatusBarNotification) =
+            standIn.notification.extras.getInt(EXTRA_MISSED_COUNT, 1)
+
+        private fun linesOf(standIn: StatusBarNotification): List<CharSequence> {
+            val extras = standIn.notification.extras
+            return extras.getCharSequenceArray(EXTRA_MISSED_LINES)?.toList()
+                ?: listOf(lineOf(extras.getCharSequence(Notification.EXTRA_TITLE), extras.getCharSequence(Notification.EXTRA_TEXT)))
+        }
+
+        private fun lineOf(title: CharSequence?, text: CharSequence?): CharSequence =
+            listOfNotNull(title, text).joinToString(": ")
+
         private fun restoredInShade(notificationManager: NotificationManager) =
             runCatching { notificationManager.activeNotifications }.getOrDefault(emptyArray())
                 .filter { it.notification.group == MISSED_GROUP_KEY && it.tag != null }
@@ -259,10 +389,10 @@ class NotificationBlockListenerService : NotificationListenerService() {
         fun clearRestored(context: Context, sourcePackage: String) {
             val notificationManager = context.getSystemService(NotificationManager::class.java)
             val inShade = restoredInShade(notificationManager)
-            val stale = inShade.filter { it.tag == sourcePackage }
+            val (stale, kept) = inShade.partition { it.tag == sourcePackage }
             if (stale.isEmpty()) return
             stale.forEach { notificationManager.cancel(it.tag, it.id) }
-            postMissedSummary(context, notificationManager, inShade.size - stale.size)
+            postMissedSummary(context, notificationManager, kept.sumOf(::missedCount))
         }
 
         /**

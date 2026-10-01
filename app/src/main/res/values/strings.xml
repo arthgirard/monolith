@@ -256,6 +256,11 @@
     <string name="missed_notification_channel_description">Notifications held back while Monolith was blocking, reposted once it stops.</string>
     <string name="missed_notification_subtext">Missed while Monolith was on · %1$s</string>
     <string name="missed_notification_summary">%1$d missed while Monolith was on</string>
+    <string name="missed_notification_more">+%1$d more</string>
+    <plurals name="missed_notification_other_apps">
+        <item quantity="one">%1$d other app</item>
+        <item quantity="other">%1$d other apps</item>
+    </plurals>
 
     <!-- Home-screen widget -->
     <string name="widget_time_saved_name">Time saved today</string>
