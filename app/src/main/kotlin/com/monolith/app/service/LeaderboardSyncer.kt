@@ -31,7 +31,9 @@ import javax.inject.Singleton
 /**
  * Keeps the leaderboard near-live without a retry queue. Idle until the member joins a group;
  * then any change to sessions, pauses, block state or blocked apps uploads once things settle. The process
- * stays warm through the accessibility service, so these triggers keep firing.
+ * stays warm through the accessibility service, so these triggers keep firing. A phone left alone
+ * changes nothing, so [LeaderboardHeartbeatWorker] also uploads every few hours: the board stops
+ * trusting a member 48 h after their last upload.
  */
 @Singleton
 class LeaderboardSyncer @Inject constructor(
@@ -56,11 +58,21 @@ class LeaderboardSyncer @Inject constructor(
         (if (immediate) immediateRequests else requests).tryEmit(Unit)
     }
 
+    /** Whether the member is in a group, so anything uploading on its own knows to run. */
+    fun observeJoined(): Flow<Boolean> = leaderboardRepository.observeIdentity()
+        .map { it != null && it.groups.isNotEmpty() }
+        .distinctUntilChanged()
+
+    /** One upload now, outside the triggers, for [LeaderboardHeartbeatWorker]. True if the server took it. */
+    suspend fun syncNow(): Boolean {
+        val synced = syncLeaderboard().synced
+        if (synced) lastSynced.value = System.currentTimeMillis()
+        return synced
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     fun start(scope: CoroutineScope) {
-        val debounced = leaderboardRepository.observeIdentity()
-            .map { it != null && it.groups.isNotEmpty() }
-            .distinctUntilChanged()
+        val debounced = observeJoined()
             .flatMapLatest { joined -> if (joined) merge(localChanges(), requests) else emptyFlow() }
             .debounce(DEBOUNCE_MILLIS)
             // This process also hosts enforcement: an unreadable identity must not crash it.

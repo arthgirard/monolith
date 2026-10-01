@@ -3,10 +3,12 @@ package com.monolith.app
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.nfc.NfcDispatchGate
 import com.monolith.app.service.BackupScheduler
 import com.monolith.app.service.EnforcementForegroundService
+import com.monolith.app.service.LeaderboardHeartbeatWorker
 import com.monolith.app.service.LeaderboardSyncer
 import com.monolith.app.service.ScheduleTrigger
 import com.monolith.app.util.AppLocale
@@ -14,6 +16,7 @@ import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -79,6 +82,11 @@ class MonolithApplication : Application() {
 
         // Idle until a group is joined; opt-in means no network calls before that.
         leaderboardSyncer.start(appScope)
+        leaderboardSyncer.observeJoined()
+            .onEach { LeaderboardHeartbeatWorker.apply(this, it) }
+            // This process also hosts enforcement: an unreadable identity must not crash it.
+            .catch { Log.w("MonolithApplication", "Leaderboard heartbeat scheduling stopped", it) }
+            .launchIn(appScope)
 
         // Idle until backup is turned on.
         backupScheduler.start(appScope)
