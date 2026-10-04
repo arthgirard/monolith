@@ -167,10 +167,11 @@ class FriendsViewModel @Inject constructor(
         viewModelScope.launch { repository.selectGroup(groupId) }
     }
 
-    fun refresh() {
+    /** The returned job ends when this fetch lands, or when a newer one replaces it. */
+    fun refresh(): Job {
         // Only the latest request may land: a slow day board must not fill the week tab.
         boardJob?.cancel()
-        boardJob = viewModelScope.launch {
+        return viewModelScope.launch {
             state.update { it.copy(boardStatus = if (it.rows.isEmpty()) BoardStatus.LOADING else it.boardStatus) }
             val window = state.value.window
             val token = state.value.identity?.token ?: return@launch
@@ -190,7 +191,7 @@ class FriendsViewModel @Inject constructor(
                     }
                 }
             }
-        }
+        }.also { boardJob = it }
     }
 
     fun showApps(row: BoardRow) = state.update { it.copy(appsOf = row) }

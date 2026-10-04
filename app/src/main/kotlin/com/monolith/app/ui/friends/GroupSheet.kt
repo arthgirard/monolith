@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,9 +29,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.monolith.app.R
 import com.monolith.app.domain.model.GroupInfo
@@ -116,7 +117,8 @@ internal fun SectionHeader(text: String) {
 
 @Composable
 private fun InviteCodeCard(inviteCode: String) {
-    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val copier = rememberInviteCopier()
     SettingsGroup {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
@@ -130,8 +132,14 @@ private fun InviteCodeCard(inviteCode: String) {
                 )
                 Text(inviteCode, style = MaterialTheme.typography.headlineSmall.mono())
             }
-            IconButton(onClick = { clipboard.setText(AnnotatedString(inviteCode)) }) {
-                Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.friends_copy))
+            IconButton(onClick = { copier.copy(inviteCode) }) {
+                Icon(
+                    if (copier.copied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
+                    contentDescription = stringResource(if (copier.copied) R.string.friends_copied else R.string.friends_copy),
+                )
+            }
+            IconButton(onClick = { shareInvite(context, inviteCode) }) {
+                Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.friends_invite_share))
             }
         }
     }
