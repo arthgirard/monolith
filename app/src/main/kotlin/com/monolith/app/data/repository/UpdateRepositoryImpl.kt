@@ -2,6 +2,7 @@ package com.monolith.app.data.repository
 
 import android.content.Context
 import com.monolith.app.BuildConfig
+import com.monolith.app.domain.model.AppUpdate
 import com.monolith.app.domain.model.DownloadState
 import com.monolith.app.domain.model.UpdateCheckResult
 import com.monolith.app.domain.repository.UpdateRepository
@@ -24,6 +25,7 @@ import javax.inject.Singleton
 @Serializable
 private data class GithubRelease(
     @SerialName("tag_name") val tagName: String,
+    val body: String? = null,
     val assets: List<GithubAsset> = emptyList(),
 )
 
@@ -60,7 +62,9 @@ class UpdateRepositoryImpl @Inject constructor(
                 ?: return@withContext UpdateCheckResult.Failure("Latest release has no APK attached.")
 
             if (isNewer(latestVersion, BuildConfig.VERSION_NAME)) {
-                UpdateCheckResult.UpdateAvailable(latestVersion, apkAsset.browserDownloadUrl)
+                UpdateCheckResult.UpdateAvailable(
+                    AppUpdate(latestVersion, apkAsset.browserDownloadUrl, parseReleaseNotes(release.body.orEmpty())),
+                )
             } else {
                 UpdateCheckResult.UpToDate
             }
@@ -105,6 +109,17 @@ class UpdateRepositoryImpl @Inject constructor(
     }.flowOn(Dispatchers.IO)
 
     override fun canInstallPackages(): Boolean = context.packageManager.canRequestPackageInstalls()
+
+    /**
+     * Release bodies are short markdown lists under a "## x.y.z release notes" heading. The popup
+     * shows them as plain rows, so headings and blank lines go and the bullet markers come off.
+     */
+    private fun parseReleaseNotes(body: String): List<String> =
+        body.lines()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .map { it.removePrefix("- ").removePrefix("* ").trim() }
+            .filter { it.isNotEmpty() }
 
     /** Pairwise numeric comparison, e.g. "1.10.0" > "1.9.0" (unlike a plain string compare). */
     private fun isNewer(remote: String, local: String): Boolean {

@@ -166,6 +166,7 @@ private object Keys {
     val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     val STRICTNESS_LEVEL = stringPreferencesKey("strictness_level")
     val DISPLAY_NAME = stringPreferencesKey("display_name")
+    val DISMISSED_UPDATE_VERSION = stringPreferencesKey("dismissed_update_version")
 }
 
 @Singleton
@@ -190,6 +191,13 @@ class MonolithPreferences @Inject constructor(
 
     suspend fun setOnboardingCompleted() {
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
+    }
+
+    /** The release the launch prompt was told "Later" for; a newer one still gets offered. */
+    val dismissedUpdateVersion: Flow<String?> = context.dataStore.data.map { it[Keys.DISMISSED_UPDATE_VERSION] }
+
+    suspend fun setDismissedUpdateVersion(version: String) {
+        context.dataStore.edit { it[Keys.DISMISSED_UPDATE_VERSION] = version }
     }
 
     override val displayName: Flow<String> = context.dataStore.data.map { it[Keys.DISPLAY_NAME].orEmpty() }

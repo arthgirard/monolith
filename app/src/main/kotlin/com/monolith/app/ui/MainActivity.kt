@@ -24,6 +24,7 @@ import com.monolith.app.service.LeaderboardSyncer
 import com.monolith.app.ui.navigation.MonolithDestination
 import com.monolith.app.ui.navigation.MonolithNavHost
 import com.monolith.app.ui.theme.MonolithTheme
+import com.monolith.app.ui.update.UpdateDialogs
 import com.monolith.app.util.AppLocale
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -67,6 +68,15 @@ class MainActivity : ComponentActivity() {
                 )
 
                 RecheckPermissionsOnResume(navController)
+
+                val updateState by viewModel.updateState.collectAsState()
+                UpdateDialogs(
+                    state = updateState,
+                    onDownload = viewModel::startUpdateDownload,
+                    onLater = viewModel::postponeUpdate,
+                    onDismiss = viewModel::dismissUpdate,
+                    onResume = viewModel::onUpdateResume,
+                )
 
                 val shouldOpenTimeSaved by openTimeSaved
                 LaunchedEffect(shouldOpenTimeSaved) {
@@ -131,6 +141,7 @@ class MainActivity : ComponentActivity() {
         nfcManager.enableForegroundDispatch(this)
         leaderboardSyncer.requestSync()
         backupScheduler.onAppOpen()
+        viewModel.checkForUpdateOnOpen()
     }
 
     override fun onPause() {

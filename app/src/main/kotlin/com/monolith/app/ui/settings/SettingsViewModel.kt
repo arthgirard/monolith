@@ -2,20 +2,18 @@ package com.monolith.app.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.monolith.app.domain.model.DownloadState
+import com.monolith.app.domain.model.AppUpdate
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.StrictnessLevel
-import com.monolith.app.domain.model.UpdateCheckResult
 import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.repository.LeaderboardRepository
-import com.monolith.app.domain.usecase.CanInstallPackagesUseCase
-import com.monolith.app.domain.usecase.CheckForUpdateUseCase
-import com.monolith.app.domain.usecase.DownloadUpdateUseCase
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.ObserveLinkedTagUseCase
 import com.monolith.app.domain.usecase.ObserveStrictnessUseCase
+import com.monolith.app.ui.update.UpdateFlow
+import com.monolith.app.ui.update.UpdateUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 data class SettingsUiState(
@@ -47,25 +44,12 @@ data class BackupUiState(
     val busy: Boolean = false,
 )
 
-sealed interface UpdateUiState {
-    data object Idle : UpdateUiState
-    data object Checking : UpdateUiState
-    data object UpToDate : UpdateUiState
-    data class Available(val versionName: String, val downloadUrl: String) : UpdateUiState
-    data class NeedsInstallPermission(val versionName: String, val downloadUrl: String) : UpdateUiState
-    data class Downloading(val fraction: Float?) : UpdateUiState
-    data class ReadyToInstall(val file: File) : UpdateUiState
-    data class Failed(val message: String) : UpdateUiState
-}
-
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     observeStrictness: ObserveStrictnessUseCase,
     observeLinkedTag: ObserveLinkedTagUseCase,
     observeBlockState: ObserveBlockStateUseCase,
-    private val checkForUpdate: CheckForUpdateUseCase,
-    private val downloadUpdate: DownloadUpdateUseCase,
-    private val canInstallPackages: CanInstallPackagesUseCase,
+    private val updateFlow: UpdateFlow,
     private val backupRepository: BackupRepository,
     private val leaderboardRepository: LeaderboardRepository,
 ) : ViewModel() {
@@ -132,38 +116,13 @@ class SettingsViewModel @Inject constructor(
         SettingsUiState(strictness = strictness, linkedTag = linkedTag, isLocked = blockState.isActive)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
-    private val _updateState = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
-    val updateState: StateFlow<UpdateUiState> = _updateState
+    val updateState: StateFlow<UpdateUiState> = updateFlow.state
 
-    fun checkForUpdates() {
-        if (_updateState.value == UpdateUiState.Checking) return
-        _updateState.value = UpdateUiState.Checking
-        viewModelScope.launch {
-            _updateState.value = when (val result = checkForUpdate()) {
-                is UpdateCheckResult.UpdateAvailable -> UpdateUiState.Available(result.versionName, result.downloadUrl)
-                UpdateCheckResult.UpToDate -> UpdateUiState.UpToDate
-                is UpdateCheckResult.Failure -> UpdateUiState.Failed(result.reason)
-            }
-        }
-    }
+    fun checkForUpdates() = updateFlow.check(viewModelScope)
 
-    fun startDownload(versionName: String, downloadUrl: String) {
-        if (!canInstallPackages()) {
-            _updateState.value = UpdateUiState.NeedsInstallPermission(versionName, downloadUrl)
-            return
-        }
-        viewModelScope.launch {
-            downloadUpdate(downloadUrl).collect { state ->
-                _updateState.value = when (state) {
-                    is DownloadState.Progress -> UpdateUiState.Downloading(state.fraction)
-                    is DownloadState.Complete -> UpdateUiState.ReadyToInstall(state.file)
-                    is DownloadState.Failed -> UpdateUiState.Failed(state.reason)
-                }
-            }
-        }
-    }
+    fun startDownload(update: AppUpdate) = updateFlow.startDownload(viewModelScope, update)
 
-    fun dismissUpdateDialog() {
-        _updateState.value = UpdateUiState.Idle
-    }
+    fun onUpdateResume() = updateFlow.onResume(viewModelScope)
+
+    fun dismissUpdateDialog() = updateFlow.dismiss()
 }
