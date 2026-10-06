@@ -50,6 +50,11 @@
     <string name="strictness_absolute_title">Absolute</string>
     <string name="strictness_absolute_desc">Nothing lifts Monolith but the tag.</string>
     <string name="strictness_uninstall_caveat">You can still uninstall Monolith. That\'s on purpose.</string>
+    <string name="strictness_uninstall_guard_title">Block uninstalling</string>
+    <string name="strictness_uninstall_guard_desc">While Monolith is on, its uninstall prompt, App info and accessibility pages close as soon as they open.</string>
+    <string name="strictness_uninstall_guard_caveat">A computer can still remove Monolith.</string>
+    <string name="uninstall_guard_headline">Monolith is on</string>
+    <string name="uninstall_guard_body">Turn it off with your tag first.</string>
 
     <string name="onboarding_complete_title">You\'re all set!</string>
     <string name="onboarding_complete_title_named">You\'re all set, %1$s!</string>

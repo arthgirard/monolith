@@ -2,16 +2,22 @@ package com.monolith.app.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import com.monolith.app.R
 import com.monolith.app.domain.model.BlockState
 import com.monolith.app.domain.model.SystemPackages
 import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.AppUnlockRepository
 import com.monolith.app.domain.repository.BlockRepository
+import com.monolith.app.domain.repository.StrictnessRepository
 import com.monolith.app.domain.usecase.RecordBlockHitUseCase
 import com.monolith.app.ui.bypass.BlockOverlayActivity
+import com.monolith.app.ui.guard.UninstallGuardActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,12 +30,11 @@ import javax.inject.Inject
 
 /**
  * Watches foreground-app changes and throws up the block overlay whenever Monolith is
- * enforcing and the foreground package is on the blocked list. Settings isn't hard-blocked:
- * a user determined to disable the accessibility service could just uninstall Monolith from
- * the home screen instead, so hard-blocking it stops nothing while catching false positives
- * like system dialogs (biometric/PIN confirmation, location prompts, ...) that happen to be
- * hosted inside the Settings package. Monolith's own UI is deliberately left reachable, since
- * the emergency bypass button lives there.
+ * enforcing and the foreground package is on the blocked list. Settings as a whole isn't
+ * hard-blocked: that would catch system dialogs (biometric/PIN confirmation, location prompts,
+ * ...) that happen to be hosted inside the Settings package. Instead, with the uninstall guard on,
+ * only the pages that would take Monolith apart are shut while it's active (see [UninstallGuard]).
+ * Monolith's own UI is deliberately left reachable, since the emergency bypass button lives there.
  */
 @AndroidEntryPoint
 class AppBlockAccessibilityService : AccessibilityService() {
@@ -40,6 +45,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
     @Inject lateinit var overlayGuard: BlockOverlayGuard
     @Inject lateinit var recordBlockHit: RecordBlockHitUseCase
     @Inject lateinit var statusNotifier: StatusNotifier
+    @Inject lateinit var strictnessRepository: StrictnessRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -53,6 +59,15 @@ class AppBlockAccessibilityService : AccessibilityService() {
 
     /** The app on screen that was let through, whose restored notifications go once it's left. */
     @Volatile private var visitedPackage: String? = null
+
+    @Volatile private var uninstallGuardOn: Boolean = true
+
+    /** Main-thread only, like everything below that touches it. */
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val appLabel: String by lazy { getString(R.string.app_name) }
+    private var watchingContent = false
+    private var guardShownAt = 0L
+    private val guardCheck = Runnable { if (guardedScreenShown()) showGuard() }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -70,6 +85,9 @@ class AppBlockAccessibilityService : AccessibilityService() {
                     unlockedPackages = unlocks
                     if (pauseCutShort) withContext(Dispatchers.Main) { blockAppInFront() }
                 }
+        }
+        serviceScope.launch {
+            strictnessRepository.observeUninstallGuard().collect { uninstallGuardOn = it }
         }
     }
 
@@ -107,10 +125,122 @@ class AppBlockAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        val foregroundPackage = event.packageName?.toString() ?: return
-        val blocked = blockIfNeeded(foregroundPackage, event.className?.toString())
-        trackVisit(foregroundPackage, blocked)
+        val eventPackage = event?.packageName?.toString() ?: return
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                if (UninstallGuard.watches(eventPackage)) scheduleGuardCheck()
+                return
+            }
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> Unit
+            else -> return
+        }
+        watchContentFor(eventPackage)
+        if (guardIfNeeded(eventPackage)) {
+            trackVisit(eventPackage, blocked = true)
+            return
+        }
+        val blocked = blockIfNeeded(eventPackage, event.className?.toString())
+        trackVisit(eventPackage, blocked)
+    }
+
+    private fun guardArmed(): Boolean = uninstallGuardOn && blockState.isActive
+
+    /**
+     * Checked on arrival, and again a moment later: a Settings page often fills in its title after
+     * the window has opened, and the installer's prompt can do the same. Returns whether the
+     * guard took over the screen.
+     */
+    private fun guardIfNeeded(foregroundPackage: String): Boolean {
+        if (!guardArmed() || !UninstallGuard.watches(foregroundPackage)) return false
+        if (guardedScreenShown()) {
+            showGuard()
+            return true
+        }
+        scheduleGuardCheck()
+        return false
+    }
+
+    /**
+     * Settings moves between its pages without opening a new window, so window changes alone
+     * would miss App info reached from inside Settings. Content changes fire constantly in every
+     * app, though, so they're only subscribed to while a watched package is in front.
+     */
+    private fun watchContentFor(foregroundPackage: String) {
+        // The shade over Settings says nothing about what's under it, and Monolith's own windows
+        // include the guard's flash.
+        if (foregroundPackage == SystemPackages.SYSTEM_UI || foregroundPackage == packageName) return
+        val watch = guardArmed() && UninstallGuard.watches(foregroundPackage)
+        if (watch == watchingContent) return
+        val info = serviceInfo ?: return
+        info.eventTypes = if (watch) {
+            info.eventTypes or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        } else {
+            info.eventTypes and AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED.inv()
+        }
+        serviceInfo = info
+        watchingContent = watch
+        if (!watch) mainHandler.removeCallbacks(guardCheck)
+    }
+
+    /** Coalesces a burst of content changes into one look once the page has settled. */
+    private fun scheduleGuardCheck() {
+        mainHandler.removeCallbacks(guardCheck)
+        mainHandler.postDelayed(guardCheck, GUARD_CHECK_DELAY_MILLIS)
+    }
+
+    private fun guardedScreenShown(): Boolean {
+        if (!guardArmed()) return false
+        val windows = runCatching { windows }.getOrNull() ?: return false
+        return windows.any { window ->
+            if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) return@any false
+            val root = runCatching { window.root }.getOrNull() ?: return@any false
+            val windowPackage = root.packageName?.toString() ?: return@any false
+            if (!UninstallGuard.watches(windowPackage)) return@any false
+            val title = window.title?.toString()
+            runCatching {
+                UninstallGuard.isGuardedScreen(windowPackage, appLabel, title, guardNodes(root))
+            }.getOrDefault(false).also { guarded ->
+                // Diagnostic only, as for the Settings classes below: when a skin's App info page
+                // slips through, this is what shows which title or ID it uses instead.
+                if (!guarded) Log.d(LOG_TAG, "guard passed $windowPackage window title=$title")
+            }
+        }
+    }
+
+    /** The window's nodes, breadth first and capped, so a long list can't stall the check. */
+    private fun guardNodes(root: AccessibilityNodeInfo): Sequence<GuardNode> = sequence {
+        val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+        var visited = 0
+        while (queue.isNotEmpty() && visited < GUARD_NODE_LIMIT) {
+            val node = queue.removeFirst()
+            visited++
+            yield(
+                GuardNode(
+                    text = node.text?.toString(),
+                    contentDescription = node.contentDescription?.toString(),
+                    viewId = node.viewIdResourceName,
+                    isCheckable = node.isCheckable,
+                ),
+            )
+            for (i in 0 until node.childCount) node.getChild(i)?.let(queue::add)
+        }
+    }
+
+    private fun showGuard() {
+        mainHandler.removeCallbacks(guardCheck)
+        val now = System.currentTimeMillis()
+        // One flash per attempt: the page underneath keeps reporting changes until the flash
+        // covers it. Shorter than the flash itself, so coming straight back via Recents is caught.
+        if (now - guardShownAt < GUARD_REPEAT_WINDOW_MILLIS) return
+        guardShownAt = now
+        Log.d(LOG_TAG, "uninstall guard caught a page about Monolith")
+        // Covered at once, as for a blocked app: the uninstall prompt's OK button is one tap away.
+        overlayGuard.show()
+        startActivity(
+            Intent(this, UninstallGuardActivity::class.java).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION,
+            ),
+        )
     }
 
     /**
@@ -200,6 +330,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(guardCheck)
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -207,6 +338,9 @@ class AppBlockAccessibilityService : AccessibilityService() {
     companion object {
         private const val LOG_TAG = "MonolithBlock"
         private const val OVERLAY_PERMISSION_NOTICE_INTERVAL_MILLIS = 60L * 60 * 1000
+        private const val GUARD_CHECK_DELAY_MILLIS = 150L
+        private const val GUARD_REPEAT_WINDOW_MILLIS = 1_000L
+        private const val GUARD_NODE_LIMIT = 400
 
         /**
          * Transient helper windows that report under the Settings package without being a real

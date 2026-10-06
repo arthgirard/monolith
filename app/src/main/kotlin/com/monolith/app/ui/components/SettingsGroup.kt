@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -100,13 +101,17 @@ fun SettingsRow(
     }
 }
 
-/** A [SettingsRow] whose whole surface toggles a switch; the switch itself only displays. */
+/**
+ * A [SettingsRow] whose whole surface toggles a switch; the switch itself only displays.
+ * [supporting] is a line under the label for a toggle whose name can't say everything it does.
+ */
 @Composable
 fun SettingsToggleRow(
     label: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
+    supporting: String? = null,
 ) {
     val contentAlpha = if (enabled) 1f else DisabledAlpha
     Row(
@@ -116,12 +121,22 @@ fun SettingsToggleRow(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                label,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+            )
+            if (supporting != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    supporting,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
+                )
+            }
+        }
+        Spacer(Modifier.width(16.dp))
         Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }

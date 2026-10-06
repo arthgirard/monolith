@@ -51,6 +51,11 @@
     <string name="strictness_absolute_title">Absoluto</string>
     <string name="strictness_absolute_desc">Nada levanta Monolith salvo la etiqueta.</string>
     <string name="strictness_uninstall_caveat">Aún puede desinstalar Monolith. Es a propósito.</string>
+    <string name="strictness_uninstall_guard_title">Bloquear la desinstalación</string>
+    <string name="strictness_uninstall_guard_desc">Mientras Monolith está activo, su aviso de desinstalación, su página de información y su página de accesibilidad se cierran nada más abrirse.</string>
+    <string name="strictness_uninstall_guard_caveat">Un ordenador aún puede eliminar Monolith.</string>
+    <string name="uninstall_guard_headline">Monolith está activo</string>
+    <string name="uninstall_guard_body">Desactívelo antes con su etiqueta.</string>
     <string name="onboarding_complete_title">¡Todo listo!</string>
     <string name="onboarding_complete_title_named">¡Todo listo, %1$s!</string>
     <string name="onboarding_complete_desc">Monolith le da la bienvenida.</string>

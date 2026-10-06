@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monolith.app.R
 import com.monolith.app.domain.model.StrictnessLevel
+import com.monolith.app.ui.components.SettingsGroup
+import com.monolith.app.ui.components.SettingsToggleRow
 import com.monolith.app.ui.theme.DisabledAlpha
 import com.monolith.app.ui.theme.MonolithButtonShape
 
@@ -127,12 +129,28 @@ fun StrictnessScreen(
                     )
                 }
 
+                SettingsGroup {
+                    SettingsToggleRow(
+                        label = stringResource(R.string.strictness_uninstall_guard_title),
+                        supporting = stringResource(R.string.strictness_uninstall_guard_desc),
+                        checked = uiState.uninstallGuard,
+                        onCheckedChange = viewModel::setUninstallGuard,
+                        enabled = !uiState.isLocked,
+                    )
+                }
+
                 // Said here rather than left for someone to discover. A screen offering a level
-                // called Absolute has to be honest about what it cannot hold, or the first person
-                // who works out that Monolith uninstalls like any other app learns that the rest
-                // of the screen was overselling too.
+                // called Absolute has to be honest about what it cannot hold: with the guard off
+                // Monolith uninstalls like any other app, and even with it on a computer over ADB
+                // can still remove it. Overselling either would make the rest of the screen suspect.
                 Text(
-                    stringResource(R.string.strictness_uninstall_caveat),
+                    stringResource(
+                        if (uiState.uninstallGuard) {
+                            R.string.strictness_uninstall_guard_caveat
+                        } else {
+                            R.string.strictness_uninstall_caveat
+                        },
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

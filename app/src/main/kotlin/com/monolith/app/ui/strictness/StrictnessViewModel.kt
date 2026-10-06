@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.monolith.app.domain.model.StrictnessLevel
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
 import com.monolith.app.domain.usecase.ObserveStrictnessUseCase
+import com.monolith.app.domain.usecase.ObserveUninstallGuardUseCase
 import com.monolith.app.domain.usecase.SaveStrictnessLevelUseCase
+import com.monolith.app.domain.usecase.SaveUninstallGuardUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +18,7 @@ import javax.inject.Inject
 
 data class StrictnessUiState(
     val level: StrictnessLevel = StrictnessLevel.DEFAULT,
+    val uninstallGuard: Boolean = true,
     /** True while Monolith is active, when the choice is the tag's to change and not the screen's. */
     val isLocked: Boolean = false,
 )
@@ -23,15 +26,18 @@ data class StrictnessUiState(
 @HiltViewModel
 class StrictnessViewModel @Inject constructor(
     observeStrictness: ObserveStrictnessUseCase,
+    observeUninstallGuard: ObserveUninstallGuardUseCase,
     observeBlockState: ObserveBlockStateUseCase,
     private val saveStrictnessLevel: SaveStrictnessLevelUseCase,
+    private val saveUninstallGuard: SaveUninstallGuardUseCase,
 ) : ViewModel() {
 
     val uiState: StateFlow<StrictnessUiState> = combine(
         observeStrictness(),
+        observeUninstallGuard(),
         observeBlockState(),
-    ) { level, blockState ->
-        StrictnessUiState(level = level, isLocked = blockState.isActive)
+    ) { level, uninstallGuard, blockState ->
+        StrictnessUiState(level = level, uninstallGuard = uninstallGuard, isLocked = blockState.isActive)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StrictnessUiState())
 
     /**
@@ -42,5 +48,10 @@ class StrictnessViewModel @Inject constructor(
      */
     fun select(level: StrictnessLevel) {
         viewModelScope.launch { saveStrictnessLevel(level) }
+    }
+
+    /** Silent on refusal, for the same reason as [select]. */
+    fun setUninstallGuard(enabled: Boolean) {
+        viewModelScope.launch { saveUninstallGuard(enabled) }
     }
 }

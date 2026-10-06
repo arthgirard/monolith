@@ -150,6 +150,7 @@ class FakeAppRepository(
 
 class FakeStrictnessRepository(level: StrictnessLevel = StrictnessLevel.DEFAULT) : StrictnessRepository {
     private val stored = MutableStateFlow(level)
+    private val guard = MutableStateFlow(true)
 
     override fun observeStrictness(): Flow<StrictnessLevel> = stored
 
@@ -157,7 +158,15 @@ class FakeStrictnessRepository(level: StrictnessLevel = StrictnessLevel.DEFAULT)
         stored.value = level
     }
 
+    override fun observeUninstallGuard(): Flow<Boolean> = guard
+
+    override suspend fun setUninstallGuard(enabled: Boolean) {
+        guard.value = enabled
+    }
+
     fun current(): StrictnessLevel = stored.value
+
+    fun currentGuard(): Boolean = guard.value
 }
 
 class FakeScheduleRepository(schedules: List<BlockSchedule> = emptyList()) : ScheduleRepository {

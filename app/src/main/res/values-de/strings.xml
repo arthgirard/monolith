@@ -51,6 +51,11 @@
     <string name="strictness_absolute_title">Absolut</string>
     <string name="strictness_absolute_desc">Nur der Tag hebt Monolith auf.</string>
     <string name="strictness_uninstall_caveat">Sie können Monolith weiterhin deinstallieren. Das ist Absicht.</string>
+    <string name="strictness_uninstall_guard_title">Deinstallation sperren</string>
+    <string name="strictness_uninstall_guard_desc">Solange Monolith aktiv ist, schließen sich der Deinstallationsdialog, die App-Info und die Bedienungshilfen-Seite sofort wieder.</string>
+    <string name="strictness_uninstall_guard_caveat">Über einen Computer lässt sich Monolith weiterhin entfernen.</string>
+    <string name="uninstall_guard_headline">Monolith ist aktiv</string>
+    <string name="uninstall_guard_body">Schalten Sie es zuerst mit Ihrem Tag aus.</string>
     <string name="onboarding_complete_title">Alles bereit!</string>
     <string name="onboarding_complete_title_named">Alles bereit, %1$s!</string>
     <string name="onboarding_complete_desc">Willkommen bei Monolith.</string>

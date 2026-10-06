@@ -14,6 +14,8 @@ data class BackupSnapshot(
     val importantPeople: List<PersonEntry>,
     val schedules: List<ScheduleEntry>,
     val strictness: String?,
+    /** Absent in backups made before the setting existed, which restore as the default (on). */
+    val uninstallGuard: Boolean? = null,
 ) {
     @Serializable
     data class SessionEntry(val start: Long, val end: Long)

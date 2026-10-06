@@ -7,4 +7,9 @@ interface StrictnessRepository {
     fun observeStrictness(): Flow<StrictnessLevel>
 
     suspend fun setStrictness(level: StrictnessLevel)
+
+    /** Whether an active Monolith keeps the user out of its own uninstall and settings pages. */
+    fun observeUninstallGuard(): Flow<Boolean>
+
+    suspend fun setUninstallGuard(enabled: Boolean)
 }

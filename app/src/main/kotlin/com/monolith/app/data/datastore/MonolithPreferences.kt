@@ -167,6 +167,7 @@ private object Keys {
     val SCHEDULE_LAST_FIRE = longPreferencesKey("schedule_last_fire_handled_at")
     val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     val STRICTNESS_LEVEL = stringPreferencesKey("strictness_level")
+    val UNINSTALL_GUARD = booleanPreferencesKey("uninstall_guard")
     val DISPLAY_NAME = stringPreferencesKey("display_name")
     val DISMISSED_UPDATE_VERSION = stringPreferencesKey("dismissed_update_version")
 }
@@ -221,6 +222,17 @@ class MonolithPreferences @Inject constructor(
 
     suspend fun setStrictnessLevel(level: StrictnessLevel) {
         context.dataStore.edit { it[Keys.STRICTNESS_LEVEL] = level.name }
+    }
+
+    /**
+     * Whether an active Monolith keeps its own uninstall and settings pages shut. On unless turned
+     * off, installs that predate the setting included: the absent value is read as the default
+     * rather than as a choice someone made.
+     */
+    val uninstallGuard: Flow<Boolean> = context.dataStore.data.map { it[Keys.UNINSTALL_GUARD] ?: true }
+
+    suspend fun setUninstallGuard(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.UNINSTALL_GUARD] = enabled }
     }
 
     val blockState: Flow<BlockState> = context.dataStore.data.map { prefs ->
@@ -601,6 +613,7 @@ internal fun readSnapshot(prefs: Preferences, now: Long): BackupSnapshot = Backu
     schedules = decodeList<BlockScheduleDto>(prefs[Keys.BLOCK_SCHEDULES])
         .map { BackupSnapshot.ScheduleEntry(it.id, it.enabled, it.days, it.startMinuteOfDay) },
     strictness = prefs[Keys.STRICTNESS_LEVEL],
+    uninstallGuard = prefs[Keys.UNINSTALL_GUARD],
 )
 
 private fun activeSegments(prefs: Preferences, now: Long): List<BlockSessionDto> {
@@ -628,7 +641,7 @@ private fun runningSegments(prefs: Preferences, startedAt: Long, now: Long): Lis
     )
 }
 
-/** Replaces exactly the five backed-up keys; everything device-bound is left alone. */
+/** Replaces exactly the backed-up keys; everything device-bound is left alone. */
 internal fun applySnapshot(prefs: MutablePreferences, snapshot: BackupSnapshot) {
     prefs[Keys.BLOCK_SESSIONS] = snapshotJson.encodeToString(
         snapshot.sessions.map { BlockSessionDto(it.start, it.end) },
@@ -642,4 +655,6 @@ internal fun applySnapshot(prefs: MutablePreferences, snapshot: BackupSnapshot) 
     )
     val strictness = snapshot.strictness
     if (strictness == null) prefs.remove(Keys.STRICTNESS_LEVEL) else prefs[Keys.STRICTNESS_LEVEL] = strictness
+    val uninstallGuard = snapshot.uninstallGuard
+    if (uninstallGuard == null) prefs.remove(Keys.UNINSTALL_GUARD) else prefs[Keys.UNINSTALL_GUARD] = uninstallGuard
 }

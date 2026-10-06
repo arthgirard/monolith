@@ -51,6 +51,11 @@
     <string name="strictness_absolute_title">Absoluut</string>
     <string name="strictness_absolute_desc">Niets tilt Monolith op, behalve de tag.</string>
     <string name="strictness_uninstall_caveat">U kunt Monolith nog steeds verwijderen. Dat is met opzet.</string>
+    <string name="strictness_uninstall_guard_title">Verwijderen blokkeren</string>
+    <string name="strictness_uninstall_guard_desc">Zolang Monolith aan staat, sluiten het verwijdervenster, de app-info en de toegankelijkheidspagina meteen weer.</string>
+    <string name="strictness_uninstall_guard_caveat">Via een computer kan Monolith nog steeds worden verwijderd.</string>
+    <string name="uninstall_guard_headline">Monolith staat aan</string>
+    <string name="uninstall_guard_body">Zet het eerst uit met uw tag.</string>
     <string name="onboarding_complete_title">Klaar!</string>
     <string name="onboarding_complete_title_named">Klaar, %1$s!</string>
     <string name="onboarding_complete_desc">Welkom bij Monolith.</string>

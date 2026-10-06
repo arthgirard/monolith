@@ -65,6 +65,15 @@
             android:theme="@style/Theme.Monolith.Overlay"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Shown over Monolith's own uninstall and settings pages while it is on, then home. -->
+        <activity
+            android:name=".ui.guard.UninstallGuardActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Monolith.Overlay" />
+
         <!--
             Background NFC tap target: a tag scan while Monolith isn't foregrounded is routed
             straight here by the OS Tag Dispatch System (not through MainActivity), so it can

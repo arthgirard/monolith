@@ -17,4 +17,10 @@ class StrictnessRepositoryImpl @Inject constructor(
     override suspend fun setStrictness(level: StrictnessLevel) {
         preferences.setStrictnessLevel(level)
     }
+
+    override fun observeUninstallGuard(): Flow<Boolean> = preferences.uninstallGuard
+
+    override suspend fun setUninstallGuard(enabled: Boolean) {
+        preferences.setUninstallGuard(enabled)
+    }
 }

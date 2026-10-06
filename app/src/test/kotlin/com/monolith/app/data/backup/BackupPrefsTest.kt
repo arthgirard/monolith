@@ -20,6 +20,7 @@ class BackupPrefsTest {
         importantPeople = listOf(BackupSnapshot.PersonEntry("com.a", name = "Sam")),
         schedules = listOf(BackupSnapshot.ScheduleEntry("s1", true, listOf("MONDAY"), 540)),
         strictness = "STRICT",
+        uninstallGuard = false,
     )
 
     @Test
@@ -75,11 +76,12 @@ class BackupPrefsTest {
     fun `restore replaces rather than merges sessions and apps`() {
         val prefs = mutablePreferencesOf()
         applySnapshot(prefs, snapshot)
-        applySnapshot(prefs, snapshot.copy(sessions = emptyList(), blockedPackages = emptyList(), strictness = null))
+        applySnapshot(prefs, snapshot.copy(sessions = emptyList(), blockedPackages = emptyList(), strictness = null, uninstallGuard = null))
         val read = readSnapshot(prefs, now = 0)
         assertEquals(emptyList<BackupSnapshot.SessionEntry>(), read.sessions)
         assertEquals(emptyList<String>(), read.blockedPackages)
         assertEquals(null, read.strictness)
+        assertEquals(null, read.uninstallGuard)
     }
 
     @Test
