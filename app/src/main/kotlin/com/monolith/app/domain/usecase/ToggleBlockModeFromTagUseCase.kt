@@ -32,6 +32,15 @@ class ToggleBlockModeFromTagUseCase @Inject constructor(
             }
         }
 
+        // What a writable tag carries can change behind this phone's back: re-linked on another
+        // phone, or linked before codes were written. Only a code actually read is recorded; a
+        // missed read is not proof the code is gone.
+        if (linked.mode == TagLinkMode.SMART_NDEF) {
+            tagProvisioner.readCode(tag)?.let { onTag ->
+                if (onTag != linked.code) blockRepository.saveLinkedTag(linked.copy(code = onTag))
+            }
+        }
+
         val current = blockRepository.observeBlockState().first()
         val nowActive = !current.isActive
         blockRepository.setBlockModeActive(nowActive)
