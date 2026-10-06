@@ -103,6 +103,16 @@ class NfcLinkViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The screen has moved on from a restore. Settled as a plain link, so coming Back to this step
+     * shows the linked tag instead of replaying the restore's navigation.
+     */
+    fun restoreHandled() {
+        if (_status.value is NfcLinkStatus.Restored) {
+            _status.value = NfcLinkStatus.Success(TagLinkMode.SMART_NDEF, carriesCode = true)
+        }
+    }
+
     fun tryAgain() {
         _status.value = NfcLinkStatus.Checking
         viewModelScope.launch {

@@ -60,6 +60,7 @@ fun NfcLinkScreen(
         val restored = status as? NfcLinkStatus.Restored ?: return@LaunchedEffect
         // A backup brings the whole setup back; friends alone still need it walked through.
         if (restored.hasBackup) onRestored?.invoke() else onLinked?.invoke()
+        viewModel.restoreHandled()
     }
 
     Scaffold(
