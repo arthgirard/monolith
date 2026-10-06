@@ -50,17 +50,25 @@ class IdentityManager @Inject constructor(
      * until it registers. Null for an identity from before backups, whose code exists only once it
      * migrates.
      */
-    suspend fun localMaster(): String? = mutex.withLock {
-        val identity = store.identity.first()
-        if (identity != null) return@withLock identity.master
+    suspend fun localMaster(): String? {
+        store.identity.first()?.let { return it.master }
+        return unregisteredMaster()
+    }
+
+    // Its own lock: [mutex] is held across a registration's network call, and a tag being linked
+    // has to get its code while it is still against the phone.
+    private val masterMutex = Mutex()
+
+    /** Made once and kept: a registration in flight and a tag being linked must agree on it. */
+    private suspend fun unregisteredMaster(): String = masterMutex.withLock {
         store.unregisteredMaster.first()
             ?: BackupCrypto.encodeCode(BackupCrypto.newMaster()).also { store.saveUnregisteredMaster(it) }
     }
 
     private suspend fun register(displayName: String?): LeaderboardResult<Unit> {
-        // A master already written to a tag is the one to register, or the tag would carry a code
-        // that restores nothing.
-        val master = store.unregisteredMaster.first()?.let(BackupCrypto::decodeCode) ?: BackupCrypto.newMaster()
+        // The same master a tag linked meanwhile is given, or the tag would carry a code that
+        // restores nothing.
+        val master = BackupCrypto.decodeCode(unregisteredMaster()) ?: BackupCrypto.newMaster()
         val token = BackupCrypto.deriveToken(master)
         return api.register(RegisterRequest(token, displayName)).andThen {
             // A restore may have stored another identity meanwhile; this one is then left unused.

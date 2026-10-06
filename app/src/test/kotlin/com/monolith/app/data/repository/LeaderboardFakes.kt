@@ -35,7 +35,6 @@ internal class FakeIdentityStore(initial: Identity? = null, selected: String? = 
         this.identity.value = identity
         removedNotice.value = false
         if (identity.master != null) pendingMaster.value = null
-        unregisteredMaster.value = null
     }
     override suspend fun saveGroups(groups: List<GroupInfo>) {
         identity.value = identity.value?.copy(groups = groups)
@@ -75,6 +74,7 @@ internal class FakeLeaderboardApi : LeaderboardApi {
     var getBackupResult: LeaderboardResult<ByteArray> = LeaderboardResult.Err(LeaderboardError.NO_BACKUP)
     var deleteBackupResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
     var duringBoard: suspend () -> Unit = {}
+    var duringRegister: suspend () -> Unit = {}
     /** Tokens the server no longer knows (deleted user, or pre-migration): every call is a 401. */
     val deadTokens = mutableSetOf<String>()
     val syncResults = ArrayDeque<LeaderboardResult<Unit>>()
@@ -96,6 +96,7 @@ internal class FakeLeaderboardApi : LeaderboardApi {
 
     override suspend fun register(request: RegisterRequest): LeaderboardResult<Unit> {
         registerRequests += request
+        duringRegister()
         return registerResult
     }
     override suspend fun rotateToken(token: String, request: RotateTokenRequest): LeaderboardResult<Unit> {

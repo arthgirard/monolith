@@ -34,7 +34,8 @@ interface IdentityStore {
 
     /**
      * A master made on the phone before any server knows it: written to a tag during setup, and
-     * registered on the next online moment. Cleared by any [save], and by [clear].
+     * registered on the next online moment. Kept after registering, so a link racing the
+     * registration still gets the same code; only [clear] drops it.
      */
     val unregisteredMaster: Flow<String?>
     val backupEnabled: Flow<Boolean>
@@ -100,7 +101,6 @@ class DataStoreIdentityStore @Inject constructor(
             prefs.putOrRemove(MASTER, identity.master)
             prefs.putOrRemove(BACKUP_AT, identity.backupAt)
             if (identity.master != null) prefs.remove(PENDING_MASTER)
-            prefs.remove(UNREGISTERED_MASTER)
         }
     }
 

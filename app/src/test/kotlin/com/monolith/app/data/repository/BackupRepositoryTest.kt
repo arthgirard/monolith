@@ -13,6 +13,10 @@ import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.repository.FetchedBackup
 import com.monolith.app.domain.repository.MeInfo
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -324,7 +328,6 @@ class BackupRepositoryTest {
 
         assertEquals(code, store.identity.value!!.master)
         assertEquals(BackupCrypto.deriveToken(BackupCrypto.decodeCode(code)!!), api.registerRequests.single().token)
-        assertNull(store.unregisteredMaster.value)
     }
 
     @Test
@@ -368,5 +371,23 @@ class BackupRepositoryTest {
 
         assertTrue(store.backupEnabled.value)
         assertEquals(0, api.calls)
+    }
+
+    @Test
+    fun `a code is handed out while a registration is still in flight`() = runBlocking {
+        val api = FakeLeaderboardApi()
+        val store = FakeIdentityStore()
+        val repo = repo(api, store)
+        val server = CompletableDeferred<Unit>()
+        api.duringRegister = { server.await() }
+
+        val registering = launch { repo.ensureIdentity(null) }
+        yield()
+        // The tag is still against the phone: the code must not wait for the server.
+        val code = withTimeout(1_000) { repo.localRecoveryCode() }
+        server.complete(Unit)
+        registering.join()
+
+        assertEquals("the tag gets the code that registered", store.identity.value!!.master, code)
     }
 }
