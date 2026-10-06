@@ -1,81 +1,139 @@
-# Monolith
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/banner.svg">
+    <img src="assets/logo/banner-light.svg" alt="Monolith" width="420">
+  </picture>
+</p>
 
-[![GitHub release](https://img.shields.io/github/v/release/arthgirard/monolith)](https://github.com/arthgirard/monolith/releases/latest)
+<p align="center">
+  <a href="https://github.com/arthgirard/monolith/releases/latest"><img src="https://img.shields.io/github/v/release/arthgirard/monolith" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84" alt="Android 8.0+">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/arthgirard/monolith" alt="MIT license"></a>
+</p>
 
-An NFC tag as a physical switch for the apps you keep opening out of habit. Tap the tag and
-your chosen apps get blocked; tap it again and they're back. There's no in-app toggle for this
-by design: the tag is the only quick way out, aside from a timed emergency bypass for when the
-tag isn't around.
+An NFC tag as a physical switch for the apps you keep opening out of habit. Tap the tag and the
+apps you picked are blocked. Tap it again and they come back. There is no switch in the app to
+turn blocking off: getting up to find the tag is the point.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="assets/screenshots/home.png" alt="Home screen" width="200"></td>
+    <td><img src="assets/screenshots/block-wall.png" alt="Block screen" width="200"></td>
+    <td><img src="assets/screenshots/time-gained.png" alt="Time gained" width="200"></td>
+    <td><img src="assets/screenshots/friends.png" alt="Friends board" width="200"></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/apps.png" alt="App list" width="200"></td>
+    <td><img src="assets/screenshots/strictness.png" alt="Strictness" width="200"></td>
+    <td><img src="assets/screenshots/schedules.png" alt="Schedules" width="200"></td>
+    <td><img src="assets/screenshots/widget.png" alt="Home screen widget" width="200"></td>
+  </tr>
+</table>
+
+## Install
+
+Monolith is not on the Play Store. Download the latest APK from
+[Releases](https://github.com/arthgirard/monolith/releases/latest) and open it on your phone.
+After that, the app checks GitHub for new versions itself and installs them for you.
+
+You need an Android phone with NFC (Android 8.0 or newer) and an NFC tag. Any cheap NTAG sticker
+works.
 
 ## Features
 
-- **Tag-only control.** No in-app switch to turn blocking off. The NFC tag is the only fast way
-  out, so the friction of getting up and finding it is the point.
-- **Real enforcement.** An Accessibility Service and a Notification Listener work together to
-  block the app screen and cancel notifications, not just hide an icon.
-- **Emergency bypass.** A 15-minute countdown you can trigger from the home screen when the tag
-  isn't around, limited to one per cycle so it can't be leaned on as a workaround.
-- **Important people.** Allowlist specific names or handles per app so notifications from people
-  who matter still get through even while that app is blocked.
-- **Time saved stats.** A day/week/month/year breakdown of how much time Monolith actually spent
-  enforcing, so you can see the habit changing instead of just trusting it is.
-- **Home-screen widget.** Today's time saved as a running total plus the same hour-by-hour bars
-  as the in-app screen, so the number is visible without opening anything. Tapping it opens the
-  full breakdown, and a refresh button redraws it on demand. Made taller, it adds today's block
-  count and current streak, then the apps you reached for most today.
-- **In-app updates.** Since Monolith isn't on the Play Store, it checks GitHub releases on demand
-  and can download and hand the APK straight to the system installer.
+**The tag is the switch.** Link a tag once and every tap turns Monolith on or off. While it is
+on, the app list, important people and restore are locked, so nothing in the app can undo it.
+
+**Blocking that holds.** A blocked app is covered by a full-screen wall the moment it opens, and
+its notifications never reach the shade. Android Settings is covered too, so the services can't
+be switched off to escape.
+
+**Strictness you choose.** For when the tag isn't near:
+
+- *Standard:* open one app for 5 minutes by solving a puzzle and copying out a sentence by hand.
+  It ends your streak. You also get one 15-minute bypass of everything per lock.
+- *Strict:* only the one 15-minute bypass per lock.
+- *Absolute:* nothing but the tag.
+
+**Schedules.** Monolith can turn itself on at set times and days. It never turns itself off:
+that still takes the tag.
+
+**Important people.** Let notifications from specific names or handles through, per app, even
+while that app is blocked.
+
+**Dumb phone mode.** One button blocks every app except your messages, phone and clock.
+
+**Time gained.** Every minute Monolith spends blocking is counted and broken down by day, week,
+month and year, with your running total and personal record.
+
+**Home screen widget.** Today's time gained, hour by hour. Make it taller to add today's blocks,
+your streak, and the apps you reached for most.
+
+**Friends.** Create or join a group with an invite code and compare time gained, streaks,
+bypasses and blocked apps. You choose what each group sees, and a stat you hide stays hidden from
+you too. Your group always sees whether Monolith is on.
+
+**Encrypted backup.** History and setup are backed up automatically, encrypted on your phone
+with a recovery code the server never sees. The code is saved to your tag as well, so tapping it
+while setting up a new phone brings everything back.
+
+**Seven languages.** English, French, German, Spanish, Italian, Dutch and Brazilian Portuguese.
 
 ## How it works
 
-Pick the apps you want blocked from your installed apps list, then link an NFC tag to your
-phone. Monolith tries to write an NDEF record to the tag (a `monolith://tag/<uid>` URI, so a tap
-launches the app directly instead of going through a browser). Read-only or unformattable tags
-fall back to matching on the tag's hardware UID instead. Either way, the tap is recognized as
-yours from then on.
+**Linking a tag.** Monolith writes a `monolith://tag/<uid>` record to the tag, so a tap opens the
+app directly. A tag that can't be written still works: Monolith falls back to matching its
+hardware ID. A writable tag also carries your recovery code, encrypted with a key derived from
+that tag's ID, so a copy of what is written on it is useless without the tag itself.
 
-Once linked, tapping the tag flips Monolith on or off. The app list locks while it's on, so
-the tag stays the only way to change what's blocked. Enforcement itself runs on two independent
-services: an Accessibility Service watches for foreground app changes and throws up a
-full-screen block when a listed app (or Settings, so you can't disable the service to escape)
-comes to the front, and a Notification Listener cancels notifications from blocked apps so they
-can't reach you through the shade either.
+**Enforcement.** An Accessibility Service watches which app comes to the front and puts up the
+block wall. A Notification Listener cancels notifications from blocked apps, letting through the
+ones that match an important person's name or handle. A foreground service keeps both running,
+and Monolith tells you if Android takes a permission back.
 
-Notifications from people you've marked as important still get through. You add them per app
-by name or handle, and matching is done against the notification's title and text. Editing that
-list is locked the same way the app list is: only while Monolith is off.
+**Permissions.** Setup asks for five, one at a time, and all are needed before blocking works:
+Usage Access, Display over other apps, Accessibility, Notification Access, and permission to send
+notifications.
 
-Lost the tag, or it's not on you? The home screen has a 15-minute countdown bypass that lifts
-Monolith temporarily, one per Monolith cycle, so it can't be spammed. Tapping the tag again,
-either on or off, resets that allowance. Time spent in bypass doesn't count toward your saved
-time.
-
-Every session Monolith spends actively blocking is logged, and the time saved screen breaks
-that down by day, week, month, or year so you can see the pattern over time.
-
-Monolith also checks GitHub releases for newer versions on demand and can download and hand the
-APK to the system installer directly, since it isn't distributed through the Play Store.
-
-## Permissions
-
-Four permissions are requested step-by-step during onboarding, and all four are required before
-blocking works: Usage Access (to see the foreground app), Display Over Other Apps (to show the
-block screen), Accessibility Service (to catch app launches in real time), and Notification
-Access (to cancel notifications from blocked apps).
-
-## Stack
-
-Kotlin, Jetpack Compose, Material 3, Hilt, DataStore, coroutines/Flow. `domain` (models,
-repository interfaces, use cases) has no Android dependencies beyond the NFC `Tag` handle;
-`data` and `nfc` implement those interfaces; `ui` is Compose + ViewModels.
+**Friends and backup.** A small Cloudflare Worker with a D1 database (in `server/`) stores the
+groups board and the encrypted backups. Your phone only uploads what you've chosen to share.
+Your identity is derived from the recovery code: the server keeps a hash of a token derived from
+it, and the backup key comes from a separate derivation that never leaves the phone. Backups use
+AES-GCM, so the server holds data it can't read. The Worker keeps no request logs, and members
+who go quiet for 120 days are removed.
 
 ## Building
 
-Standard Gradle Android project, open in Android Studio or run:
+The app is a standard Gradle project. Open it in Android Studio, or run:
 
 ```
 ./gradlew assembleDebug
 ```
 
-(Add the Gradle wrapper jar via Android Studio's "Sync Project" on first open, or run
-`gradle wrapper` once if you have Gradle installed locally.)
+Release builds are signed only when a `keystore.properties` file is present at the repo root;
+copy `keystore.properties.example` to set one up. Without it, `./gradlew assembleRelease` still
+builds an unsigned APK.
+
+The server lives in `server/`:
+
+```
+cd server
+npm install
+npm test
+npm run migrate:remote   # apply new D1 migrations
+npm run deploy
+```
+
+## Stack
+
+Kotlin, Jetpack Compose, Material 3, Hilt, DataStore, WorkManager, coroutines and Flow. `domain`
+holds models, repository interfaces and use cases with no Android dependencies beyond the NFC
+`Tag` handle. `data` and `nfc` implement those interfaces, `service` runs enforcement, schedules
+and sync, and `ui` is Compose with ViewModels. The server is TypeScript on Cloudflare Workers
+with D1, tested with Vitest.
+
+## License
+
+[MIT](LICENSE). Inter and JetBrains Mono are under the SIL Open Font License.
