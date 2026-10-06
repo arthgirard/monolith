@@ -1,6 +1,7 @@
 package com.monolith.app.domain.usecase
 
 import com.monolith.app.data.backup.BackupSnapshot
+import com.monolith.app.data.backup.BackupSnapshot.PersonEntry
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.repository.FetchedBackup
@@ -23,13 +24,17 @@ class RestoreBackupUseCaseTest {
     )
     private val me = MeInfo("Ana", emptyList(), backupAt = 1_700_000_100_000L)
 
-    private class Harness(active: Boolean, fetch: LeaderboardResult<FetchedBackup>) {
+    private class Harness(
+        active: Boolean,
+        fetch: LeaderboardResult<FetchedBackup>,
+        installed: Set<String> = setOf("com.example.feed"),
+    ) {
         val blocks = FakeBlockRepository(initiallyActive = active)
         val backup = FakeBackupRepository(fetch)
         val leaderboard = FakeLeaderboardRepository()
         val writer = RecordingWriter()
         val after = CountingAfterRestore()
-        val useCase = RestoreBackupUseCase(blocks, backup, leaderboard, writer, after)
+        val useCase = RestoreBackupUseCase(blocks, backup, leaderboard, writer, after, FakeAppRepository(installed = installed))
 
         fun assertNothingWritten() {
             assertTrue(writer.writes.isEmpty())
@@ -117,5 +122,22 @@ class RestoreBackupUseCaseTest {
         assertTrue(h.writer.writes.isEmpty())
         assertTrue(h.backup.enabledCalls.isEmpty())
         assertEquals(0, h.after.runs)
+    }
+
+    @Test
+    fun `apps this phone lacks are dropped from the restore`() = runBlocking {
+        val full = snapshot.copy(
+            blockedPackages = listOf("com.example.feed", "com.example.gone"),
+            importantPeople = listOf(PersonEntry("com.example.chat", "Sam"), PersonEntry("com.example.gone", "Lea")),
+        )
+        val h = Harness(active = false, fetch = fetched(full), installed = setOf("com.example.feed", "com.example.chat"))
+
+        h.useCase.prepare(code)
+        assertEquals(RestoreOutcome.Done, h.useCase.confirm())
+
+        val written = h.writer.writes.single()
+        assertEquals(listOf("com.example.feed"), written.blockedPackages)
+        assertEquals(listOf(PersonEntry("com.example.chat", "Sam")), written.importantPeople)
+        assertEquals("history is never filtered", full.sessions, written.sessions)
     }
 }

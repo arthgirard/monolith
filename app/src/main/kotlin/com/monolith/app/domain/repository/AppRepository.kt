@@ -8,6 +8,9 @@ interface AppRepository {
     /** Snapshot of launchable, non-Monolith apps installed on the device. */
     suspend fun getInstalledApps(): List<AppInfo>
 
+    /** The package names [getInstalledApps] would list, without loading a label or icon for each. */
+    suspend fun installedPackages(): Set<String>
+
     fun observeBlockedPackages(): Flow<Set<String>>
 
     suspend fun setBlockedPackages(packages: Set<String>)

@@ -134,10 +134,12 @@ class FakeAppUnlockRepository : AppUnlockRepository {
 class FakeAppRepository(
     blocked: Set<String> = emptySet(),
     private val labels: Map<String, String> = emptyMap(),
+    private val installed: Set<String> = emptySet(),
 ) : AppRepository {
     val blocked = MutableStateFlow(blocked)
 
     override suspend fun getInstalledApps(): List<AppInfo> = emptyList()
+    override suspend fun installedPackages(): Set<String> = installed
     override fun observeBlockedPackages(): Flow<Set<String>> = blocked
     override suspend fun setBlockedPackages(packages: Set<String>) { blocked.value = packages }
     override suspend fun getEssentialPackages(): Set<String> = emptySet()

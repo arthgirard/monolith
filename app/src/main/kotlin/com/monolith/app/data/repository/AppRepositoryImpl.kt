@@ -48,6 +48,13 @@ class AppRepositoryImpl @Inject constructor(
             .toList()
     }
 
+    override suspend fun installedPackages(): Set<String> = withContext(Dispatchers.IO) {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        context.packageManager.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
+            .mapTo(mutableSetOf()) { it.activityInfo.packageName }
+            .apply { remove(context.packageName) }
+    }
+
     override fun observeBlockedPackages(): Flow<Set<String>> = preferences.blockedPackages
 
     override suspend fun setBlockedPackages(packages: Set<String>) {

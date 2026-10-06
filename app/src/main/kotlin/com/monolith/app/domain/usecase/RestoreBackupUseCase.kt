@@ -3,6 +3,7 @@ package com.monolith.app.domain.usecase
 import com.monolith.app.data.backup.BackupSnapshot
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
+import com.monolith.app.domain.repository.AppRepository
 import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.FetchedBackup
@@ -41,6 +42,7 @@ class RestoreBackupUseCase @Inject constructor(
     private val leaderboardRepository: LeaderboardRepository,
     private val snapshotWriter: SnapshotWriter,
     private val afterRestore: AfterRestore,
+    private val appRepository: AppRepository,
 ) {
     private var prepared: FetchedBackup? = null
 
@@ -66,7 +68,7 @@ class RestoreBackupUseCase @Inject constructor(
         if (saved is LeaderboardResult.Err) return RestoreOutcome.Failed(saved.error)
         prepared = null
         val snapshot = backup.snapshot ?: return RestoreOutcome.Done
-        snapshotWriter.write(snapshot)
+        snapshotWriter.write(snapshot.keepingOnly(appRepository.installedPackages()))
         // Only fails without an identity, and one was just saved. Enabled after the write, so the
         // upload this triggers carries the restored data.
         backupRepository.setBackupEnabled(true)
@@ -76,3 +78,13 @@ class RestoreBackupUseCase @Inject constructor(
 
     private suspend fun isActive(): Boolean = blockRepository.observeBlockState().first().isActive
 }
+
+/**
+ * Drops what names an app this phone doesn't have: a blocked app that isn't installed shows in
+ * the list as a bare package name, and an important person on a missing app can never get
+ * through. Dropped rather than hidden, so the next upload matches what this phone has.
+ */
+private fun BackupSnapshot.keepingOnly(installed: Set<String>) = copy(
+    blockedPackages = blockedPackages.filter { it in installed },
+    importantPeople = importantPeople.filter { it.packageName in installed },
+)
