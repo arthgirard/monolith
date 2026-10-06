@@ -353,6 +353,10 @@
     <string name="backup_show_code">Show recovery code</string>
     <string name="backup_restore">Restore from a backup</string>
     <string name="backup_code_warning">Anyone with this code can restore your data. Keep it private.</string>
+    <string name="backup_save_to_tag">Save recovery code to tag</string>
+    <string name="backup_tag_missing">Your tag doesn\'t have your recovery code yet</string>
+    <string name="backup_tag_stale">Your tag has an old recovery code</string>
+    <string name="backup_code_warning_tag">Anyone with this code can restore your data. Your tag carries it too, so keep both private.</string>
     <string name="backup_restore_title">Restore from a backup</string>
     <string name="backup_restore_confirm_body">Replace this phone\'s history and setup with the backup from %1$s?</string>
     <string name="backup_restore_confirm">Replace</string>

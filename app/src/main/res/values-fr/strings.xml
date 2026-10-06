@@ -350,6 +350,10 @@
     <string name="backup_show_code">Afficher le code de récupération</string>
     <string name="backup_restore">Restaurer une sauvegarde</string>
     <string name="backup_code_warning">Toute personne ayant ce code peut restaurer vos données. Gardez-le privé.</string>
+    <string name="backup_save_to_tag">Enregistrer le code de récupération sur le tag</string>
+    <string name="backup_tag_missing">Votre tag n\'a pas encore votre code de récupération</string>
+    <string name="backup_tag_stale">Votre tag a un ancien code de récupération</string>
+    <string name="backup_code_warning_tag">Toute personne ayant ce code peut restaurer vos données. Votre tag le porte aussi, gardez donc les deux privés.</string>
     <string name="backup_restore_title">Restaurer une sauvegarde</string>
     <string name="backup_restore_confirm_body">Remplacer l\'historique et la configuration de ce téléphone par la sauvegarde du %1$s ?</string>
     <string name="backup_restore_confirm">Remplacer</string>

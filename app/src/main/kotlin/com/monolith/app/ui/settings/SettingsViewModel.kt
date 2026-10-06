@@ -7,6 +7,8 @@ import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
 import com.monolith.app.domain.model.NfcTagLink
 import com.monolith.app.domain.model.StrictnessLevel
+import com.monolith.app.domain.model.TagCodeState
+import com.monolith.app.domain.model.tagCodeState
 import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.repository.LeaderboardRepository
 import com.monolith.app.domain.usecase.ObserveBlockStateUseCase
@@ -42,6 +44,10 @@ data class BackupUiState(
     /** Null until an identity with a master exists; "Show recovery code" stays hidden until then. */
     val recoveryCode: String? = null,
     val busy: Boolean = false,
+    /** Null unless the Settings row should offer to put the code on the tag. */
+    val tagCode: TagCodeState? = null,
+    /** The tag carries a code, so the privacy caption names it too. */
+    val tagCarriesCode: Boolean = false,
 )
 
 @HiltViewModel
@@ -78,13 +84,25 @@ class SettingsViewModel @Inject constructor(
 
     private val backupBusy = MutableStateFlow(false)
 
+    private val linkedTag = observeLinkedTag()
+
     val backupState: StateFlow<BackupUiState> = combine(
         backupRepository.observeBackupEnabled(),
         backupRepository.observeLastBackupAt(),
         backupRepository.observeRecoveryCode(),
         backupBusy,
-    ) { enabled, lastBackupAt, code, busy ->
-        BackupUiState(enabled = enabled, lastBackupAt = lastBackupAt, recoveryCode = code, busy = busy)
+        linkedTag,
+    ) { enabled, lastBackupAt, code, busy, tag ->
+        val state = tagCodeState(tag, enabled, code)
+        BackupUiState(
+            enabled = enabled,
+            lastBackupAt = lastBackupAt,
+            recoveryCode = code,
+            busy = busy,
+            // CURRENT needs no row: the tag already does its job.
+            tagCode = state?.takeIf { it != TagCodeState.CURRENT },
+            tagCarriesCode = tag?.code != null,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BackupUiState())
 
     private val _errors = MutableSharedFlow<LeaderboardError>(extraBufferCapacity = 1)
@@ -110,7 +128,7 @@ class SettingsViewModel @Inject constructor(
 
     val uiState: StateFlow<SettingsUiState> = combine(
         observeStrictness(),
-        observeLinkedTag(),
+        linkedTag,
         observeBlockState(),
     ) { strictness, linkedTag, blockState ->
         SettingsUiState(strictness = strictness, linkedTag = linkedTag, isLocked = blockState.isActive)

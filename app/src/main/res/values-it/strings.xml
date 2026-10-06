@@ -350,6 +350,10 @@
     <string name="backup_show_code">Mostra codice di recupero</string>
     <string name="backup_restore">Ripristina da un backup</string>
     <string name="backup_code_warning">Chiunque abbia questo codice può ripristinare i suoi dati. Lo tenga privato.</string>
+    <string name="backup_save_to_tag">Salva il codice di recupero sul tag</string>
+    <string name="backup_tag_missing">Il suo tag non ha ancora il codice di recupero</string>
+    <string name="backup_tag_stale">Il suo tag ha un codice di recupero vecchio</string>
+    <string name="backup_code_warning_tag">Chiunque abbia questo codice può ripristinare i suoi dati. Anche il tag lo contiene, quindi li tenga privati entrambi.</string>
     <string name="backup_restore_title">Ripristina da un backup</string>
     <string name="backup_restore_confirm_body">Sostituire la cronologia e la configurazione di questo telefono con il backup del %1$s?</string>
     <string name="backup_restore_confirm">Sostituisci</string>

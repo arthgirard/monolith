@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import com.monolith.app.R
+import com.monolith.app.domain.model.TagCodeState
 import com.monolith.app.ui.components.SettingsDivider
 import com.monolith.app.ui.components.SettingsGroup
 import com.monolith.app.ui.components.SettingsRow
@@ -48,6 +50,7 @@ fun BackupSection(
     isLocked: Boolean,
     onToggle: (Boolean) -> Unit,
     onRestore: () -> Unit,
+    onSaveToTag: () -> Unit,
 ) {
     var showCode by rememberSaveable { mutableStateOf(false) }
 
@@ -81,6 +84,27 @@ fun BackupSection(
                     onClick = { showCode = true },
                 )
             }
+            state.tagCode?.let { tagCode ->
+                SettingsDivider(startInset = 20.dp)
+                SettingsRow(
+                    icon = Icons.Filled.Nfc,
+                    label = stringResource(R.string.backup_save_to_tag),
+                    enabled = !isLocked,
+                    onClick = onSaveToTag,
+                )
+                Text(
+                    stringResource(
+                        when {
+                            isLocked -> R.string.backup_restore_refused
+                            tagCode == TagCodeState.STALE -> R.string.backup_tag_stale
+                            else -> R.string.backup_tag_missing
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+                )
+            }
             SettingsDivider(startInset = 20.dp)
             SettingsRow(
                 icon = Icons.Filled.Restore,
@@ -90,7 +114,7 @@ fun BackupSection(
             )
         }
         Text(
-            stringResource(R.string.backup_code_warning),
+            stringResource(if (state.tagCarriesCode) R.string.backup_code_warning_tag else R.string.backup_code_warning),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 4.dp),

@@ -182,6 +182,8 @@ fun SettingsScreen(
                     isLocked = uiState.isLocked,
                     onToggle = viewModel::setBackupEnabled,
                     onRestore = { showRestore = true },
+                    // Re-linking the same tag rewrites both records.
+                    onSaveToTag = onLinkTag,
                 )
             }
         }

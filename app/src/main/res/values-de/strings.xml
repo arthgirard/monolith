@@ -349,6 +349,10 @@
     <string name="backup_show_code">Wiederherstellungscode anzeigen</string>
     <string name="backup_restore">Aus einer Sicherung wiederherstellen</string>
     <string name="backup_code_warning">Wer diesen Code hat, kann Ihre Daten wiederherstellen. Halten Sie ihn geheim.</string>
+    <string name="backup_save_to_tag">Wiederherstellungscode auf Tag speichern</string>
+    <string name="backup_tag_missing">Ihr Tag hat Ihren Wiederherstellungscode noch nicht</string>
+    <string name="backup_tag_stale">Ihr Tag hat einen alten Wiederherstellungscode</string>
+    <string name="backup_code_warning_tag">Wer diesen Code hat, kann Ihre Daten wiederherstellen. Ihr Tag trägt ihn auch, halten Sie also beide geheim.</string>
     <string name="backup_restore_title">Aus einer Sicherung wiederherstellen</string>
     <string name="backup_restore_confirm_body">Verlauf und Einrichtung dieses Telefons durch die Sicherung vom %1$s ersetzen?</string>
     <string name="backup_restore_confirm">Ersetzen</string>

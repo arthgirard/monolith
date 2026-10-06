@@ -349,6 +349,10 @@
     <string name="backup_show_code">Herstelcode tonen</string>
     <string name="backup_restore">Herstellen vanuit een back-up</string>
     <string name="backup_code_warning">Iedereen met deze code kan uw gegevens herstellen. Houd hem privé.</string>
+    <string name="backup_save_to_tag">Herstelcode op tag opslaan</string>
+    <string name="backup_tag_missing">Uw tag heeft uw herstelcode nog niet</string>
+    <string name="backup_tag_stale">Uw tag heeft een oude herstelcode</string>
+    <string name="backup_code_warning_tag">Iedereen met deze code kan uw gegevens herstellen. Uw tag bevat hem ook, dus houd beide privé.</string>
     <string name="backup_restore_title">Herstellen vanuit een back-up</string>
     <string name="backup_restore_confirm_body">De geschiedenis en instellingen van deze telefoon vervangen door de back-up van %1$s?</string>
     <string name="backup_restore_confirm">Vervangen</string>

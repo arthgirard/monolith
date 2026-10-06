@@ -350,6 +350,10 @@
     <string name="backup_show_code">Mostrar código de recuperación</string>
     <string name="backup_restore">Restaurar desde una copia</string>
     <string name="backup_code_warning">Cualquiera con este código puede restaurar sus datos. Manténgalo en privado.</string>
+    <string name="backup_save_to_tag">Guardar el código de recuperación en la etiqueta</string>
+    <string name="backup_tag_missing">Su etiqueta aún no tiene su código de recuperación</string>
+    <string name="backup_tag_stale">Su etiqueta tiene un código de recuperación antiguo</string>
+    <string name="backup_code_warning_tag">Cualquiera con este código puede restaurar sus datos. Su etiqueta también lo lleva, así que mantenga ambos en privado.</string>
     <string name="backup_restore_title">Restaurar desde una copia</string>
     <string name="backup_restore_confirm_body">¿Reemplazar el historial y la configuración de este teléfono con la copia del %1$s?</string>
     <string name="backup_restore_confirm">Reemplazar</string>
