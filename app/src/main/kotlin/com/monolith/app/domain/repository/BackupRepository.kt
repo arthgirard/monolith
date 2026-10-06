@@ -19,6 +19,15 @@ interface BackupRepository {
     /** Registers a new identity if there is none, and migrates one from before backups. */
     suspend fun ensureIdentity(displayName: String?): LeaderboardResult<Unit>
 
+    /** The code a tag linked now should carry. Null for an identity from before backups. */
+    suspend fun localRecoveryCode(): String?
+
+    /**
+     * Turns backup on without asking the server, for a new install. Registration and the first
+     * upload follow on the next online moment.
+     */
+    suspend fun enableByDefault()
+
     /** On makes sure an identity exists; off deletes the server's copy. */
     suspend fun setBackupEnabled(enabled: Boolean): LeaderboardResult<Unit>
 

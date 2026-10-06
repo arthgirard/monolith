@@ -45,8 +45,22 @@ class IdentityManager @Inject constructor(
         }
     }
 
+    /**
+     * The recovery code a tag linked now should carry: the identity's, or one made here and kept
+     * until it registers. Null for an identity from before backups, whose code exists only once it
+     * migrates.
+     */
+    suspend fun localMaster(): String? = mutex.withLock {
+        val identity = store.identity.first()
+        if (identity != null) return@withLock identity.master
+        store.unregisteredMaster.first()
+            ?: BackupCrypto.encodeCode(BackupCrypto.newMaster()).also { store.saveUnregisteredMaster(it) }
+    }
+
     private suspend fun register(displayName: String?): LeaderboardResult<Unit> {
-        val master = BackupCrypto.newMaster()
+        // A master already written to a tag is the one to register, or the tag would carry a code
+        // that restores nothing.
+        val master = store.unregisteredMaster.first()?.let(BackupCrypto::decodeCode) ?: BackupCrypto.newMaster()
         val token = BackupCrypto.deriveToken(master)
         return api.register(RegisterRequest(token, displayName)).andThen {
             // A restore may have stored another identity meanwhile; this one is then left unused.

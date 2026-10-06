@@ -311,4 +311,62 @@ class BackupRepositoryTest {
         assertTrue(store.backupEnabled.value)
         assertEquals(1, api.registerRequests.size)
     }
+
+    @Test
+    fun `a code handed out before registering is the one registered`() = runBlocking {
+        val api = FakeLeaderboardApi()
+        val store = FakeIdentityStore()
+        val repo = repo(api, store)
+
+        val code = repo.localRecoveryCode()!!
+        assertEquals("the same code until it registers", code, repo.localRecoveryCode())
+        assertEquals(LeaderboardResult.Ok(Unit), repo.ensureIdentity(null))
+
+        assertEquals(code, store.identity.value!!.master)
+        assertEquals(BackupCrypto.deriveToken(BackupCrypto.decodeCode(code)!!), api.registerRequests.single().token)
+        assertNull(store.unregisteredMaster.value)
+    }
+
+    @Test
+    fun `an offline registration keeps the code for the next try`() = runBlocking {
+        val api = FakeLeaderboardApi()
+        val store = FakeIdentityStore()
+        val repo = repo(api, store)
+        val code = repo.localRecoveryCode()!!
+
+        api.registerResult = LeaderboardResult.Err(LeaderboardError.NETWORK)
+        repo.ensureIdentity(null)
+        assertNull(store.identity.value)
+
+        api.registerResult = LeaderboardResult.Ok(Unit)
+        repo.ensureIdentity(null)
+        assertEquals(code, store.identity.value!!.master)
+    }
+
+    @Test
+    fun `an identity's own code is the local one`() = runBlocking {
+        val code = BackupCrypto.encodeCode(BackupCrypto.newMaster())
+        val store = FakeIdentityStore(Identity("t", "", emptyList(), master = code))
+
+        assertEquals(code, repo(FakeLeaderboardApi(), store).localRecoveryCode())
+        assertNull(store.unregisteredMaster.value)
+    }
+
+    @Test
+    fun `an identity from before backups has no local code until it migrates`() = runBlocking {
+        val store = FakeIdentityStore(Identity("old", "", emptyList(), master = null))
+
+        assertNull(repo(FakeLeaderboardApi(), store).localRecoveryCode())
+    }
+
+    @Test
+    fun `enableByDefault turns backup on without asking the server`() = runBlocking {
+        val api = FakeLeaderboardApi()
+        val store = FakeIdentityStore()
+
+        repo(api, store).enableByDefault()
+
+        assertTrue(store.backupEnabled.value)
+        assertEquals(0, api.calls)
+    }
 }

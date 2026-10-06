@@ -41,6 +41,10 @@ class BackupRepositoryImpl @Inject constructor(
 
     override suspend fun ensureIdentity(displayName: String?): LeaderboardResult<Unit> = identities.ensureIdentity(displayName)
 
+    override suspend fun localRecoveryCode(): String? = identities.localMaster()
+
+    override suspend fun enableByDefault() = store.setBackupEnabled(true)
+
     override suspend fun setBackupEnabled(enabled: Boolean): LeaderboardResult<Unit> = mutex.withLock {
         if (enabled) identities.ensureIdentity(null).andThen { store.setBackupEnabled(true) } else disable()
     }

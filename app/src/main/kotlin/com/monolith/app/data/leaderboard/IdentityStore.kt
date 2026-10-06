@@ -31,6 +31,12 @@ interface IdentityStore {
      * server rotated but its answer was lost, the next try still knows the new token.
      */
     val pendingMaster: Flow<String?>
+
+    /**
+     * A master made on the phone before any server knows it: written to a tag during setup, and
+     * registered on the next online moment. Cleared by any [save], and by [clear].
+     */
+    val unregisteredMaster: Flow<String?>
     val backupEnabled: Flow<Boolean>
     val lastBackupAt: Flow<Long?>
     suspend fun save(identity: Identity)
@@ -38,6 +44,7 @@ interface IdentityStore {
     /** Replaces the cached group list; does nothing without an identity. */
     suspend fun saveGroups(groups: List<GroupInfo>)
     suspend fun savePendingMaster(master: String)
+    suspend fun saveUnregisteredMaster(master: String)
     suspend fun setBackupEnabled(enabled: Boolean)
     suspend fun setLastBackupAt(at: Long?)
     suspend fun select(groupId: String?)
@@ -78,6 +85,8 @@ class DataStoreIdentityStore @Inject constructor(
 
     override val pendingMaster: Flow<String?> = context.leaderboardStore.data.map { it[PENDING_MASTER] }
 
+    override val unregisteredMaster: Flow<String?> = context.leaderboardStore.data.map { it[UNREGISTERED_MASTER] }
+
     override val backupEnabled: Flow<Boolean> = context.leaderboardStore.data.map { it[BACKUP_ENABLED] ?: false }
 
     override val lastBackupAt: Flow<Long?> = context.leaderboardStore.data.map { it[LAST_BACKUP_AT] }
@@ -91,6 +100,7 @@ class DataStoreIdentityStore @Inject constructor(
             prefs.putOrRemove(MASTER, identity.master)
             prefs.putOrRemove(BACKUP_AT, identity.backupAt)
             if (identity.master != null) prefs.remove(PENDING_MASTER)
+            prefs.remove(UNREGISTERED_MASTER)
         }
     }
 
@@ -102,6 +112,10 @@ class DataStoreIdentityStore @Inject constructor(
 
     override suspend fun savePendingMaster(master: String) {
         context.leaderboardStore.edit { it[PENDING_MASTER] = master }
+    }
+
+    override suspend fun saveUnregisteredMaster(master: String) {
+        context.leaderboardStore.edit { it[UNREGISTERED_MASTER] = master }
     }
 
     override suspend fun setBackupEnabled(enabled: Boolean) {
@@ -147,6 +161,7 @@ class DataStoreIdentityStore @Inject constructor(
         val REMOVED_NOTICE = booleanPreferencesKey("removed_notice")
         val MASTER = stringPreferencesKey("master")
         val PENDING_MASTER = stringPreferencesKey("pending_master")
+        val UNREGISTERED_MASTER = stringPreferencesKey("unregistered_master")
         val BACKUP_AT = longPreferencesKey("backup_at")
         val BACKUP_ENABLED = booleanPreferencesKey("backup_enabled")
         val LAST_BACKUP_AT = longPreferencesKey("last_backup_at")

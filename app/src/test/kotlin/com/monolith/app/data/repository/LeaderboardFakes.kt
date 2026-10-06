@@ -28,17 +28,20 @@ internal class FakeIdentityStore(initial: Identity? = null, selected: String? = 
     override val selectedGroupId = MutableStateFlow(selected)
     override val removedNotice = MutableStateFlow(false)
     override val pendingMaster = MutableStateFlow<String?>(null)
+    override val unregisteredMaster = MutableStateFlow<String?>(null)
     override val backupEnabled = MutableStateFlow(false)
     override val lastBackupAt = MutableStateFlow<Long?>(null)
     override suspend fun save(identity: Identity) {
         this.identity.value = identity
         removedNotice.value = false
         if (identity.master != null) pendingMaster.value = null
+        unregisteredMaster.value = null
     }
     override suspend fun saveGroups(groups: List<GroupInfo>) {
         identity.value = identity.value?.copy(groups = groups)
     }
     override suspend fun savePendingMaster(master: String) { pendingMaster.value = master }
+    override suspend fun saveUnregisteredMaster(master: String) { unregisteredMaster.value = master }
     override suspend fun setBackupEnabled(enabled: Boolean) { backupEnabled.value = enabled }
     override suspend fun setLastBackupAt(at: Long?) { lastBackupAt.value = at }
     override suspend fun select(groupId: String?) { selectedGroupId.value = groupId }
@@ -46,6 +49,7 @@ internal class FakeIdentityStore(initial: Identity? = null, selected: String? = 
         identity.value = null
         selectedGroupId.value = null
         pendingMaster.value = null
+        unregisteredMaster.value = null
         backupEnabled.value = false
         lastBackupAt.value = null
         removedNotice.value = removed

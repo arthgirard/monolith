@@ -3,11 +3,8 @@ package com.monolith.app.domain.usecase
 import com.monolith.app.data.backup.BackupSnapshot
 import com.monolith.app.domain.model.LeaderboardError
 import com.monolith.app.domain.model.LeaderboardResult
-import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.repository.FetchedBackup
 import com.monolith.app.domain.repository.MeInfo
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,34 +22,6 @@ class RestoreBackupUseCaseTest {
         strictness = "DEFAULT",
     )
     private val me = MeInfo("Ana", emptyList(), backupAt = 1_700_000_100_000L)
-
-    private class FakeBackupRepository(var fetchResult: LeaderboardResult<FetchedBackup>) : BackupRepository {
-        val fetchCalls = mutableListOf<String>()
-        val enabledCalls = mutableListOf<Boolean>()
-        override fun observeBackupEnabled(): Flow<Boolean> = MutableStateFlow(false)
-        override fun observeLastBackupAt(): Flow<Long?> = MutableStateFlow(null)
-        override fun observeRecoveryCode(): Flow<String?> = MutableStateFlow(null)
-        override suspend fun ensureIdentity(displayName: String?) = LeaderboardResult.Ok(Unit)
-        override suspend fun setBackupEnabled(enabled: Boolean): LeaderboardResult<Unit> {
-            enabledCalls += enabled
-            return LeaderboardResult.Ok(Unit)
-        }
-        override suspend fun upload(snapshot: BackupSnapshot, now: Long) = LeaderboardResult.Ok(Unit)
-        override suspend fun fetch(recoveryCode: String): LeaderboardResult<FetchedBackup> {
-            fetchCalls += recoveryCode
-            return fetchResult
-        }
-    }
-
-    private class RecordingWriter : SnapshotWriter {
-        val writes = mutableListOf<BackupSnapshot>()
-        override suspend fun write(snapshot: BackupSnapshot) { writes += snapshot }
-    }
-
-    private class CountingAfterRestore : AfterRestore {
-        var runs = 0
-        override suspend fun run() { runs++ }
-    }
 
     private class Harness(active: Boolean, fetch: LeaderboardResult<FetchedBackup>) {
         val blocks = FakeBlockRepository(initiallyActive = active)

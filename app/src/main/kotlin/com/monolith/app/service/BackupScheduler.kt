@@ -82,6 +82,12 @@ class BackupScheduler @Inject constructor(
     private suspend fun handle(trigger: Trigger) {
         if (trigger == Trigger.APP_OPEN) migrateLegacyIdentity()
         if (!backupRepository.observeBackupEnabled().first()) return
+        // Backup turned on during setup may not have reached the server yet.
+        val identity = backupRepository.ensureIdentity(null)
+        if (identity is LeaderboardResult.Err) {
+            Log.w(TAG, "Backup identity not registered: ${identity.error}")
+            return
+        }
         val now = System.currentTimeMillis()
         if (trigger != Trigger.ENABLED && !BackupThrottle.due(backupRepository.observeLastBackupAt().first(), now)) return
         val result = backupRepository.upload(preferences.exportSnapshot(), now)
