@@ -161,6 +161,18 @@
     <string name="nfc_link_success_fallback">UID opgeslagen</string>
     <string name="nfc_link_locked">Monolith staat aan. Houd de gekoppelde tag ertegen om te openen, koppel daarna een andere.</string>
     <string name="nfc_link_error">Lezen mislukt. Probeer opnieuw.</string>
+    <string name="nfc_link_carries_code">Uw tag herstelt ook uw voortgang als u de app opnieuw installeert.</string>
+    <string name="tag_restore_checking">Uw tag wordt gecontroleerd…</string>
+    <string name="tag_restore_restoring">Herstellen…</string>
+    <string name="tag_restore_title">Welkom terug</string>
+    <string name="tag_restore_body">Voortgang van %1$s herstellen?</string>
+    <string name="tag_restore_friends_body">Uw vriendengroepen herstellen?</string>
+    <string name="tag_restore_cta">Herstellen</string>
+    <string name="tag_start_fresh">Opnieuw beginnen</string>
+    <string name="tag_check_failed">De back-up van deze tag kan nu niet worden gecontroleerd.</string>
+    <string name="tag_try_again">Opnieuw proberen</string>
+    <string name="tag_start_fresh_confirm">Hiermee wordt de herstelcode op de tag vervangen.</string>
+    <string name="tag_tap_again">Houd uw tag nogmaals tegen de telefoon om een nieuwe code op te slaan</string>
     <string name="nfc_not_supported">Dit toestel heeft geen NFC.</string>
     <string name="not_now_cta">Niet nu</string>
 

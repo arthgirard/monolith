@@ -161,6 +161,18 @@
     <string name="nfc_link_success_fallback">UID gespeichert</string>
     <string name="nfc_link_locked">Monolith ist aktiv. Den bekannten Tag zum Entsperren antippen, dann einen neuen verknüpfen.</string>
     <string name="nfc_link_error">Tag nicht lesbar. Erneut versuchen.</string>
+    <string name="nfc_link_carries_code">Ihr Tag stellt Ihren Fortschritt auch nach einer Neuinstallation wieder her.</string>
+    <string name="tag_restore_checking">Tag wird geprüft…</string>
+    <string name="tag_restore_restoring">Wird wiederhergestellt…</string>
+    <string name="tag_restore_title">Willkommen zurück</string>
+    <string name="tag_restore_body">Fortschritt vom %1$s wiederherstellen?</string>
+    <string name="tag_restore_friends_body">Ihre Freundesgruppen wiederherstellen?</string>
+    <string name="tag_restore_cta">Wiederherstellen</string>
+    <string name="tag_start_fresh">Neu beginnen</string>
+    <string name="tag_check_failed">Die Sicherung dieses Tags kann gerade nicht geprüft werden.</string>
+    <string name="tag_try_again">Erneut versuchen</string>
+    <string name="tag_start_fresh_confirm">Dadurch wird der Wiederherstellungscode auf dem Tag ersetzt.</string>
+    <string name="tag_tap_again">Halten Sie Ihren Tag erneut an das Telefon, um einen neuen Code zu speichern</string>
     <string name="nfc_not_supported">Dieses Gerät hat keine NFC-Hardware.</string>
     <string name="not_now_cta">Später</string>
 

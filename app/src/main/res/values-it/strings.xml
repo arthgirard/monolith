@@ -161,6 +161,18 @@
     <string name="nfc_link_success_fallback">UID salvato</string>
     <string name="nfc_link_locked">Monolith è attivo. Avvicini il tag già collegato per aprire, poi ne colleghi un altro.</string>
     <string name="nfc_link_error">Lettura non riuscita. Riprovi.</string>
+    <string name="nfc_link_carries_code">Il tag ripristina anche i suoi progressi se reinstalla l\'app.</string>
+    <string name="tag_restore_checking">Controllo del tag…</string>
+    <string name="tag_restore_restoring">Ripristino…</string>
+    <string name="tag_restore_title">Bentornato</string>
+    <string name="tag_restore_body">Ripristinare i progressi del %1$s?</string>
+    <string name="tag_restore_friends_body">Ripristinare i suoi gruppi di amici?</string>
+    <string name="tag_restore_cta">Ripristina</string>
+    <string name="tag_start_fresh">Ricomincia da capo</string>
+    <string name="tag_check_failed">Al momento non è possibile controllare il backup di questo tag.</string>
+    <string name="tag_try_again">Riprova</string>
+    <string name="tag_start_fresh_confirm">Questo sostituisce il codice di recupero sul tag.</string>
+    <string name="tag_tap_again">Avvicini di nuovo il tag per salvare un nuovo codice</string>
     <string name="nfc_not_supported">Questo dispositivo non ha NFC.</string>
     <string name="not_now_cta">Non ora</string>
 

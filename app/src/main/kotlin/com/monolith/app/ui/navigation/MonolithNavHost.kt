@@ -27,7 +27,7 @@ import com.monolith.app.ui.timesaved.TimeSavedScreen
 
 private const val TRANSITION_DURATION_MILLIS = 300
 
-/** Name, apps, tag, strictness. The permission step before them is not counted. */
+/** Tag, name, apps, strictness. The permission step before them is not counted. */
 private const val ONBOARDING_STEPS = 4
 
 @Composable
@@ -47,7 +47,7 @@ fun MonolithNavHost(
         composable(MonolithDestination.Onboarding.route) {
             OnboardingScreen(
                 onFinished = {
-                    navController.navigate(MonolithDestination.OnboardingName.route)
+                    navController.navigate(MonolithDestination.OnboardingNfcLink.route)
                 },
             )
         }
@@ -55,27 +55,29 @@ fun MonolithNavHost(
             NameScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = { navController.navigate(MonolithDestination.OnboardingAppSelector.route) },
-                onboardingStep = 1 to ONBOARDING_STEPS,
+                onboardingStep = 2 to ONBOARDING_STEPS,
             )
         }
         composable(MonolithDestination.OnboardingAppSelector.route) {
             AppSelectorScreen(
                 onBack = { navController.popBackStack() },
-                onContinue = { navController.navigate(MonolithDestination.OnboardingNfcLink.route) },
-                onboardingStep = 2 to ONBOARDING_STEPS,
+                onContinue = { navController.navigate(MonolithDestination.OnboardingStrictness.route) },
+                onboardingStep = 3 to ONBOARDING_STEPS,
                 onboardingSubtitle = stringResource(R.string.onboarding_select_apps_subtitle),
             )
         }
         composable(MonolithDestination.OnboardingNfcLink.route) {
             NfcLinkScreen(
                 onBack = { navController.popBackStack() },
-                onboardingStep = 3 to ONBOARDING_STEPS,
+                onboardingStep = 1 to ONBOARDING_STEPS,
                 onboardingSubtitle = stringResource(R.string.onboarding_link_tag_subtitle),
-                // Skipping the tag still leads through the strictness step, which shows the
-                // levels and lets only Standard be picked until a tag exists. Skipping it
-                // entirely left people who deferred the tag never knowing the setting was there.
-                onSkip = { navController.navigate(MonolithDestination.OnboardingStrictness.route) },
-                onLinked = { navController.navigate(MonolithDestination.OnboardingStrictness.route) },
+                // First, so a tag from an earlier install can bring everything back before any of
+                // it is set up by hand. Skipping still walks through the strictness step later,
+                // which shows the levels and lets only Standard be picked until a tag exists.
+                onSkip = { navController.navigate(MonolithDestination.OnboardingName.route) },
+                onLinked = { navController.navigate(MonolithDestination.OnboardingName.route) },
+                offersRestore = true,
+                onRestored = { navController.navigate(MonolithDestination.OnboardingComplete.route) },
             )
         }
         composable(MonolithDestination.OnboardingStrictness.route) {

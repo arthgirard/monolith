@@ -161,6 +161,18 @@
     <string name="nfc_link_success_fallback">UID guardado</string>
     <string name="nfc_link_locked">Monolith está activo. Toque la etiqueta que ya conoce para abrir y luego vincule otra.</string>
     <string name="nfc_link_error">No se pudo leer. Inténtelo otra vez.</string>
+    <string name="nfc_link_carries_code">Su etiqueta también restaura su progreso si reinstala la app.</string>
+    <string name="tag_restore_checking">Comprobando su etiqueta…</string>
+    <string name="tag_restore_restoring">Restaurando…</string>
+    <string name="tag_restore_title">Bienvenido de nuevo</string>
+    <string name="tag_restore_body">¿Restaurar el progreso del %1$s?</string>
+    <string name="tag_restore_friends_body">¿Restaurar sus grupos de amigos?</string>
+    <string name="tag_restore_cta">Restaurar</string>
+    <string name="tag_start_fresh">Empezar de cero</string>
+    <string name="tag_check_failed">Ahora mismo no se puede comprobar la copia de esta etiqueta.</string>
+    <string name="tag_try_again">Reintentar</string>
+    <string name="tag_start_fresh_confirm">Esto reemplaza el código de recuperación de la etiqueta.</string>
+    <string name="tag_tap_again">Acerque de nuevo su etiqueta para guardar un código nuevo</string>
     <string name="nfc_not_supported">Este dispositivo no tiene NFC.</string>
     <string name="not_now_cta">Ahora no</string>
 
