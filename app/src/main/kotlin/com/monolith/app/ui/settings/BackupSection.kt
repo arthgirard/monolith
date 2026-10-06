@@ -9,7 +9,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -87,7 +87,7 @@ fun BackupSection(
             state.tagCode?.let { tagCode ->
                 SettingsDivider(startInset = 20.dp)
                 SettingsRow(
-                    icon = Icons.Filled.Nfc,
+                    icon = Icons.Filled.Contactless,
                     label = stringResource(R.string.backup_save_to_tag),
                     enabled = !isLocked,
                     onClick = onSaveToTag,
