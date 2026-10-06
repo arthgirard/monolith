@@ -12,6 +12,8 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.nfc.tech.NdefFormatable
+import com.monolith.app.data.backup.BackupCrypto
+import com.monolith.app.data.backup.TagCodeCodec
 import com.monolith.app.domain.model.NfcDispatchTech
 import com.monolith.app.domain.model.NfcLinkResult
 import com.monolith.app.domain.model.NfcTagLink
@@ -43,21 +45,23 @@ class NfcManager @Inject constructor(
     val isNfcSupported: Boolean get() = adapter != null
     val isNfcEnabled: Boolean get() = adapter?.isEnabled == true
 
-    override suspend fun provisionTag(tag: Tag): NfcLinkResult = withContext(Dispatchers.IO) {
+    override suspend fun provisionTag(tag: Tag, code: String?): NfcLinkResult = withContext(Dispatchers.IO) {
         val uid = bytesToHex(tag.id)
         if (uid.isBlank()) {
             return@withContext NfcLinkResult.Failure("Tag has no readable identifier.")
         }
 
         val uri = "$TAG_BASE_URL$uid"
-        val wroteNdef = runCatching { writeNdefUri(tag, uri) }.getOrDefault(false)
+        val codeRecord = code?.let(BackupCrypto::decodeCode)?.let { codeRecord(tag.id, it) }
+        val written = runCatching { writeNdef(tag, uri, codeRecord) }.getOrDefault(NdefWrite.FAILED)
 
-        val link = if (wroteNdef) {
+        val link = when (written) {
             // Nothing to register: the tag now carries a monolith:// URI, and the NDEF filter
             // that matches it cannot be triggered by anybody else's tag.
-            NfcTagLink(uid = uid, mode = TagLinkMode.SMART_NDEF, ndefUri = uri)
-        } else {
-            NfcTagLink(
+            NdefWrite.WITH_CODE -> NfcTagLink(uid = uid, mode = TagLinkMode.SMART_NDEF, ndefUri = uri, code = code)
+            // Asked for a code and got only the URI: the tag is too small, and stays quiet about it.
+            NdefWrite.URI_ONLY -> NfcTagLink(uid = uid, mode = TagLinkMode.SMART_NDEF, ndefUri = uri, codeFits = codeRecord == null)
+            NdefWrite.FAILED -> NfcTagLink(
                 uid = uid,
                 mode = TagLinkMode.FALLBACK_UID,
                 ndefUri = null,
@@ -72,38 +76,70 @@ class NfcManager @Inject constructor(
     override fun dispatchTechFor(tag: Tag): String? =
         NfcDispatchTech.narrowest(tag.techList.toList())
 
-    private fun writeNdefUri(tag: Tag, uri: String): Boolean {
-        val message = NdefMessage(arrayOf(NdefRecord.createUri(uri)))
+    override fun readCode(tag: Tag): String? {
+        val message = Ndef.get(tag)?.cachedNdefMessage ?: return null
+        val record = message.records.firstOrNull {
+            it.tnf == NdefRecord.TNF_EXTERNAL_TYPE && String(it.type, Charsets.US_ASCII) == CODE_RECORD_TYPE
+        } ?: return null
+        return TagCodeCodec.decode(tag.id, record.payload)?.let(BackupCrypto::encodeCode)
+    }
+
+    override fun existingLink(tag: Tag, code: String): NfcTagLink {
+        val uid = bytesToHex(tag.id)
+        return NfcTagLink(uid = uid, mode = TagLinkMode.SMART_NDEF, ndefUri = "$TAG_BASE_URL$uid", code = code)
+    }
+
+    private enum class NdefWrite { WITH_CODE, URI_ONLY, FAILED }
+
+    private fun codeRecord(uid: ByteArray, master: ByteArray): NdefRecord =
+        NdefRecord.createExternal(CODE_DOMAIN, CODE_TYPE, TagCodeCodec.encode(uid, master))
+
+    /** The URI always comes first: Android dispatches a background tap on the first record only. */
+    private fun writeNdef(tag: Tag, uri: String, codeRecord: NdefRecord?): NdefWrite {
+        val uriRecord = NdefRecord.createUri(uri)
+        val uriOnly = NdefMessage(arrayOf(uriRecord))
+        val withCode = codeRecord?.let { NdefMessage(arrayOf(uriRecord, it)) }
 
         Ndef.get(tag)?.let { ndef ->
             return try {
                 ndef.connect()
-                if (!ndef.isWritable || ndef.maxSize < message.toByteArray().size) {
-                    false
-                } else {
-                    ndef.writeNdefMessage(message)
-                    true
+                when {
+                    !ndef.isWritable -> NdefWrite.FAILED
+                    withCode != null && withCode.byteArrayLength <= ndef.maxSize -> {
+                        ndef.writeNdefMessage(withCode)
+                        NdefWrite.WITH_CODE
+                    }
+                    uriOnly.byteArrayLength <= ndef.maxSize -> {
+                        ndef.writeNdefMessage(uriOnly)
+                        NdefWrite.URI_ONLY
+                    }
+                    else -> NdefWrite.FAILED
                 }
             } catch (_: Exception) {
-                false
+                NdefWrite.FAILED
             } finally {
                 runCatching { ndef.close() }
             }
         }
 
         NdefFormatable.get(tag)?.let { formatable ->
-            return try {
-                formatable.connect()
-                formatable.format(message)
-                true
-            } catch (_: Exception) {
-                false
-            } finally {
-                runCatching { formatable.close() }
-            }
+            // A blank tag says nothing about its size until formatted, so try both records first
+            // and fall back to the URI alone.
+            if (withCode != null && format(formatable, withCode)) return NdefWrite.WITH_CODE
+            return if (format(formatable, uriOnly)) NdefWrite.URI_ONLY else NdefWrite.FAILED
         }
 
-        return false
+        return NdefWrite.FAILED
+    }
+
+    private fun format(formatable: NdefFormatable, message: NdefMessage): Boolean = try {
+        formatable.connect()
+        formatable.format(message)
+        true
+    } catch (_: Exception) {
+        false
+    } finally {
+        runCatching { formatable.close() }
     }
 
     fun enableForegroundDispatch(activity: Activity) {
@@ -140,5 +176,10 @@ class NfcManager @Inject constructor(
 
     companion object {
         const val TAG_BASE_URL = "monolith://tag/"
+        private const val CODE_DOMAIN = "monolith.app"
+        private const val CODE_TYPE = "k"
+
+        /** How Android spells an external record's type: lower-case "domain:type". */
+        private const val CODE_RECORD_TYPE = "$CODE_DOMAIN:$CODE_TYPE"
     }
 }

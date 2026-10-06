@@ -24,4 +24,11 @@ data class NfcTagLink(
      * also answers to.
      */
     val dispatchTech: String? = null,
+    /**
+     * The recovery code this tag was last seen carrying, written at link time or read on a tap.
+     * Null when it carries none. Only ever set on [TagLinkMode.SMART_NDEF] links.
+     */
+    val code: String? = null,
+    /** False once a write found this tag too small to hold the code alongside its URI. */
+    val codeFits: Boolean = true,
 )

@@ -147,6 +147,8 @@ private object Keys {
     val TAG_MODE = stringPreferencesKey("tag_mode")
     val TAG_LINKED_AT = longPreferencesKey("tag_linked_at")
     val TAG_DISPATCH_TECH = stringPreferencesKey("tag_dispatch_tech")
+    val TAG_CODE = stringPreferencesKey("tag_code")
+    val TAG_CODE_FITS = booleanPreferencesKey("tag_code_fits")
     val IMPORTANT_PEOPLE = stringPreferencesKey("important_people")
     val SESSION_STARTED_AT = longPreferencesKey("session_started_at")
 
@@ -437,6 +439,8 @@ class MonolithPreferences @Inject constructor(
             ndefUri = prefs[Keys.TAG_NDEF_URI],
             linkedAtMillis = prefs[Keys.TAG_LINKED_AT] ?: System.currentTimeMillis(),
             dispatchTech = prefs[Keys.TAG_DISPATCH_TECH],
+            code = prefs[Keys.TAG_CODE],
+            codeFits = prefs[Keys.TAG_CODE_FITS] ?: true,
         )
     }
 
@@ -455,6 +459,12 @@ class MonolithPreferences @Inject constructor(
             } else {
                 prefs.remove(Keys.TAG_DISPATCH_TECH)
             }
+            if (link.code != null) {
+                prefs[Keys.TAG_CODE] = link.code
+            } else {
+                prefs.remove(Keys.TAG_CODE)
+            }
+            prefs[Keys.TAG_CODE_FITS] = link.codeFits
         }
     }
 
