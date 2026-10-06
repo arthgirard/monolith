@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monolith.app.data.datastore.MonolithPreferences
 import com.monolith.app.domain.model.AppUpdate
+import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.service.AppBlockAccessibilityService
 import com.monolith.app.ui.navigation.MonolithDestination
 import com.monolith.app.ui.update.UpdateFlow
@@ -24,6 +25,7 @@ class MainViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val preferences: MonolithPreferences,
     private val updateFlow: UpdateFlow,
+    private val backupRepository: BackupRepository,
 ) : ViewModel() {
 
     /** Null until the stored onboarding flag has been read; the NavHost waits for it. */
@@ -55,7 +57,13 @@ class MainViewModel @Inject constructor(
 
     fun markOnboardingCompleted() {
         onboardingCompleted = true
-        viewModelScope.launch { preferences.setOnboardingCompleted() }
+        viewModelScope.launch {
+            preferences.setOnboardingCompleted()
+            // A new install backs up by default. Turned on here rather than at the tag step, so
+            // the first upload carries the apps and schedule just set up, not an empty setup that
+            // the three-hour throttle would then leave standing.
+            backupRepository.enableByDefault()
+        }
     }
 
     val updateState: StateFlow<UpdateUiState> = updateFlow.state

@@ -67,4 +67,15 @@ class LinkNfcTagUseCaseTest {
 
         assertEquals(listOf<String?>(null), provisioner.provisionedCodes)
     }
+
+    @Test
+    fun `a new install's tag gets the code before backup is on`() = runBlocking {
+        // Setup turns backup on only once it is finished, so the first upload carries the apps.
+        val provisioner = FakeTagProvisioner(NfcLinkResult.Success(link))
+        val backup = FakeBackupRepository(enabled = false).apply { localCode = code }
+
+        LinkNfcTagUseCase(provisioner, FakeBlockRepository(initiallyActive = false), backup)(tag, newInstall = true)
+
+        assertEquals(listOf<String?>(code), provisioner.provisionedCodes)
+    }
 }

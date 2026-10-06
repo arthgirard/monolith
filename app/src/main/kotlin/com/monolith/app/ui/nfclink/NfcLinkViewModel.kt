@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monolith.app.domain.model.NfcLinkResult
 import com.monolith.app.domain.model.TagLinkMode
-import com.monolith.app.domain.repository.BackupRepository
 import com.monolith.app.domain.usecase.LinkNfcTagUseCase
 import com.monolith.app.domain.usecase.TagCheck
 import com.monolith.app.domain.usecase.TagRestoreResult
@@ -47,7 +46,6 @@ sealed interface NfcLinkStatus {
 class NfcLinkViewModel @Inject constructor(
     private val linkNfcTag: LinkNfcTagUseCase,
     private val tagRestore: TagRestoreUseCase,
-    private val backupRepository: BackupRepository,
     private val nfcTagBus: NfcTagBus,
     nfcManager: NfcManager,
 ) : ViewModel() {
@@ -87,9 +85,7 @@ class NfcLinkViewModel @Inject constructor(
 
     private suspend fun link(tag: Tag) {
         _status.value = NfcLinkStatus.Writing
-        // A new install backs up by default. Turned on before linking, so the tag gets the code.
-        if (offersRestore) backupRepository.enableByDefault()
-        _status.value = when (val result = linkNfcTag(tag)) {
+        _status.value = when (val result = linkNfcTag(tag, newInstall = offersRestore)) {
             is NfcLinkResult.Success -> NfcLinkStatus.Success(result.link.mode, carriesCode = result.link.code != null)
             is NfcLinkResult.Failure -> NfcLinkStatus.Error(result.reason)
             NfcLinkResult.Locked -> NfcLinkStatus.Locked
@@ -101,11 +97,7 @@ class NfcLinkViewModel @Inject constructor(
         _status.value = NfcLinkStatus.Restoring
         viewModelScope.launch {
             _status.value = when (val result = tagRestore.restore()) {
-                is TagRestoreResult.Done -> {
-                    // A restored backup turns itself back on; friends alone don't.
-                    if (!result.hasBackup) backupRepository.enableByDefault()
-                    NfcLinkStatus.Restored(result.hasBackup)
-                }
+                is TagRestoreResult.Done -> NfcLinkStatus.Restored(result.hasBackup)
                 TagRestoreResult.Failed -> NfcLinkStatus.CheckFailed
             }
         }
@@ -121,11 +113,6 @@ class NfcLinkViewModel @Inject constructor(
 
     fun startFresh() {
         _status.value = NfcLinkStatus.TapAgain
-    }
-
-    /** Skipping setup's tag still leaves a new install backing up by default. */
-    fun skip() {
-        if (offersRestore) viewModelScope.launch { backupRepository.enableByDefault() }
     }
 
     fun retry() {

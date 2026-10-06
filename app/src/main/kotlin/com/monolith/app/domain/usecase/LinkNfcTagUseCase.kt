@@ -13,7 +13,7 @@ class LinkNfcTagUseCase @Inject constructor(
     private val blockRepository: BlockRepository,
     private val backupRepository: BackupRepository,
 ) {
-    suspend operator fun invoke(tag: Tag): NfcLinkResult {
+    suspend operator fun invoke(tag: Tag, newInstall: Boolean = false): NfcLinkResult {
         // Re-linking while Monolith is on is a way out of an active session: any blank tag
         // becomes the new key, and the next tap with it unlocks. That undoes the whole point of
         // the tag being something you have to go and find, so it follows the same rule as the
@@ -22,8 +22,10 @@ class LinkNfcTagUseCase @Inject constructor(
             return NfcLinkResult.Locked
         }
         // The code rides along only while backup is on: with it off there is nothing behind it
-        // for a reinstall to restore.
-        val code = if (backupRepository.observeBackupEnabled().first()) backupRepository.localRecoveryCode() else null
+        // for a reinstall to restore. A [newInstall] backs up by default, but only turns it on
+        // once setup is done, so its first upload carries the apps chosen after this step.
+        val backsUp = newInstall || backupRepository.observeBackupEnabled().first()
+        val code = if (backsUp) backupRepository.localRecoveryCode() else null
         val result = tagProvisioner.provisionTag(tag, code)
         if (result is NfcLinkResult.Success) {
             blockRepository.saveLinkedTag(result.link)

@@ -276,14 +276,7 @@ fun NfcLinkScreen(
 
             val settled = status is NfcLinkStatus.Success || status is NfcLinkStatus.Restored || status == NfcLinkStatus.Restoring
             if (onSkip != null && !settled) {
-                Button(
-                    onClick = {
-                        viewModel.skip()
-                        onSkip()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MonolithButtonShape,
-                ) {
+                Button(onClick = onSkip, modifier = Modifier.fillMaxWidth(), shape = MonolithButtonShape) {
                     Text(stringResource(R.string.not_now_cta))
                 }
             }

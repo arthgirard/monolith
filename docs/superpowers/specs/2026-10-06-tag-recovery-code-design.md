@@ -21,8 +21,10 @@ install should offer to restore everything.
 - **Tag linking becomes the first onboarding step.** Order: permissions, tag (1/4), name, apps,
   strictness, complete.
 - **Restore is a one-tap confirm, never silent.** A tag can belong to someone else.
-- **Backup is on by default for new installs only.** Onboarding sets it explicitly. Existing
-  installs keep their stored value; one that never touched the toggle stays off.
+- **Backup is on by default for new installs only.** Onboarding turns it on when setup completes
+  (not at the tag step, so the first upload carries the apps chosen after it); the tag step still
+  writes the code. Existing installs keep their stored value; one that never touched the toggle
+  stays off.
 - **Restore drops apps this phone does not have.** Blocked apps and important people whose app is
   not installed are removed from the snapshot before it is written. This applies to every restore,
   including the paste-the-code one.
@@ -106,7 +108,7 @@ On a tap, read the tag first and write nothing. Then:
 
 - **Restore:** `confirm()`, then save the tag link with `existingLink` (the tag already carries
   this code, so nothing is written). With a backup, go straight to complete, skipping name, apps
-  and strictness. Friends only: turn backup on and continue to name.
+  and strictness. Friends only: continue to name.
 - **Start fresh:** the tag has usually left the phone by the time the button is pressed, so the
   step asks "Hold your tag again to save a new code". The next tap skips the check, writes a new
   code over the old one and continues to name. When the backup could not be checked, Start fresh
