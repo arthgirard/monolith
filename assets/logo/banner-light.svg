@@ -1,10 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 616 224" width="616" height="224">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 46 545 132" width="545" height="132">
   <title>Monolith</title>
 
-  <g transform="translate(16 16)">
-    <rect x="0" y="0" width="192" height="192" fill="#0B0B0D" />
+  <g transform="translate(30 16)">
     <path
-      fill="#F5F5F0"
+      fill="#0B0B0D"
       d="M38.5,38.5h115v15h-115z M138.5,38.5h15v115h-15z M38.5,138.5h115v15h-115z M38.5,63.5h15v90h-15z M38.5,63.5h40v15h-40z M63.5,63.5h65v15h-65z M113.5,63.5h15v65h-15z M63.5,113.5h65v15h-65z M63.5,63.5h15v65h-15z" />
     <rect x="88.5" y="88.5" width="15" height="15" fill="#D97706" />
   </g>
