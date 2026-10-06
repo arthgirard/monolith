@@ -69,21 +69,27 @@ Writing the code during onboarding cannot wait for the network.
 `TagProvisioner.provisionTag(tag, master: ByteArray?)`. `LinkNfcTagUseCase` passes
 `localMaster()` when backup is on, null otherwise. It still returns `Locked` while Monolith is on.
 
-`NfcTagLink` adds `carriesCode: Boolean` (true only when record 2 was written). Everything visible
-in this spec keys off it.
+`NfcTagLink` adds `code: String?` (the recovery code last written to or read from the tag; null when
+it carries none) and `codeFits: Boolean` (false once a write found the tag too small for record 2).
+A link "carries a code" when `code != null`. Everything visible in this spec keys off these two.
 
-`NfcManager` also gains `readTagCode(tag): ByteArray?`, which reads the tag's NDEF message without
-writing and decodes record 2 for that UID.
+`TagProvisioner` also gains `readCode(tag): String?`, which decodes record 2 from the NDEF message
+Android cached at discovery (no I/O, nothing written), and `existingLink(tag, code): NfcTagLink`,
+which describes a Monolith-written tag without writing to it.
 
 ### Tag state check
 
-Only when the linked tag has `carriesCode`. On each background tap, `NfcTapOverlayActivity` reads
-`EXTRA_NDEF_MESSAGES` from the intent, decodes record 2 with the tag's UID and compares it with the
-current master. It stores `tag_code_state` in preferences: `CURRENT`, `MISSING` or `STALE`. A
-successful link with a code sets `CURRENT`.
+Only for `SMART_NDEF` links. On each recognised tap (background or foreground),
+`ToggleBlockModeFromTagUseCase` reads the tag's code with `readCode` and, when it differs from
+`link.code`, saves the link with the code it found. The state is derived, never stored:
 
-An existing user whose linked tag predates this feature has `carriesCode = false`. If that link is
-`SMART_NDEF` (writable), the state is `MISSING` from the start, so the Settings row appears.
+- `CURRENT`: `link.code` equals the current recovery code.
+- `MISSING`: `link.code` is null.
+- `STALE`: `link.code` is another code (the identity was cleared and made again).
+
+There is no state at all (nothing shown) for a `FALLBACK_UID` link, a link with `codeFits = false`,
+or while backup is off. An existing user whose writable tag predates this feature has
+`code = null` and `codeFits = true`, so they see `MISSING` and the Settings row appears.
 
 ### Onboarding tag step
 
@@ -98,11 +104,13 @@ On a tap, read the tag first and write nothing. Then:
 | `Failed(NETWORK)` or `Failed(SERVER)` | "Can't check this tag's backup right now." with Try again and Start fresh |
 | `Failed(INVALID)` (backup does not decrypt) | "This backup can't be read." with Start fresh |
 
-- **Restore:** save the tag link (the tag already carries this code, so nothing is written), then
-  `confirm()`. With a backup, go straight to complete, skipping name, apps and strictness. Friends
-  only: continue to name.
-- **Start fresh:** write a new code over the old one, continue to name. When the backup could not
-  be checked, Start fresh first confirms: "This replaces the recovery code on the tag."
+- **Restore:** `confirm()`, then save the tag link with `existingLink` (the tag already carries
+  this code, so nothing is written). With a backup, go straight to complete, skipping name, apps
+  and strictness. Friends only: turn backup on and continue to name.
+- **Start fresh:** the tag has usually left the phone by the time the button is pressed, so the
+  step asks "Hold your tag again to save a new code". The next tap skips the check, writes a new
+  code over the old one and continues to name. When the backup could not be checked, Start fresh
+  first confirms: "This replaces the recovery code on the tag."
 - **Skip** on the tag step continues to name.
 
 `ONBOARDING_STEPS` stays 4; the step numbers move with the new order.
@@ -110,19 +118,20 @@ On a tap, read the tag first and write nothing. Then:
 ### Restore filtering
 
 `RestoreBackupUseCase.confirm()` filters the snapshot before `snapshotWriter.write`:
-`blockedPackages` keeps only packages in `AppRepository.getInstalledApps()`, and `importantPeople`
+`blockedPackages` keeps only packages in `AppRepository.installedPackages()` (new: the launcher
+package names, without loading labels or icons), and `importantPeople`
 keeps only entries whose `packageName` is installed. History, schedules and strictness are written
 as they are. Dropped entries are gone; installing the app later does not bring them back.
 
 ### Settings (Backup section)
 
-- New row under "Show recovery code": "Save recovery code to tag". Shown only when backup is on,
-  the linked tag is `SMART_NDEF`, and `tag_code_state` is not `CURRENT`. Caption: "Your tag doesn't
+- New row under "Show recovery code": "Save recovery code to tag". Shown only when the tag state
+  is `MISSING` or `STALE`. Caption: "Your tag doesn't
   have your recovery code yet" (`MISSING`) or "Your tag has an old recovery code" (`STALE`). While
   Monolith is on the row is disabled with "Turn Monolith off with your tag first." Tapping opens
   the link screen; linking the same tag rewrites both records.
 - The privacy caption reads "Anyone with this code can restore your data. Your tag carries it too,
-  so keep both private." only when the linked tag `carriesCode`; otherwise it is unchanged.
+  so keep both private." only when the linked tag carries a code; otherwise it is unchanged.
 
 ### Link screen
 
@@ -138,7 +147,9 @@ reinstall." Nothing for a link without a code.
 - `LinkNfcTagUseCase`: passes a master when backup is on, none when off; still `Locked` while
   active.
 - Onboarding tag step: every row of the table above, with fakes.
-- Tag state check: `CURRENT`, `MISSING`, `STALE`; no state written for a link without a code.
+- Tag state: `CURRENT`, `MISSING`, `STALE` derived correctly; no state for UID-only links, for
+  `codeFits = false`, or with backup off; a tap that finds a different code on the tag updates the
+  link.
 - Restore filtering: uninstalled blocked apps and important people dropped; installed ones kept;
   history untouched.
 - On device (needs a phone and a writable tag, no emulator): link on the debug build, clear the
