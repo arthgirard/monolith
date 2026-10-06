@@ -1,8 +1,15 @@
 package com.monolith.app.ui.importantpeople
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -22,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -86,12 +94,15 @@ fun ImportantPeopleScreen(
         },
         snackbarHost = { MonolithSnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = MaterialTheme.colorScheme.onSecondary,
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.important_people_add_cta))
+            // Held back until the apps resolve: opened any sooner, the dialog's picker would be empty.
+            AnimatedVisibility(visible = !uiState.isLoading, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
+                FloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.important_people_add_cta))
+                }
             }
         },
     ) { padding ->
@@ -103,25 +114,37 @@ fun ImportantPeopleScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
 
-            if (uiState.people.isEmpty() && !uiState.isLoading) {
-                Text(
-                    stringResource(R.string.important_people_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                )
-            }
+            // Rows wait for the installed apps: drawn before them, each one would show a bare package
+            // name and no icon, then jump once the labels arrive.
+            Crossfade(targetState = uiState.isLoading, modifier = Modifier.weight(1f), label = "people") { loading ->
+                if (loading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                    }
+                } else {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (uiState.people.isEmpty()) {
+                            Text(
+                                stringResource(R.string.important_people_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            )
+                        }
 
-            LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 80.dp)) {
-                items(uiState.people, key = { it.packageName + it.name + it.handle }) { person ->
-                    val app = uiState.installedApps.firstOrNull { it.packageName == person.packageName }
-                    PersonRow(
-                        person = person,
-                        app = app,
-                        isAppBlocked = person.packageName in uiState.blockedPackages,
-                        onEdit = { personBeingEdited = person },
-                        onRemove = { viewModel.removePerson(person) },
-                    )
+                        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 80.dp)) {
+                            items(uiState.people, key = { it.packageName + it.name + it.handle }) { person ->
+                                val app = uiState.installedApps.firstOrNull { it.packageName == person.packageName }
+                                PersonRow(
+                                    person = person,
+                                    app = app,
+                                    isAppBlocked = person.packageName in uiState.blockedPackages,
+                                    onEdit = { personBeingEdited = person },
+                                    onRemove = { viewModel.removePerson(person) },
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
