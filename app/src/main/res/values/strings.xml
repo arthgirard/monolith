@@ -292,7 +292,7 @@
     <string name="friends_share_streak">Current streak</string>
     <string name="friends_share_pauses">Bypasses and unlocks</string>
     <string name="friends_share_apps">Blocked apps</string>
-    <string name="friends_share_caption">Hidden stats stay hidden for you too.</string>
+    <string name="friends_share_caption">Hidden stats stay hidden for you too. Your group always sees whether Monolith is on.</string>
     <string name="friends_create">Create a group</string>
     <string name="friends_invite_label">Invite code</string>
     <string name="friends_join">Join</string>

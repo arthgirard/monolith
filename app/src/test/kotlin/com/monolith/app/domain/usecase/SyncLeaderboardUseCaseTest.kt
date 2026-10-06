@@ -37,6 +37,7 @@ class SyncLeaderboardUseCaseTest {
         assertEquals(1, days.sumOf { it.unlockCount })
         assertEquals(SyncOutcome(synced = true, pauseEndsAt = null), outcome)
         assertEquals(0L, leaderboard.syncedAccruals.single()?.resumesInMillis)
+        assertEquals(true, leaderboard.syncedActive.single())
     }
 
     @Test

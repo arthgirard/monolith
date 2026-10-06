@@ -144,18 +144,19 @@ class LeaderboardRepositoryImpl @Inject constructor(
         streakStartedAt: Long?,
         blockedApps: List<SharedApp>,
         accrual: Accrual?,
+        active: Boolean,
     ): LeaderboardResult<Unit> = authed { identity ->
         // With no group cached the share union is all off, and uploading it would wipe the
         // server's values with nulls. Nobody could see them anyway.
         if (identity.groups.isEmpty()) return@authed LeaderboardResult.Ok(Unit)
-        val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, accrual, shareUnion(identity.groups)))
+        val first = api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, accrual, shareUnion(identity.groups), active))
         // The cached share flags are older than the server's (a change on another phone, or an
         // update that raced this upload). Take the server's, then retry once with their union.
         if (first is LeaderboardResult.Err && first.error == LeaderboardError.HIDDEN_SIGNAL) {
             val refreshed = refreshGroups()
             if (refreshed is LeaderboardResult.Err) return@authed refreshed
             val current = store.identity.first()?.takeIf { it.token == identity.token } ?: return@authed first
-            api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, accrual, shareUnion(current.groups)))
+            api.sync(identity.token, syncRequestOf(days, streakStartedAt, blockedApps, accrual, shareUnion(current.groups), active))
         } else {
             first
         }

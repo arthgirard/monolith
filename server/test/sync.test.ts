@@ -84,6 +84,7 @@ describe("POST /sync", () => {
       { days: "nope" },
       { days: [], resumesInMs: -1 },
       { days: [], utcOffsetMinutes: 900 },
+      { days: [], active: "yes" },
     ]) {
       expect((await call("POST", "/sync", body, ana.token)).status).toBe(400);
     }

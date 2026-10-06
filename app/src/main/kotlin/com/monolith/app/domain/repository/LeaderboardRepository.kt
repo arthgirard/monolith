@@ -44,6 +44,7 @@ interface LeaderboardRepository {
         streakStartedAt: Long?,
         blockedApps: List<SharedApp>,
         accrual: Accrual? = null,
+        active: Boolean = false,
     ): LeaderboardResult<Unit>
     suspend fun board(groupId: String, window: BoardWindow, today: LocalDate): LeaderboardResult<List<BoardRow>>
 }

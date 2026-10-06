@@ -288,7 +288,7 @@
     <string name="friends_share_streak">Huidige reeks</string>
     <string name="friends_share_pauses">Nood- en app-ontgrendelingen</string>
     <string name="friends_share_apps">Geblokkeerde apps</string>
-    <string name="friends_share_caption">Verborgen cijfers blijven ook voor u verborgen.</string>
+    <string name="friends_share_caption">Verborgen cijfers blijven ook voor u verborgen. De groep ziet altijd of Monolith aan staat.</string>
     <string name="friends_create">Groep maken</string>
     <string name="friends_invite_label">Uitnodigingscode</string>
     <string name="friends_join">Deelnemen</string>

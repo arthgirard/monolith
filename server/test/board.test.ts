@@ -64,6 +64,35 @@ describe("GET /groups/:id/board", () => {
     expect((await benRow()).apps).toBeUndefined();
   });
 
+  it("shows Monolith on to every group, whatever the member shares", async () => {
+    const ana = await newUser("Ana");
+    const ben = await join(ana.group.inviteCode, "Ben", share(false, false, false, false));
+    const benRow = async () => (await board(ana.token, ana.group.id)).body.rows.find((r: { name: string }) => r.name === "Ben");
+    // Never said: an older app, read as off.
+    expect((await benRow()).active).toBe(false);
+    expect((await call("POST", "/sync", { days: [], active: true }, ben.token)).status).toBe(204);
+    const on = await benRow();
+    expect(on.active).toBe(true);
+    expect(on.streak).toBeUndefined();
+    expect(on.savedMs).toBeUndefined();
+    // A viewer hiding everything still sees it too.
+    const zed = await join(ana.group.inviteCode, "Zed", share(false, false, false, false));
+    expect((await board(zed.token, ana.group.id)).body.rows.find((r: { name: string }) => r.name === "Ben").active).toBe(true);
+    await call("POST", "/sync", { days: [], active: false }, ben.token);
+    expect((await benRow()).active).toBe(false);
+  });
+
+  it("a phone silent past the projection limit no longer reads as on", async () => {
+    const ana = await newUser("Ana");
+    const ben = await join(ana.group.inviteCode, "Ben");
+    await call("POST", "/sync", { days: [], active: true }, ben.token);
+    await env.monolith_leaderboard
+      .prepare("UPDATE users SET last_sync_at = ?1 WHERE display_name = 'Ben'")
+      .bind(Date.now() - PROJECTION_MAX_MS - 60_000)
+      .run();
+    expect((await board(ana.token, ana.group.id)).body.rows.find((r: { name: string }) => r.name === "Ben").active).toBe(false);
+  });
+
   it("a board for a group you're not in is not_member", async () => {
     const ana = await newUser("Ana");
     const ben = await newUser("Ben");
@@ -100,7 +129,7 @@ describe("project", () => {
   const t0 = Date.parse("2026-09-29T10:00:00Z");
   const row = (over: Partial<BoardQueryRow>): BoardQueryRow => ({
     id: "u", display_name: "Ana", share_saved: 1, share_streak: 1, share_pauses: 1, share_apps: 1, blocked_apps: null,
-    streak_started_at: t0 - HOUR, last_sync_at: t0, accruing_since: t0, utc_offset_min: 0,
+    streak_started_at: t0 - HOUR, last_sync_at: t0, accruing_since: t0, utc_offset_min: 0, active: 0,
     saved: 1000, bypass: 0, unlock: 0, ...over,
   });
   const day = (r: BoardQueryRow, now: number, date = "2026-09-29") => project([r], date, date, now)[0];

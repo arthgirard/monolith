@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -89,6 +90,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -498,14 +501,21 @@ private fun BoardRowItem(row: BoardRow, leaderMillis: Long?, nowMillis: Long, wi
                 modifier = Modifier.width(RankWidth),
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    row.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = if (row.isMe) FontWeight.SemiBold else FontWeight.Normal,
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        row.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = if (row.isMe) FontWeight.SemiBold else FontWeight.Normal,
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (row.active) {
+                        Spacer(Modifier.width(8.dp))
+                        ActiveDot()
+                    }
+                }
                 if (sharesNothing) {
                     Text(stringResource(R.string.friends_row_not_sharing), style = MaterialTheme.typography.labelSmall, color = muted)
                 } else if (showSyncAge(row.lastSyncAt, nowMillis)) {
@@ -566,6 +576,30 @@ private fun BoardRowItem(row: BoardRow, leaderMillis: Long?, nowMillis: Long, wi
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
+    }
+}
+
+private val ActiveDotSize = 7.dp
+
+/**
+ * The accent, spent on the one thing every row shows whatever its member shares: Monolith is on
+ * for them.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActiveDot() {
+    val label = stringResource(R.string.block_mode_active)
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(label) } },
+        state = rememberTooltipState(),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(ActiveDotSize)
+                .background(MaterialTheme.colorScheme.secondary, CircleShape)
+                .semantics { contentDescription = label },
+        )
     }
 }
 

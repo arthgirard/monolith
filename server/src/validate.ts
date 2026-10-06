@@ -62,6 +62,8 @@ export interface SyncBody {
   accruingSince: number | null;
   /** The phone's offset from UTC, to split projected time into its local days. */
   utcOffsetMinutes: number | null;
+  /** Whether Monolith is on. No share setting hides it. Absent (null) from an older client. */
+  active: boolean | null;
 }
 
 const PACKAGE_NAME = /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*$/;
@@ -128,5 +130,7 @@ export function parseSync(body: Record<string, unknown>, share: Share, now: numb
   const utcOffsetMinutes = optionalInt(body.utcOffsetMinutes, -840, 840);
   if (!share.saved && !share.streak && (resumesInMs !== null || utcOffsetMinutes !== null)) throw hidden();
   const accruingSince = resumesInMs === null ? null : now + resumesInMs;
-  return { days, streakStartedAt, apps, accruingSince, utcOffsetMinutes };
+  if (body.active !== undefined && body.active !== null && typeof body.active !== "boolean") throw invalidBody();
+  const active = typeof body.active === "boolean" ? body.active : null;
+  return { days, streakStartedAt, apps, accruingSince, utcOffsetMinutes, active };
 }

@@ -25,7 +25,7 @@ class LeaderboardDtosTest {
 
         assertEquals(
             """{"days":[{"date":"2026-09-28","savedMs":60000,"bypassCount":1,"unlockCount":2}],"streakStartedAt":42,""" +
-                """"apps":[{"packageName":"com.example.video","label":"Video"}],"resumesInMs":0,"utcOffsetMinutes":-240}""",
+                """"apps":[{"packageName":"com.example.video","label":"Video"}],"resumesInMs":0,"utcOffsetMinutes":-240,"active":false}""",
             body,
         )
     }
@@ -34,14 +34,33 @@ class LeaderboardDtosTest {
     fun `hidden signals never leave the phone`() {
         val body = LeaderboardJson.encodeToString(syncRequestOf(listOf(day), 42L, apps, accrual, ShareSettings(false, false, false, false)))
 
-        assertEquals("""{"days":[{"date":"2026-09-28"}]}""", body)
+        assertEquals("""{"days":[{"date":"2026-09-28"}],"active":false}""", body)
+    }
+
+    @Test
+    fun `Monolith being on goes out whatever is hidden`() {
+        val body = LeaderboardJson.encodeToString(
+            syncRequestOf(listOf(day), 42L, apps, accrual, ShareSettings(false, false, false, false), active = true),
+        )
+
+        assertEquals("""{"days":[{"date":"2026-09-28"}],"active":true}""", body)
+    }
+
+    @Test
+    fun `a row without the active flag, from an older server, reads as off`() {
+        val rows = LeaderboardJson.decodeFromString<BoardResponse>(
+            """{"rows":[{"name":"A","isMe":false,"active":true},{"name":"B","isMe":false}]}""",
+        ).rows.map { it.toDomain() }
+
+        assertTrue(rows[0].active)
+        assertFalse(rows[1].active)
     }
 
     @Test
     fun `accrual goes out with the streak alone`() {
         val body = LeaderboardJson.encodeToString(syncRequestOf(emptyList(), 42L, apps, accrual, ShareSettings(false, true, false, false)))
 
-        assertEquals("""{"days":[],"streakStartedAt":42,"resumesInMs":0,"utcOffsetMinutes":-240}""", body)
+        assertEquals("""{"days":[],"streakStartedAt":42,"resumesInMs":0,"utcOffsetMinutes":-240,"active":false}""", body)
     }
 
     @Test

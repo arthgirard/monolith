@@ -64,6 +64,8 @@ data class BoardRow(
     val unlockCount: Int?,
     val lastSyncAt: Long?,
     val blockedApps: List<SharedApp>? = null,
+    /** Monolith is on for this member. Every group sees it, whatever they share. */
+    val active: Boolean = false,
 )
 
 /** One local day as uploaded to the leaderboard. */

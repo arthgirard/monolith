@@ -288,7 +288,7 @@
     <string name="friends_share_streak">Aktuelle Serie</string>
     <string name="friends_share_pauses">Freigaben und Entsperrungen</string>
     <string name="friends_share_apps">Gesperrte Apps</string>
-    <string name="friends_share_caption">Verborgene Werte bleiben auch für Sie verborgen.</string>
+    <string name="friends_share_caption">Verborgene Werte bleiben auch für Sie verborgen. Die Gruppe sieht immer, ob Monolith aktiviert ist.</string>
     <string name="friends_create">Gruppe erstellen</string>
     <string name="friends_invite_label">Einladungscode</string>
     <string name="friends_join">Beitreten</string>

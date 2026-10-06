@@ -289,7 +289,7 @@
     <string name="friends_share_streak">Série en cours</string>
     <string name="friends_share_pauses">Déblocages et déverrouillages</string>
     <string name="friends_share_apps">Applis bloquées</string>
-    <string name="friends_share_caption">Une stat masquée l\'est aussi pour vous.</string>
+    <string name="friends_share_caption">Une stat masquée l\'est aussi pour vous. Le groupe voit toujours si Monolith est activé.</string>
     <string name="friends_create">Créer un groupe</string>
     <string name="friends_invite_label">Code d\'invitation</string>
     <string name="friends_join">Rejoindre</string>

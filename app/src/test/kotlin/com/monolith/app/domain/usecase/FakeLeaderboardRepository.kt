@@ -19,6 +19,7 @@ class FakeLeaderboardRepository(identity: Identity? = null) : LeaderboardReposit
     val syncCalls = mutableListOf<Pair<List<DayAggregate>, Long?>>()
     val syncedApps = mutableListOf<List<SharedApp>>()
     val syncedAccruals = mutableListOf<Accrual?>()
+    val syncedActive = mutableListOf<Boolean>()
     var syncResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
     val restoreCalls = mutableListOf<String>()
     var restoreResult: LeaderboardResult<Unit> = LeaderboardResult.Ok(Unit)
@@ -50,10 +51,12 @@ class FakeLeaderboardRepository(identity: Identity? = null) : LeaderboardReposit
         streakStartedAt: Long?,
         blockedApps: List<SharedApp>,
         accrual: Accrual?,
+        active: Boolean,
     ): LeaderboardResult<Unit> {
         syncCalls += days to streakStartedAt
         syncedApps += blockedApps
         syncedAccruals += accrual
+        syncedActive += active
         return syncResult
     }
     override suspend fun board(groupId: String, window: BoardWindow, today: LocalDate): LeaderboardResult<List<BoardRow>> =

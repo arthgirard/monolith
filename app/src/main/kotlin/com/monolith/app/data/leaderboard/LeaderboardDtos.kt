@@ -54,6 +54,8 @@ data class GroupDto(
 /** An empty [name] clears the group's name. */
 @Serializable data class UpdateGroupRequest(val share: ShareDto? = null, val name: String? = null)
 @Serializable data class SyncDayDto(val date: String, val savedMs: Long? = null, val bypassCount: Int? = null, val unlockCount: Int? = null)
+/** [active] is always sent, off included: no share setting hides it, and absent reads as an older app. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class SyncRequest(
     val days: List<SyncDayDto>,
@@ -61,6 +63,7 @@ data class SyncRequest(
     val apps: List<SharedAppDto>? = null,
     val resumesInMs: Long? = null,
     val utcOffsetMinutes: Int? = null,
+    @EncodeDefault val active: Boolean = false,
 )
 @Serializable data class StreakDto(val startedAt: Long? = null)
 
@@ -75,6 +78,7 @@ data class BoardRowDto(
     val unlockCount: Int? = null,
     val lastSyncAt: Long? = null,
     val apps: List<SharedAppDto>? = null,
+    val active: Boolean = false,
 )
 
 @Serializable data class BoardResponse(val rows: List<BoardRowDto>)
@@ -98,6 +102,7 @@ fun BoardRowDto.toDomain() = BoardRow(
     unlockCount = unlockCount,
     lastSyncAt = lastSyncAt,
     blockedApps = apps?.map(SharedAppDto::toDomain),
+    active = active,
 )
 
 /** The upload body, with every signal [share] hides left out before it reaches the network. */
@@ -107,6 +112,7 @@ fun syncRequestOf(
     blockedApps: List<SharedApp>,
     accrual: Accrual?,
     share: ShareSettings,
+    active: Boolean = false,
 ): SyncRequest {
     // Projection moves time gained and restarts the streak, so either one lets it through.
     val sharedAccrual = accrual.takeIf { share.saved || share.streak }
@@ -123,6 +129,7 @@ fun syncRequestOf(
         apps = blockedApps.map(SharedApp::toDto).takeIf { share.apps },
         resumesInMs = sharedAccrual?.resumesInMillis,
         utcOffsetMinutes = sharedAccrual?.utcOffsetMinutes,
+        active = active,
     )
 }
 

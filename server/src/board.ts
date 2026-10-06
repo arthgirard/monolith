@@ -16,6 +16,8 @@ export interface BoardQueryRow {
   last_sync_at: number | null;
   accruing_since: number | null;
   utc_offset_min: number | null;
+  /** 1 only while Monolith is on and the last upload is recent enough to still vouch for it. */
+  active: number;
   saved: number | null;
   bypass: number | null;
   unlock: number | null;
@@ -31,6 +33,7 @@ export interface BoardRow {
   unlockCount?: number;
   apps?: BlockedApp[];
   lastSyncAt: number | null;
+  active: boolean;
 }
 
 /** How long after its last upload a phone is still trusted to be blocking: past this it may be dead. */
@@ -69,7 +72,8 @@ export function project(rows: BoardQueryRow[], from: string, to: string, now: nu
  */
 export function rankRows(rows: BoardQueryRow[], meId: string, viewer: Share): BoardRow[] {
   const out = rows.map((r): BoardRow => {
-    const row: BoardRow = { name: r.display_name, isMe: r.id === meId, lastSyncAt: r.last_sync_at };
+    // Not a shared signal: every group sees it, so a member hiding every stat still shows up as on.
+    const row: BoardRow = { name: r.display_name, isMe: r.id === meId, lastSyncAt: r.last_sync_at, active: r.active === 1 };
     if (viewer.saved && r.share_saved === 1) row.savedMs = r.saved ?? 0;
     if (viewer.streak && r.share_streak === 1) row.streak = { startedAt: r.streak_started_at };
     if (viewer.pauses && r.share_pauses === 1) {
@@ -140,6 +144,7 @@ export async function board(req: Request, env: Env, user: UserRow, now: number, 
     .prepare(
       `SELECT u.id, u.display_name, m.share_saved, m.share_streak, m.share_pauses, m.share_apps, u.blocked_apps,
               u.streak_started_at, u.last_sync_at, u.accruing_since, u.utc_offset_min,
+              CASE WHEN u.block_active = 1 AND u.last_sync_at >= ?4 THEN 1 ELSE 0 END AS active,
               SUM(d.saved_ms) AS saved, SUM(d.bypass_count) AS bypass, SUM(d.unlock_count) AS unlock
        FROM memberships m
        JOIN users u ON u.id = m.user_id
@@ -147,7 +152,8 @@ export async function board(req: Request, env: Env, user: UserRow, now: number, 
        WHERE m.group_id = ?1
        GROUP BY u.id`,
     )
-    .bind(groupId, from, to)
+    // A phone silent past the projection limit may be dead: it no longer vouches for being on.
+    .bind(groupId, from, to, now - PROJECTION_MAX_MS)
     .all<BoardQueryRow>();
 
   return json({ rows: rankRows(project(results, from, to, now), user.id, shareOf(viewer)) });

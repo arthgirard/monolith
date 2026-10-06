@@ -43,6 +43,7 @@ class SyncLeaderboardUseCase @Inject constructor(
             accrual = DailyAggregates.resumesIn(blockState, activeSessionStart, now)?.let {
                 Accrual(it, zone.rules.getOffset(Instant.ofEpochMilli(now)).totalSeconds / 60)
             },
+            active = blockState.isActive,
         )
         return SyncOutcome(
             synced = result is LeaderboardResult.Ok,
