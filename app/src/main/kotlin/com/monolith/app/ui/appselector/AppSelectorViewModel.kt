@@ -90,7 +90,8 @@ class AppSelectorViewModel @Inject constructor(
     /** Toggles between blocking every app and clearing the selection entirely. */
     fun toggleSelectAll() {
         val state = uiState.value
-        if (state.isLocked) return
+        // Against the empty list still loading, either would save an empty selection.
+        if (state.isLocked || state.isLoading) return
 
         val allPackages = state.allApps.map { it.packageName }.toSet()
         val newSelection = if (state.blockedPackages.containsAll(allPackages)) emptySet() else allPackages
@@ -100,7 +101,8 @@ class AppSelectorViewModel @Inject constructor(
     /** Blocks every installed app except the device's default SMS, dialer, and clock apps. */
     fun applyDumbPhoneMode() {
         val state = uiState.value
-        if (state.isLocked) return
+        // Against the empty list still loading, either would save an empty selection.
+        if (state.isLocked || state.isLoading) return
 
         viewModelScope.launch {
             val essential = getEssentialPackages()

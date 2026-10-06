@@ -1,8 +1,10 @@
 package com.monolith.app.ui.appselector
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -122,6 +125,9 @@ fun AppSelectorScreen(
                 enabled = !uiState.isLocked,
             )
 
+            // Both bulk actions read the app list: run against the empty one still loading, select all
+            // and dumb phone mode would each save an empty selection and wipe the block list.
+            val bulkEnabled = !uiState.isLocked && !uiState.isLoading
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -129,7 +135,7 @@ fun AppSelectorScreen(
                 OutlinedButton(
                     shape = MonolithButtonShape,
                     onClick = viewModel::toggleSelectAll,
-                    enabled = !uiState.isLocked,
+                    enabled = bulkEnabled,
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
@@ -141,7 +147,7 @@ fun AppSelectorScreen(
                 OutlinedButton(
                     shape = MonolithButtonShape,
                     onClick = { showDumbPhoneConfirm = true },
-                    enabled = !uiState.isLocked,
+                    enabled = bulkEnabled,
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(R.string.dumb_phone_mode_cta))
@@ -150,14 +156,22 @@ fun AppSelectorScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
-                items(uiState.filteredApps, key = { it.packageName }) { app ->
-                    AppRow(
-                        app = app,
-                        isChecked = app.packageName in uiState.blockedPackages,
-                        enabled = !uiState.isLocked,
-                        onToggle = { viewModel.toggleApp(app.packageName) },
-                    )
+            Crossfade(targetState = uiState.isLoading, modifier = Modifier.weight(1f), label = "apps") { loading ->
+                if (loading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                        items(uiState.filteredApps, key = { it.packageName }) { app ->
+                            AppRow(
+                                app = app,
+                                isChecked = app.packageName in uiState.blockedPackages,
+                                enabled = !uiState.isLocked,
+                                onToggle = { viewModel.toggleApp(app.packageName) },
+                            )
+                        }
+                    }
                 }
             }
 
