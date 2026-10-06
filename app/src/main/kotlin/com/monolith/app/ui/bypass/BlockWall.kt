@@ -50,7 +50,7 @@ import com.monolith.app.ui.components.revealProgress
 import com.monolith.app.ui.theme.MonolithMotion
 import com.monolith.app.ui.theme.DisabledAlpha
 import com.monolith.app.ui.theme.Spacing
-import com.monolith.app.ui.theme.tabular
+import com.monolith.app.ui.theme.mono
 import kotlinx.coroutines.delay
 
 /**
@@ -125,9 +125,11 @@ fun BlockWall(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.reveal(revealProgress(revealDelay(2), play)),
                 )
+                // Mono: "blocked" is the wall's state, not a sentence about it, so it is set in
+                // the same material as the figures below rather than in the label's voice.
                 Text(
                     stringResource(R.string.overlay_body),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.mono(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.reveal(revealProgress(revealDelay(3), play)),
                 )
@@ -217,7 +219,7 @@ private fun BypassEndedNotice(visible: Boolean) {
         Column {
             Text(
                 stringResource(R.string.overlay_bypass_ended),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.mono(),
                 color = MaterialTheme.colorScheme.secondary,
             )
             Spacer(Modifier.height(Spacing.sm))
@@ -321,7 +323,7 @@ private fun WallAction(
         if (suffix != null) {
             Text(
                 suffix,
-                style = MaterialTheme.typography.labelSmall.tabular(),
+                style = MaterialTheme.typography.labelSmall.mono(),
                 color = color,
             )
         }
@@ -331,7 +333,7 @@ private fun WallAction(
 /**
  * Seconds below an hour, minutes above it. The wall's one live number should visibly move --
  * a readout that sits still for a whole minute reads as a static label rather than a streak
- * still running. Tabular figures (see [tabular]) keep it from reflowing as digits change.
+ * still running. Mono figures (see [mono]) keep it from reflowing as digits change.
  */
 private fun formatStreak(millis: Long): String {
     val totalSeconds = (millis / 1000).coerceAtLeast(0)

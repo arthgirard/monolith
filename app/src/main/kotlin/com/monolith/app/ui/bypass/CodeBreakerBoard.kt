@@ -50,6 +50,7 @@ import com.monolith.app.ui.theme.MonolithButtonShape
 import com.monolith.app.ui.theme.MonolithMotion
 import com.monolith.app.ui.theme.MonolithShapes
 import com.monolith.app.ui.theme.Spacing
+import com.monolith.app.ui.theme.mono
 
 // 48dp keys and 44dp slots: the picker is tapped repeatedly under time pressure, so its targets
 // carry the full minimum. Slots are read, not tapped, and only need to stay legible beside them.
@@ -116,7 +117,7 @@ fun CodeBreakerBoard(
                             CodeBreaker.MAX_GUESSES,
                         )
                     },
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelMedium.mono(),
                     color = if (codeRestarted) {
                         MaterialTheme.colorScheme.secondary
                     } else {

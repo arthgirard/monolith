@@ -16,8 +16,8 @@ val MonolithFontFamily = FontFamily(
 )
 
 /**
- * Monospace as a material for data only: durations, counts, codes. Never headings or body copy,
- * where Inter stays. Fixed width also keeps a ticking streak from shifting its neighbours.
+ * Monospace as a material for data only: durations, counts, codes, one-word states ("blocked")
+ * and the waiver's copy-typing target. Never headings or body copy, where Inter stays. Fixed width also keeps a ticking streak from shifting its neighbours.
  */
 val MonolithMonoFamily = FontFamily(
     Font(R.font.jetbrains_mono_regular, FontWeight.Normal),

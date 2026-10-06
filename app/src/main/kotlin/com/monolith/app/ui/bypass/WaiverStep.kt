@@ -42,6 +42,7 @@ import com.monolith.app.ui.theme.MonolithButtonShape
 import com.monolith.app.ui.theme.MonolithMotion
 import com.monolith.app.ui.theme.MonolithShapes
 import com.monolith.app.ui.theme.Spacing
+import com.monolith.app.ui.theme.mono
 
 /**
  * The last step: copy the sentence out by hand.
@@ -85,9 +86,11 @@ fun WaiverStep(
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(Spacing.lg),
         ) {
+            // Mono, like the field below: every character takes the same width in both, so the
+            // typed line tracks the sentence column for column and a slip shows where it sits.
             Text(
                 progressShaded(sentence, typedCount = divergence ?: input.length),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.mono(),
             )
         }
         Spacer(Modifier.height(Spacing.xl))
@@ -114,6 +117,7 @@ fun WaiverStep(
                 value = input,
                 onValueChange = { newText -> if (newText.length - input.length <= 1) onInputChange(newText) },
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = MaterialTheme.typography.bodyLarge.mono(),
                 placeholder = { Text(stringResource(R.string.waiver_placeholder)) },
                 keyboardOptions = KeyboardOptions(
                     autoCorrect = false,
