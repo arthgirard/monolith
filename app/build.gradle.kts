@@ -27,8 +27,8 @@ android {
         applicationId = "com.monolith.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 29
-        versionName = "1.10.0"
+        versionCode = 30
+        versionName = "1.11.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "LEADERBOARD_URL", "\"https://monolith-leaderboard.maude-ferguson.workers.dev\"")
