@@ -31,7 +31,7 @@ import kotlinx.coroutines.delay
 import javax.inject.Inject
 
 /**
- * Said over a screen the uninstall guard caught, then handed to the home screen. Going home is
+ * Said over a screen the tamper guard caught, then handed to the home screen. Going home is
  * done from here rather than by the accessibility service, for the race BlockOverlayActivity
  * documents: GLOBAL_ACTION_HOME lands asynchronously and could bury this flash behind the
  * launcher before it was ever read.
@@ -39,7 +39,7 @@ import javax.inject.Inject
  * Back leaves the same way. Returning to the page underneath would only be caught again.
  */
 @AndroidEntryPoint
-class UninstallGuardActivity : ComponentActivity() {
+class TamperGuardActivity : ComponentActivity() {
 
     @Inject lateinit var overlayGuard: BlockOverlayGuard
 
@@ -81,8 +81,8 @@ class UninstallGuardActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     MonolithFlash(
                         icon = Icons.Filled.Lock,
-                        headline = stringResource(R.string.uninstall_guard_headline),
-                        supporting = stringResource(R.string.uninstall_guard_body),
+                        headline = stringResource(R.string.tamper_guard_headline),
+                        supporting = stringResource(R.string.tamper_guard_body),
                     )
                 }
             }

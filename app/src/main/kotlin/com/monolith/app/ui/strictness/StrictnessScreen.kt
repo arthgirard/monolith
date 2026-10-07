@@ -140,9 +140,9 @@ fun StrictnessScreen(
                 }
 
                 // Said here rather than left for someone to discover. A screen offering a level
-                // called Absolute has to be honest about what it cannot hold: with the guard off
-                // Monolith uninstalls like any other app, and even with it on a computer over ADB
-                // can still remove it. Overselling either would make the rest of the screen suspect.
+                // called Absolute has to be honest about what it holds and what it cannot: App info
+                // and permissions are shut either way, with the guard off Monolith uninstalls like
+                // any other app, and even with it on a computer over ADB can still remove it.
                 Text(
                     stringResource(
                         if (uiState.uninstallGuard) {

@@ -50,12 +50,12 @@
     <string name="strictness_strict_desc">Um desbloqueio geral de 15 minutos, uma vez por bloqueio, pela tela inicial. Sem saída por app.</string>
     <string name="strictness_absolute_title">Absoluto</string>
     <string name="strictness_absolute_desc">Nada levanta o Monolith além da tag.</string>
-    <string name="strictness_uninstall_caveat">Você ainda pode desinstalar o Monolith. É de propósito.</string>
+    <string name="strictness_uninstall_caveat">O Monolith ainda pode ser desinstalado. Enquanto estiver ligado, as informações do app e as permissões ficam fechadas, então não dá para forçar a parada.</string>
     <string name="strictness_uninstall_guard_title">Bloquear a desinstalação</string>
-    <string name="strictness_uninstall_guard_desc">Enquanto o Monolith estiver ligado, o aviso de desinstalação, as informações do app e a página de acessibilidade fecham assim que abrem.</string>
-    <string name="strictness_uninstall_guard_caveat">Um computador ainda pode remover o Monolith.</string>
-    <string name="uninstall_guard_headline">Monolith ligado</string>
-    <string name="uninstall_guard_body">Desligue-o primeiro com sua tag.</string>
+    <string name="strictness_uninstall_guard_desc">Enquanto o Monolith estiver ligado, o aviso de desinstalação fecha assim que abre.</string>
+    <string name="strictness_uninstall_guard_caveat">Enquanto estiver ligado, as informações do app e as permissões também ficam fechadas, então não dá para forçar a parada. Um computador ainda pode remover o Monolith.</string>
+    <string name="tamper_guard_headline">Monolith ligado</string>
+    <string name="tamper_guard_body">Desligue-o primeiro com sua tag.</string>
     <string name="onboarding_complete_title">Tudo pronto!</string>
     <string name="onboarding_complete_title_named">Tudo pronto, %1$s!</string>
     <string name="onboarding_complete_desc">O Monolith dá as boas-vindas.</string>

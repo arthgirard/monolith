@@ -225,7 +225,8 @@ class MonolithPreferences @Inject constructor(
     }
 
     /**
-     * Whether an active Monolith keeps its own uninstall and settings pages shut. On unless turned
+     * Whether an active Monolith also closes its uninstall prompt; its App info and permission
+     * pages are shut while it's on regardless (see TamperGuard). On unless turned
      * off, installs that predate the setting included: the absent value is read as the default
      * rather than as a choice someone made.
      */

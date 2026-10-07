@@ -50,12 +50,12 @@
     <string name="strictness_strict_desc">Un déblocage général de 15 minutes, une fois par verrouillage, depuis l\'accueil. Aucune sortie appli par appli.</string>
     <string name="strictness_absolute_title">Absolu</string>
     <string name="strictness_absolute_desc">Rien ne lève Monolith, sauf le tag.</string>
-    <string name="strictness_uninstall_caveat">Vous pouvez toujours désinstaller Monolith. C\'est voulu.</string>
+    <string name="strictness_uninstall_caveat">Monolith peut toujours être désinstallé. Tant qu\'il est actif, ses pages Infos sur l\'appli et autorisations restent fermées, il ne peut donc pas être forcé à s\'arrêter.</string>
     <string name="strictness_uninstall_guard_title">Bloquer la désinstallation</string>
-    <string name="strictness_uninstall_guard_desc">Tant que Monolith est actif, sa fenêtre de désinstallation, sa page Infos sur l\'appli et sa page d\'accessibilité se ferment dès qu\'elles s\'ouvrent.</string>
-    <string name="strictness_uninstall_guard_caveat">Un ordinateur peut toujours supprimer Monolith.</string>
-    <string name="uninstall_guard_headline">Monolith est actif</string>
-    <string name="uninstall_guard_body">Désactivez-le d\'abord avec votre tag.</string>
+    <string name="strictness_uninstall_guard_desc">Tant que Monolith est actif, sa fenêtre de désinstallation se ferme dès qu\'elle s\'ouvre.</string>
+    <string name="strictness_uninstall_guard_caveat">Tant qu\'il est actif, ses pages Infos sur l\'appli et autorisations restent fermées aussi, il ne peut donc pas être forcé à s\'arrêter. Un ordinateur peut toujours supprimer Monolith.</string>
+    <string name="tamper_guard_headline">Monolith est actif</string>
+    <string name="tamper_guard_body">Désactivez-le d\'abord avec votre tag.</string>
     <string name="onboarding_complete_title">Tout est prêt !</string>
     <string name="onboarding_complete_title_named">Tout est prêt, %1$s !</string>
     <string name="onboarding_complete_desc">Bienvenue dans Monolith.</string>

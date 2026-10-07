@@ -2,6 +2,7 @@ package com.monolith.app.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -17,7 +18,7 @@ import com.monolith.app.domain.repository.BlockRepository
 import com.monolith.app.domain.repository.StrictnessRepository
 import com.monolith.app.domain.usecase.RecordBlockHitUseCase
 import com.monolith.app.ui.bypass.BlockOverlayActivity
-import com.monolith.app.ui.guard.UninstallGuardActivity
+import com.monolith.app.ui.guard.TamperGuardActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,8 +33,8 @@ import javax.inject.Inject
  * Watches foreground-app changes and throws up the block overlay whenever Monolith is
  * enforcing and the foreground package is on the blocked list. Settings as a whole isn't
  * hard-blocked: that would catch system dialogs (biometric/PIN confirmation, location prompts,
- * ...) that happen to be hosted inside the Settings package. Instead, with the uninstall guard on,
- * only the pages that would take Monolith apart are shut while it's active (see [UninstallGuard]).
+ * ...) that happen to be hosted inside the Settings package. Instead only the pages that would
+ * take Monolith apart are shut while it's active (see [TamperGuard]).
  * Monolith's own UI is deliberately left reachable, since the emergency bypass button lives there.
  */
 @AndroidEntryPoint
@@ -67,7 +68,8 @@ class AppBlockAccessibilityService : AccessibilityService() {
     private val appLabel: String by lazy { getString(R.string.app_name) }
     private var watchingContent = false
     private var guardShownAt = 0L
-    private val guardCheck = Runnable { if (guardedScreenShown()) showGuard() }
+    private val guardCheck = Runnable { guardedScreenShown()?.let(::showGuard) }
+    private val guardFollowUp = Runnable { guardedScreenShown()?.let(::showGuard) }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -128,7 +130,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
         val eventPackage = event?.packageName?.toString() ?: return
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                if (UninstallGuard.watches(eventPackage)) scheduleGuardCheck()
+                if (TamperGuard.watches(eventPackage)) scheduleGuardCheck()
                 return
             }
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> Unit
@@ -143,17 +145,23 @@ class AppBlockAccessibilityService : AccessibilityService() {
         trackVisit(eventPackage, blocked)
     }
 
-    private fun guardArmed(): Boolean = uninstallGuardOn && blockState.isActive
+    /**
+     * The whole while Monolith is on, bypass included: a force stop during a bypass would still
+     * leave the accessibility service switched off once it ends. The uninstall prompt is the one
+     * screen that also depends on the user's setting, and [TamperGuard] applies that itself.
+     */
+    private fun guardArmed(): Boolean = blockState.isActive
 
     /**
      * Checked on arrival, and again a moment later: a Settings page often fills in its title after
-     * the window has opened, and the installer's prompt can do the same. Returns whether the
-     * guard took over the screen.
+     * the window has opened, the installer's prompt can do the same, and the shade's Active apps
+     * panel loads its list after it appears. Returns whether the guard took over the screen.
      */
     private fun guardIfNeeded(foregroundPackage: String): Boolean {
-        if (!guardArmed() || !UninstallGuard.watches(foregroundPackage)) return false
-        if (guardedScreenShown()) {
-            showGuard()
+        if (!guardArmed() || !TamperGuard.watches(foregroundPackage)) return false
+        val caught = guardedScreenShown()
+        if (caught != null) {
+            showGuard(caught)
             return true
         }
         scheduleGuardCheck()
@@ -163,13 +171,18 @@ class AppBlockAccessibilityService : AccessibilityService() {
     /**
      * Settings moves between its pages without opening a new window, so window changes alone
      * would miss App info reached from inside Settings. Content changes fire constantly in every
-     * app, though, so they're only subscribed to while a watched package is in front.
+     * app, though, so they're only subscribed to while a watched package is on screen.
+     *
+     * An event from another package doesn't mean Settings has gone: the keyboard sends its own
+     * window changes while Settings stays in front (Gboard does, on a Pixel 10), and switching off
+     * then let Settings' Compose app list open App info unseen. So switching off waits until no
+     * watched app window is left on screen.
      */
-    private fun watchContentFor(foregroundPackage: String) {
+    private fun watchContentFor(eventPackage: String) {
         // The shade over Settings says nothing about what's under it, and Monolith's own windows
         // include the guard's flash.
-        if (foregroundPackage == SystemPackages.SYSTEM_UI || foregroundPackage == packageName) return
-        val watch = guardArmed() && UninstallGuard.watches(foregroundPackage)
+        if (eventPackage == SystemPackages.SYSTEM_UI || eventPackage == packageName) return
+        val watch = guardArmed() && (TamperGuard.watches(eventPackage) || watchedAppWindowShown())
         if (watch == watchingContent) return
         val info = serviceInfo ?: return
         info.eventTypes = if (watch) {
@@ -179,65 +192,104 @@ class AppBlockAccessibilityService : AccessibilityService() {
         }
         serviceInfo = info
         watchingContent = watch
-        if (!watch) mainHandler.removeCallbacks(guardCheck)
+        if (!watch) cancelGuardChecks()
     }
 
-    /** Coalesces a burst of content changes into one look once the page has settled. */
-    private fun scheduleGuardCheck() {
-        mainHandler.removeCallbacks(guardCheck)
-        mainHandler.postDelayed(guardCheck, GUARD_CHECK_DELAY_MILLIS)
-    }
-
-    private fun guardedScreenShown(): Boolean {
-        if (!guardArmed()) return false
+    private fun watchedAppWindowShown(): Boolean {
         val windows = runCatching { windows }.getOrNull() ?: return false
         return windows.any { window ->
-            if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) return@any false
-            val root = runCatching { window.root }.getOrNull() ?: return@any false
-            val windowPackage = root.packageName?.toString() ?: return@any false
-            if (!UninstallGuard.watches(windowPackage)) return@any false
+            window.type == AccessibilityWindowInfo.TYPE_APPLICATION &&
+                runCatching { window.root?.packageName?.toString() }.getOrNull()
+                    ?.let { it != SystemPackages.SYSTEM_UI && TamperGuard.watches(it) } == true
+        }
+    }
+
+    /**
+     * Coalesces a burst of content changes into one look once the page has settled, plus a later
+     * one for the screens that never send content changes here (the shade isn't subscribed to).
+     */
+    private fun scheduleGuardCheck() {
+        cancelGuardChecks()
+        mainHandler.postDelayed(guardCheck, GUARD_CHECK_DELAY_MILLIS)
+        mainHandler.postDelayed(guardFollowUp, GUARD_FOLLOW_UP_DELAY_MILLIS)
+    }
+
+    private fun cancelGuardChecks() {
+        mainHandler.removeCallbacks(guardCheck)
+        mainHandler.removeCallbacks(guardFollowUp)
+    }
+
+    /** The package of the guarded screen on display, or null when there is none. */
+    private fun guardedScreenShown(): String? {
+        if (!guardArmed()) return null
+        val windows = runCatching { windows }.getOrNull() ?: return null
+        // System windows for the shade's Active apps panel; everything else is an app window.
+        val candidates = windows.filter {
+            it.type == AccessibilityWindowInfo.TYPE_APPLICATION || it.type == AccessibilityWindowInfo.TYPE_SYSTEM
+        }
+        for (window in candidates) {
+            val root = runCatching { window.root }.getOrNull() ?: continue
+            val windowPackage = root.packageName?.toString() ?: continue
+            if (!TamperGuard.watches(windowPackage)) continue
             val title = window.title?.toString()
-            runCatching {
-                UninstallGuard.isGuardedScreen(windowPackage, appLabel, title, guardNodes(root))
-            }.getOrDefault(false).also { guarded ->
-                // Diagnostic only, as for the Settings classes below: when a skin's App info page
-                // slips through, this is what shows which title or ID it uses instead.
-                if (!guarded) Log.d(LOG_TAG, "guard passed $windowPackage window title=$title")
+            val guarded = runCatching {
+                TamperGuard.isGuardedScreen(windowPackage, appLabel, title, guardNodes(root), uninstallGuardOn)
+            }.getOrDefault(false)
+            if (guarded) return windowPackage
+            // Diagnostic only, as for the Settings classes below: when a skin's App info page
+            // slips through, this is what shows which title it uses instead. Not for the shade,
+            // which is checked far too often for the line to say anything.
+            if (windowPackage != SystemPackages.SYSTEM_UI) {
+                Log.d(LOG_TAG, "guard passed $windowPackage window title=$title")
             }
         }
+        return null
     }
 
     /** The window's nodes, breadth first and capped, so a long list can't stall the check. */
     private fun guardNodes(root: AccessibilityNodeInfo): Sequence<GuardNode> = sequence {
-        val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+        // Each node queued with whether something above it was clickable.
+        val queue = ArrayDeque<Pair<AccessibilityNodeInfo, Boolean>>().apply { add(root to false) }
         var visited = 0
         while (queue.isNotEmpty() && visited < GUARD_NODE_LIMIT) {
-            val node = queue.removeFirst()
+            val (node, parentClickable) = queue.removeFirst()
             visited++
+            val insideClickable = parentClickable || node.isClickable
             yield(
                 GuardNode(
                     text = node.text?.toString(),
                     contentDescription = node.contentDescription?.toString(),
                     viewId = node.viewIdResourceName,
                     isCheckable = node.isCheckable,
+                    insideClickable = insideClickable,
                 ),
             )
-            for (i in 0 until node.childCount) node.getChild(i)?.let(queue::add)
+            for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it to insideClickable) }
         }
     }
 
-    private fun showGuard() {
-        mainHandler.removeCallbacks(guardCheck)
+    private fun showGuard(caughtPackage: String) {
+        cancelGuardChecks()
         val now = System.currentTimeMillis()
         // One flash per attempt: the page underneath keeps reporting changes until the flash
         // covers it. Shorter than the flash itself, so coming straight back via Recents is caught.
         if (now - guardShownAt < GUARD_REPEAT_WINDOW_MILLIS) return
         guardShownAt = now
-        Log.d(LOG_TAG, "uninstall guard caught a page about Monolith")
-        // Covered at once, as for a blocked app: the uninstall prompt's OK button is one tap away.
-        overlayGuard.show()
+        Log.d(LOG_TAG, "tamper guard caught a screen about Monolith in $caughtPackage")
+        if (caughtPackage == SystemPackages.SYSTEM_UI) {
+            // The panel and the shade sit above every app window, the flash included, so they
+            // have to be put away first or the Stop button stays within reach on top of it.
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)
+            }
+        } else {
+            // Covered at once, as for a blocked app: the uninstall prompt's OK button and the Force
+            // stop button are each one tap away.
+            overlayGuard.show()
+        }
         startActivity(
-            Intent(this, UninstallGuardActivity::class.java).addFlags(
+            Intent(this, TamperGuardActivity::class.java).addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION,
             ),
         )
@@ -330,7 +382,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
-        mainHandler.removeCallbacks(guardCheck)
+        cancelGuardChecks()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -339,6 +391,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
         private const val LOG_TAG = "MonolithBlock"
         private const val OVERLAY_PERMISSION_NOTICE_INTERVAL_MILLIS = 60L * 60 * 1000
         private const val GUARD_CHECK_DELAY_MILLIS = 150L
+        private const val GUARD_FOLLOW_UP_DELAY_MILLIS = 600L
         private const val GUARD_REPEAT_WINDOW_MILLIS = 1_000L
         private const val GUARD_NODE_LIMIT = 400
 

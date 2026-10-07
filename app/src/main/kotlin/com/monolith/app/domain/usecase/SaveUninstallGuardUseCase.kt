@@ -7,8 +7,8 @@ import javax.inject.Inject
 
 /**
  * Rejects changes while Monolith is active, for the reason [SaveStrictnessLevelUseCase] gives.
- * Here it is also the whole point: a guard that could be switched off from inside the app it
- * guards would only move the escape one screen over.
+ * Here it is also the whole point: a guard that could be switched off mid-session would only
+ * move the escape one screen over.
  */
 class SaveUninstallGuardUseCase @Inject constructor(
     private val strictnessRepository: StrictnessRepository,

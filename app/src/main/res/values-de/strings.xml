@@ -50,12 +50,12 @@
     <string name="strictness_strict_desc">Eine 15-minütige Freigabe für alles, einmal pro Sperre, vom Startbildschirm. Kein Ausweg pro App.</string>
     <string name="strictness_absolute_title">Absolut</string>
     <string name="strictness_absolute_desc">Nur der Tag hebt Monolith auf.</string>
-    <string name="strictness_uninstall_caveat">Sie können Monolith weiterhin deinstallieren. Das ist Absicht.</string>
+    <string name="strictness_uninstall_caveat">Monolith lässt sich weiterhin deinstallieren. Solange es aktiv ist, bleiben App-Info und Berechtigungen gesperrt, ein Beenden erzwingen ist also nicht möglich.</string>
     <string name="strictness_uninstall_guard_title">Deinstallation sperren</string>
-    <string name="strictness_uninstall_guard_desc">Solange Monolith aktiv ist, schließen sich der Deinstallationsdialog, die App-Info und die Bedienungshilfen-Seite sofort wieder.</string>
-    <string name="strictness_uninstall_guard_caveat">Über einen Computer lässt sich Monolith weiterhin entfernen.</string>
-    <string name="uninstall_guard_headline">Monolith ist aktiv</string>
-    <string name="uninstall_guard_body">Schalten Sie es zuerst mit Ihrem Tag aus.</string>
+    <string name="strictness_uninstall_guard_desc">Solange Monolith aktiv ist, schließt sich der Deinstallationsdialog sofort wieder.</string>
+    <string name="strictness_uninstall_guard_caveat">Solange es aktiv ist, bleiben auch App-Info und Berechtigungen gesperrt, ein Beenden erzwingen ist also nicht möglich. Über einen Computer lässt sich Monolith weiterhin entfernen.</string>
+    <string name="tamper_guard_headline">Monolith ist aktiv</string>
+    <string name="tamper_guard_body">Schalten Sie es zuerst mit Ihrem Tag aus.</string>
     <string name="onboarding_complete_title">Alles bereit!</string>
     <string name="onboarding_complete_title_named">Alles bereit, %1$s!</string>
     <string name="onboarding_complete_desc">Willkommen bei Monolith.</string>

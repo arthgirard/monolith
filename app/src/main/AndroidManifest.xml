@@ -67,7 +67,7 @@
 
         <!-- Shown over Monolith's own uninstall and settings pages while it is on, then home. -->
         <activity
-            android:name=".ui.guard.UninstallGuardActivity"
+            android:name=".ui.guard.TamperGuardActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"

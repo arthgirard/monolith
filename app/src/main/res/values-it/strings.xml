@@ -50,12 +50,12 @@
     <string name="strictness_strict_desc">Uno sblocco generale di 15 minuti, una volta per blocco, dalla schermata iniziale. Nessuna scorciatoia per singola app.</string>
     <string name="strictness_absolute_title">Assoluto</string>
     <string name="strictness_absolute_desc">Niente solleva Monolith tranne il tag.</string>
-    <string name="strictness_uninstall_caveat">Si può comunque disinstallare Monolith. È voluto.</string>
+    <string name="strictness_uninstall_caveat">Monolith si può comunque disinstallare. Finché è attivo, le Informazioni app e le autorizzazioni restano chiuse, quindi non se ne può forzare l\'interruzione.</string>
     <string name="strictness_uninstall_guard_title">Blocca la disinstallazione</string>
-    <string name="strictness_uninstall_guard_desc">Finché Monolith è attivo, la richiesta di disinstallazione, le Informazioni app e la pagina di accessibilità si chiudono appena si aprono.</string>
-    <string name="strictness_uninstall_guard_caveat">Da un computer si può comunque rimuovere Monolith.</string>
-    <string name="uninstall_guard_headline">Monolith è attivo</string>
-    <string name="uninstall_guard_body">Lo disattivi prima con il tag.</string>
+    <string name="strictness_uninstall_guard_desc">Finché Monolith è attivo, la richiesta di disinstallazione si chiude appena si apre.</string>
+    <string name="strictness_uninstall_guard_caveat">Finché è attivo, anche le Informazioni app e le autorizzazioni restano chiuse, quindi non se ne può forzare l\'interruzione. Da un computer si può comunque rimuovere Monolith.</string>
+    <string name="tamper_guard_headline">Monolith è attivo</string>
+    <string name="tamper_guard_body">Lo disattivi prima con il tag.</string>
     <string name="onboarding_complete_title">Fatto!</string>
     <string name="onboarding_complete_title_named">Fatto, %1$s!</string>
     <string name="onboarding_complete_desc">Monolith le dà il benvenuto.</string>

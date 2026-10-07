@@ -49,12 +49,12 @@
     <string name="strictness_strict_desc">One 15-minute unblock of everything, once per lock, from the home screen. No per-app escape.</string>
     <string name="strictness_absolute_title">Absolute</string>
     <string name="strictness_absolute_desc">Nothing lifts Monolith but the tag.</string>
-    <string name="strictness_uninstall_caveat">You can still uninstall Monolith. That\'s on purpose.</string>
+    <string name="strictness_uninstall_caveat">Monolith can still be uninstalled. While it\'s on, its App info and permission pages stay shut, so it can\'t be force stopped.</string>
     <string name="strictness_uninstall_guard_title">Block uninstalling</string>
-    <string name="strictness_uninstall_guard_desc">While Monolith is on, its uninstall prompt, App info and accessibility pages close as soon as they open.</string>
-    <string name="strictness_uninstall_guard_caveat">A computer can still remove Monolith.</string>
-    <string name="uninstall_guard_headline">Monolith is on</string>
-    <string name="uninstall_guard_body">Turn it off with your tag first.</string>
+    <string name="strictness_uninstall_guard_desc">While Monolith is on, its uninstall prompt closes as soon as it opens.</string>
+    <string name="strictness_uninstall_guard_caveat">While it\'s on, its App info and permission pages stay shut too, so it can\'t be force stopped. A computer can still remove Monolith.</string>
+    <string name="tamper_guard_headline">Monolith is on</string>
+    <string name="tamper_guard_body">Turn it off with your tag first.</string>
 
     <string name="onboarding_complete_title">You\'re all set!</string>
     <string name="onboarding_complete_title_named">You\'re all set, %1$s!</string>
